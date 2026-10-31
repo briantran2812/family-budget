@@ -1,0 +1,81 @@
+# Test case trải nghiệm người dùng (UX)
+
+**Nhân vật chính:** Lan, người dùng không rành công nghệ. Lan dùng Gmail và mua sắm trên Shopee,
+TikTok; thanh toán qua MoMo và app ngân hàng. Lan nhận app qua file `.dmg`, không có ai ngồi cạnh
+hướng dẫn.
+
+**Mục tiêu:** Lan tự cài app, kết nối Gmail và biết tháng này nhà mình chi bao nhiêu % cho từng việc,
+tất cả trong vòng **10 phút** mà không cần hỏi ai.
+
+Có hai loại test case:
+
+- **Tự động (UX-xx):** chạy bằng `pytest tests/e2e` trên WebKit, đúng loại engine mà cửa sổ app dùng.
+  Mỗi test cũng tự fail nếu trang có bất kỳ lỗi JavaScript nào.
+- **Thủ công (M-xx):** cần người thật, máy thật hoặc tài khoản thật. QA chạy các ca này trên file
+  **RC `.dmg`** rồi ghi kết quả vào `qa/QA-SIGNOFF-<phiên bản>.md`. Mọi ca **P1** phải đạt PASS thì
+  mới được release.
+
+## Tự động
+
+| ID | Tình huống | Kiểm tra |
+| --- | --- | --- |
+| UX-01 | Mở app lần đầu | Hiện màn hình chào mừng; nhập tên xong thì app chào "Chào Lan 👋" và mở hướng dẫn Gmail |
+| UX-01b | Bỏ qua phần chào mừng | Mở lại app không bị hỏi lại |
+| UX-02 | Hướng dẫn Gmail: các bước và báo lỗi | Đi tới/lùi được giữa các bước; link đúng trang Google; mật khẩu thiếu ký tự hoặc sai đều có thông báo rõ ràng |
+| UX-03 | Kết nối Gmail xong rồi đồng bộ | Hiện "Đã kết nối!"; bấm Đồng bộ thì đơn Shopee xuất hiện trong ô Shopee ở trang Tổng quan |
+| UX-04 | Thêm khoản chi, gõ "1,5tr" | Ô số tiền hiện "= 1.500.000 ₫"; tự xếp vào hạng mục Học phí; hiện ngay ở Tổng quan và mục Gần đây |
+| UX-05 | Gõ số tiền sai | Có thông báo lỗi, cửa sổ nhập không bị đóng (không mất dữ liệu đã gõ) |
+| UX-06 | Thêm thu nhập, lưu bằng phím Enter | Vòng tròn hiện đúng % thu nhập đã chi |
+| UX-07 | Đổi hạng mục và bật Ghi nhớ | App đề xuất từ khoá; giao dịch tương tự được xếp lại; có thông báo đã xếp lại bao nhiêu giao dịch |
+| UX-08 | Đánh dấu Không tính, rồi Tính lại | Tổng tiền cập nhật ngay; giao dịch bị gạch ngang |
+| UX-09 | Xoá giao dịch | App hỏi xác nhận trước; bấm Huỷ thì không xoá |
+| UX-10 | Chuyển tháng | Nút ‹ › đổi tháng; nút "Tháng này" chỉ hiện khi đang xem tháng khác |
+| UX-11 | Bấm vào một hạng mục ở Tổng quan | Chuyển sang tab Giao dịch, đã lọc sẵn theo hạng mục đó |
+| UX-12 | Tìm kiếm và lọc theo nguồn | Số giao dịch và tổng chi hiển thị khớp với bộ lọc |
+| UX-13 | Nhập ảnh biên lai, sửa số tiền rồi lưu | OCR điền sẵn số tiền, mô tả và hạng mục; số đã sửa được lưu đúng |
+| UX-14 | Đặt ngân sách "1tr" | Ở Tổng quan hiện cảnh báo "Vượt ngân sách 200k" |
+| UX-15 | Mở app khi chưa có dữ liệu | Hiện thẻ "Bắt đầu thôi!" với 3 lựa chọn; nút Đồng bộ ẩn khi chưa kết nối Gmail |
+| UX-16 | Đóng cửa sổ nhập liệu | Đóng được bằng phím Esc và bằng cách bấm ra ngoài |
+| UX-17 | Màn hình rộng 390px (cỡ điện thoại) | Không tab nào bị tràn ngang; thanh điều hướng chuyển xuống đáy |
+| UX-18 | Máy để chế độ tối | Giao diện tự chuyển sang màu tối |
+| UX-21 | Email không đọc được | Hiện trong danh sách riêng; bấm "Ẩn" là xong |
+| UX-22 | Xuất CSV | Tải về file đúng tên; mở bằng Excel thấy đúng tiếng Việt (file có BOM) |
+| UX-23 | Gỡ tài khoản Gmail | App hỏi xác nhận trước; danh sách tài khoản cập nhật |
+| UX-24 | Đi qua mọi tab | Không có lỗi JavaScript nào |
+| UX-25 | 3.000 giao dịch | Tổng quan và danh sách tải xong dưới 3 giây |
+
+Bản đóng gói còn được kiểm tra tự động bằng `tests/test_packaged.py`: cửa sổ tải được giao diện,
+Keychain hoạt động, OCR chạy bên trong bundle, và kết nối TLS tới Gmail thành công.
+
+## Thủ công
+
+Chuẩn bị: file RC `.dmg`, **một máy Mac khác** (lý tưởng nhất là máy của Lan), một tài khoản Gmail
+có ít nhất một đơn Shopee hoặc TikTok trong 6 tháng gần nhất, và điện thoại có app MoMo hoặc app ngân
+hàng.
+
+| ID | Ưu tiên | Tên | Các bước | Kết quả mong đợi |
+| --- | --- | --- | --- | --- |
+| M-01 | P1 | Cài từ DMG trên máy Mac khác | Gửi RC qua AirDrop hoặc Zalo → mở `.dmg` → kéo vào Applications → mở app | Bị chặn lần đầu; làm theo "Hướng dẫn cài đặt.txt" (Open Anyway) thì mở được; không cần cài thêm gì |
+| M-02 | P1 | Người mới tự kết nối Gmail | Đưa máy cho Lan, **không giúp**; bấm giờ từ màn hình chào mừng tới lúc "Đã kết nối!" | Xong trong ≤ 10 phút; Lan hiểu App Password là gì; ghi lại chỗ nào Lan bị vướng |
+| M-03 | P1 | Đồng bộ Gmail thật | Bấm Đồng bộ ngay; so số đơn và tổng tiền với lịch sử "Đơn mua" trên app Shopee/TikTok và lịch sử giao dịch MoMo của tháng gần nhất. Nếu không có đơn nào, đọc thông báo app đưa ra | Mỗi đơn chỉ tính một lần; số tiền khớp; đơn huỷ không bị tính; mục "Email chưa đọc được" chỉ còn email giao hàng |
+| M-04 | P1 | Ảnh chụp biên lai MoMo thật | Chụp màn hình biên lai MoMo (điện, học phí…) trên iPhone → AirDrop sang Mac → kéo vào app | Số tiền và ngày đúng; mô tả đọc được; hạng mục hợp lý hoặc sửa được dễ dàng |
+| M-05 | P1 | Ảnh chụp biên lai chuyển khoản ngân hàng thật | Như M-04, nhưng với biên lai chuyển khoản của app ngân hàng | Như M-04 |
+| M-06 | P1 | Đóng rồi mở lại app | Thêm 1 giao dịch → đóng cửa sổ (⌘Q) → mở lại | App thoát hẳn khi đóng; dữ liệu và tài khoản Gmail còn nguyên |
+| M-07 | P1 | Cập nhật đè lên bản cũ | Đang có dữ liệu, cài bản RC đè lên bản trước | Dữ liệu còn; tài khoản Gmail còn; nếu Keychain hỏi quyền thì chọn "Always Allow" và chỉ bị hỏi một lần |
+| M-08 | P1 | Đồng bộ khi mất mạng | Tắt Wi-Fi → bấm Đồng bộ ngay | Thông báo bằng tiếng Việt dễ hiểu, app không treo; bật lại Wi-Fi thì đồng bộ được |
+| M-09 | P2 | Kéo thả ảnh vào cửa sổ app | Kéo một file ảnh từ Finder vào ô "Kéo thả ảnh" | Ảnh được đọc như khi bấm chọn file |
+| M-10 | P2 | Dán ảnh bằng ⌘V | Chụp màn hình bằng ⌘⇧4 (giữ Control để chụp vào clipboard) → ⌘V trong app | Ảnh được đọc |
+| M-11 | P2 | Xuất CSV trong cửa sổ app | Cài đặt → Xuất CSV → mở file bằng Numbers hoặc Excel | File nằm trong Downloads; tiếng Việt hiển thị đúng |
+| M-12 | P2 | Đổi chế độ sáng/tối | System Settings → Appearance → Light rồi Dark | Giao diện đổi theo; chữ dễ đọc ở cả hai chế độ |
+| M-13 | P2 | Thu hồi App Password | Xoá App Password trên trang Google → bấm Đồng bộ | Báo lỗi đúng tài khoản, gợi ý gỡ rồi thêm lại tài khoản |
+| M-14 | P2 | Lan đọc lại toàn bộ chữ trong app | Lan đọc mọi màn hình và đánh dấu chữ nào khó hiểu hoặc sai chính tả | Không có thuật ngữ kỹ thuật nào khó hiểu; không sai chính tả |
+| M-15 | P2 | Hai tài khoản Gmail | Thêm Gmail của cả hai vợ chồng → Đồng bộ | Đơn của cả hai đều được nhập; một tài khoản lỗi không làm hỏng tài khoản kia |
+
+## Mức độ lỗi
+
+| Mức | Định nghĩa | Ảnh hưởng tới release |
+| --- | --- | --- |
+| **S1 — Nghiêm trọng** | Mất hoặc sai dữ liệu tiền; không mở được app; lộ mật khẩu | Chặn release |
+| **S2 — Cao** | Một luồng P1 không làm được, hoặc phải có người hướng dẫn mới làm được | Chặn release |
+| **S3 — Trung bình** | Có cách khác để làm; hiển thị sai nhưng dữ liệu vẫn đúng | Được release nếu ghi rõ trong biên bản QA |
+| **S4 — Thấp** | Chính tả, căn lề | Được release |

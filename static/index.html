@@ -1,0 +1,1006 @@
+<!doctype html>
+<html lang="vi">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Thu Chi Gia Đình</title>
+<style>
+:root {
+  color-scheme: light;
+  --bg: #f4f5fb; --surface: #ffffff; --surface-2: #f1f2f8; --border: #e6e8f0;
+  --text: #151826; --text-2: #575d72; --muted: #8d93a8;
+  --accent: #5b4ff5; --accent-soft: #eeecff; --accent-ink: #ffffff;
+  --bar: #5b4ff5; --bar-soft: #cfcafc;
+  --good: #11875a; --good-soft: #e3f6ec; --bad: #d03b3b; --bad-soft: #fdeaea; --warn-soft: #fff4d6;
+  --hero: linear-gradient(130deg, #5b4ff5 0%, #8b5cf6 52%, #e0559c 100%);
+  --shadow: 0 1px 2px rgba(20, 24, 40, .04), 0 6px 20px rgba(20, 24, 40, .06);
+  --radius: 18px;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    color-scheme: dark;
+    --bg: #0f1017; --surface: #181a24; --surface-2: #222532; --border: #2c2f3d;
+    --text: #eef0f6; --text-2: #b6bacb; --muted: #7d8296;
+    --accent: #8a80ff; --accent-soft: #2a2650; --accent-ink: #ffffff;
+    --bar: #8a80ff; --bar-soft: #3b3672;
+    --good: #3fcf8e; --good-soft: #163527; --bad: #f07272; --bad-soft: #3b1d1f; --warn-soft: #3a3215;
+    --hero: linear-gradient(130deg, #4338ca 0%, #7c3aed 52%, #be185d 100%);
+    --shadow: 0 1px 2px rgba(0, 0, 0, .3), 0 6px 20px rgba(0, 0, 0, .25);
+  }
+}
+* { box-sizing: border-box; }
+html, body { margin: 0; height: 100%; }
+body { background: var(--bg); color: var(--text); -webkit-font-smoothing: antialiased;
+  font: 15px/1.45 -apple-system, BlinkMacSystemFont, "SF Pro Text", "Segoe UI", Roboto, sans-serif; }
+button, input, select, textarea { font: inherit; color: inherit; }
+.num { font-variant-numeric: tabular-nums; }
+code { overflow-wrap: anywhere; }  /* long data-folder paths must wrap on phones */
+
+/* ---------- shell ---------- */
+.shell { display: flex; min-height: 100vh; }
+.side { width: 232px; flex: none; background: var(--surface); border-right: 1px solid var(--border);
+  padding: 22px 14px; display: flex; flex-direction: column; gap: 22px; position: sticky; top: 0; height: 100vh; }
+.brand { display: flex; align-items: center; gap: 10px; padding: 0 8px; }
+.logo { width: 38px; height: 38px; border-radius: 12px; background: var(--hero); color: #fff; display: grid;
+  place-items: center; font-weight: 800; font-size: 20px; box-shadow: 0 4px 12px rgba(91, 79, 245, .35); }
+.brand b { display: block; font-size: 16px; } .brand small { color: var(--muted); font-size: 12px; }
+nav { display: flex; flex-direction: column; gap: 4px; }
+nav button { display: flex; align-items: center; gap: 12px; padding: 10px 12px; border: 0; border-radius: 12px;
+  background: none; color: var(--text-2); cursor: pointer; text-align: left; font-weight: 500; }
+nav button svg { width: 20px; height: 20px; flex: none; }
+nav button:hover { background: var(--surface-2); color: var(--text); }
+nav button.on { background: var(--accent-soft); color: var(--accent); font-weight: 650; }
+.side-foot { margin-top: auto; padding: 0 10px; color: var(--muted); font-size: 12px; }
+.content { flex: 1; min-width: 0; }
+.topbar { display: flex; align-items: center; gap: 16px; padding: 22px 32px 6px; flex-wrap: wrap; }
+.hello { font-size: 22px; font-weight: 700; letter-spacing: -.01em; }
+.hello-sub { color: var(--text-2); font-size: 14px; }
+.topbar .grow { flex: 1; }
+.month { display: flex; align-items: center; gap: 2px; background: var(--surface); border: 1px solid var(--border);
+  border-radius: 999px; padding: 3px; box-shadow: var(--shadow); }
+.month span { min-width: 120px; text-align: center; font-weight: 600; font-size: 14px; }
+.month button { width: 32px; height: 32px; border-radius: 50%; border: 0; background: none; cursor: pointer; color: var(--text-2); font-size: 16px; }
+.month button:hover { background: var(--surface-2); color: var(--text); }
+#todayBtn { width: auto; padding: 0 10px; border-radius: 999px; font-size: 12px; color: var(--accent); }
+main { padding: 16px 32px 90px; max-width: 1240px; }
+[hidden] { display: none !important; }
+
+/* ---------- generic ---------- */
+.card { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius);
+  padding: 20px; box-shadow: var(--shadow); min-width: 0; }
+.card + .card { margin-top: 16px; }
+.minis .card + .card { margin-top: 0; }
+.card h2 { font-size: 16px; margin: 0 0 4px; letter-spacing: -.01em; }
+.card .hint { color: var(--muted); font-size: 13px; margin: 0 0 14px; }
+.card-head { display: flex; align-items: baseline; justify-content: space-between; gap: 10px; margin-bottom: 12px; }
+.card-head h2 { margin: 0; }
+.btn { display: inline-flex; align-items: center; justify-content: center; gap: 6px; border: 1px solid var(--border);
+  background: var(--surface); border-radius: 12px; padding: 9px 16px; cursor: pointer; font-weight: 600; font-size: 14px; white-space: nowrap; }
+.btn:hover { background: var(--surface-2); }
+a.btn, a .btn { text-decoration: none; }
+.btn.primary { background: var(--accent); border-color: var(--accent); color: var(--accent-ink);
+  box-shadow: 0 4px 12px rgba(91, 79, 245, .3); }
+.btn.primary:hover { filter: brightness(1.07); }
+.btn.danger { color: var(--bad); }
+.btn.ghost { border-color: transparent; background: none; color: var(--accent); }
+.btn.sm { padding: 6px 11px; font-size: 13px; border-radius: 10px; }
+.btn:disabled { opacity: .55; cursor: wait; }
+.link { background: none; border: 0; color: var(--accent); cursor: pointer; padding: 0; font-weight: 600; font-size: 13px; }
+input.field, select.field, textarea.field { width: 100%; background: var(--surface); border: 1px solid var(--border);
+  border-radius: 12px; padding: 10px 12px; outline: none; }
+input.field:focus, select.field:focus { border-color: var(--accent); box-shadow: 0 0 0 3px var(--accent-soft); }
+label.lbl { display: block; font-size: 13px; color: var(--text-2); font-weight: 600; margin: 12px 0 6px; }
+.ico { width: 40px; height: 40px; border-radius: 12px; background: var(--surface-2); display: grid; place-items: center;
+  font-size: 20px; flex: none; }
+.muted { color: var(--muted); }
+.empty { text-align: center; color: var(--muted); padding: 28px 10px; }
+.pill { display: inline-flex; align-items: center; gap: 4px; font-size: 11.5px; font-weight: 600; padding: 2px 8px;
+  border-radius: 999px; background: var(--surface-2); color: var(--text-2); white-space: nowrap; }
+.pill.shopee { background: #ffe7dc; color: #b23c0c; } .pill.momo { background: #fde4f1; color: #9c0b5b; } .pill.tiktok { background: #e3ecfb; color: #1f3f73; }
+.pill.bad { background: var(--bad-soft); color: var(--bad); } .pill.good { background: var(--good-soft); color: var(--good); }
+@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) .pill.shopee { background: #4a2414; color: #f6b195; }
+  :root:not([data-theme="light"]) .pill.tiktok { background: #18294a; color: #a9c6f0; } }
+.up { color: var(--bad); } .down { color: var(--good); }
+
+/* ---------- overview ---------- */
+.hero { background: var(--hero); color: #fff; border-radius: 24px; padding: 28px 30px; display: flex; gap: 24px;
+  align-items: center; box-shadow: 0 12px 32px rgba(91, 79, 245, .28); position: relative; overflow: hidden; }
+.hero::after { content: ""; position: absolute; right: -60px; top: -80px; width: 260px; height: 260px; border-radius: 50%;
+  background: rgba(255, 255, 255, .08); }
+.hero-main { flex: 1; min-width: 0; position: relative; z-index: 1; }
+.eyebrow { font-size: 13px; opacity: .85; font-weight: 600; letter-spacing: .02em; }
+.big { font-size: 42px; font-weight: 800; letter-spacing: -.02em; margin: 4px 0 12px; line-height: 1.1; }
+.hero-meta { display: flex; gap: 10px; flex-wrap: wrap; }
+.hero-meta span { background: rgba(255, 255, 255, .16); border-radius: 999px; padding: 5px 12px; font-size: 13px; }
+.ring { position: relative; width: 132px; height: 132px; flex: none; z-index: 1; }
+.ring svg { transform: rotate(-90deg); }
+.ring .c { position: absolute; inset: 0; display: grid; place-content: center; text-align: center; }
+.ring .c b { font-size: 26px; font-weight: 800; } .ring .c small { font-size: 11px; opacity: .85; line-height: 1.2; max-width: 90px; }
+.minis { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 14px; margin: 16px 0; }
+.mini { display: flex; align-items: center; gap: 12px; }
+.mini .k { color: var(--text-2); font-size: 13px; } .mini .v { font-size: 18px; font-weight: 700; }
+.cols { display: grid; grid-template-columns: minmax(0, 1.25fr) minmax(0, 1fr); gap: 16px; align-items: start; }
+.cats { display: flex; flex-direction: column; gap: 4px; }
+.cat { display: flex; gap: 12px; align-items: center; padding: 10px; margin: 0 -10px; border-radius: 14px; cursor: pointer; }
+.cat:hover { background: var(--surface-2); }
+.cat-body { flex: 1; min-width: 0; }
+.cat-top { display: flex; justify-content: space-between; gap: 10px; align-items: baseline; }
+.cat-name { font-weight: 600; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.cat-amt { font-weight: 700; white-space: nowrap; }
+.bar { height: 8px; background: var(--surface-2); border-radius: 999px; margin: 7px 0 5px; overflow: hidden; }
+.bar i { display: block; height: 100%; background: var(--bar); border-radius: 999px; min-width: 4px; }
+.cat-meta { display: flex; justify-content: space-between; gap: 8px; font-size: 12px; color: var(--muted); flex-wrap: wrap; }
+.trend { display: flex; align-items: flex-end; gap: 6px; height: 170px; padding-top: 8px; }
+.trend .col { flex: 1; display: flex; flex-direction: column; align-items: center; height: 100%; justify-content: flex-end; cursor: pointer; }
+.trend .b { width: 100%; max-width: 30px; background: var(--bar-soft); border-radius: 8px 8px 3px 3px; min-height: 3px; transition: background .15s; }
+.trend .col.cur .b { background: var(--bar); }
+.trend .col:hover .b { background: var(--bar); }
+.trend .l { font-size: 11px; color: var(--muted); margin-top: 6px; }
+#tip { position: fixed; pointer-events: none; background: var(--text); color: var(--bg); padding: 8px 11px;
+  border-radius: 10px; font-size: 12.5px; z-index: 60; display: none; white-space: nowrap; box-shadow: var(--shadow); }
+
+/* ---------- transaction rows ---------- */
+.txlist { display: flex; flex-direction: column; }
+.dayhead { display: flex; justify-content: space-between; font-size: 12.5px; color: var(--muted); font-weight: 600;
+  padding: 14px 2px 6px; text-transform: uppercase; letter-spacing: .03em; }
+.txrow { display: flex; align-items: center; gap: 12px; width: 100%; padding: 10px; margin: 0 -10px; width: calc(100% + 20px);
+  background: none; border: 0; border-radius: 14px; cursor: pointer; text-align: left; }
+.txrow:hover { background: var(--surface-2); }
+.tx-main { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 3px; }
+.tx-desc { font-weight: 600; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.tx-sub { font-size: 12.5px; color: var(--muted); display: flex; gap: 6px; align-items: center; flex-wrap: wrap; }
+.tx-amt { font-weight: 700; white-space: nowrap; }
+.tx-amt.inc { color: var(--good); }
+.txrow.cancelled .tx-desc, .txrow.cancelled .tx-amt { text-decoration: line-through; color: var(--muted); }
+.toolbar { display: flex; gap: 10px; flex-wrap: wrap; align-items: center; margin-bottom: 6px; }
+.toolbar .field { width: auto; }
+.search { position: relative; flex: 1; min-width: 200px; }
+.search input { padding-left: 36px; }
+.search::before { content: "⌕"; position: absolute; left: 13px; top: 50%; transform: translateY(-52%); color: var(--muted); font-size: 18px; }
+.segs { display: flex; gap: 6px; flex-wrap: wrap; }
+.seg { border: 1px solid var(--border); background: var(--surface); border-radius: 999px; padding: 6px 12px;
+  font-size: 13px; cursor: pointer; font-weight: 600; color: var(--text-2); }
+.seg.on { background: var(--text); color: var(--bg); border-color: var(--text); }
+.sumline { color: var(--text-2); font-size: 13px; margin: 6px 0 0; }
+
+/* ---------- import ---------- */
+.grid3 { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 16px; }
+.grid3 .card + .card { margin-top: 0; }
+.feature .big-ico { width: 52px; height: 52px; border-radius: 16px; display: grid; place-items: center; font-size: 26px;
+  background: var(--accent-soft); margin-bottom: 14px; }
+.feature p { color: var(--text-2); font-size: 14px; margin: 4px 0 16px; }
+.acct { display: flex; align-items: center; gap: 8px; font-size: 13px; padding: 6px 10px; background: var(--surface-2);
+  border-radius: 10px; margin-bottom: 6px; }
+.acct span { flex: 1; overflow: hidden; text-overflow: ellipsis; }
+.drop { display: block; border: 2px dashed var(--border); border-radius: 16px; padding: 22px 14px; text-align: center;
+  color: var(--text-2); cursor: pointer; font-size: 14px; transition: .15s; }
+.drop:hover, .drop.over { border-color: var(--accent); background: var(--accent-soft); color: var(--accent); }
+.result { margin-top: 14px; font-size: 13.5px; padding: 12px 14px; border-radius: 12px; background: var(--surface-2); }
+.result.err { background: var(--bad-soft); color: var(--bad); }
+.result.ok { background: var(--good-soft); color: var(--text); }
+.ocr-row { display: grid; grid-template-columns: 26px 130px minmax(0, 1fr) 180px 140px; gap: 8px; align-items: center;
+  padding: 8px 0; border-bottom: 1px solid var(--border); }
+.ocr-row input[type=checkbox] { width: 18px; height: 18px; accent-color: var(--accent); }
+details.mail { border-bottom: 1px solid var(--border); padding: 10px 0; }
+details.mail summary { cursor: pointer; font-size: 14px; display: flex; gap: 10px; align-items: center; }
+details.mail summary span { flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+details pre { white-space: pre-wrap; font-size: 12px; background: var(--surface-2); padding: 12px; border-radius: 12px;
+  max-height: 260px; overflow: auto; }
+
+/* ---------- settings ---------- */
+.set-grid { align-items: start; display: grid; grid-template-columns: repeat(auto-fill, minmax(min(100%, 300px), 1fr)); gap: 12px; }
+.catcard { border: 1px solid var(--border); border-radius: 14px; padding: 12px; }
+.catcard-head { display: flex; align-items: center; gap: 10px; }
+.catcard-head .ico { cursor: pointer; } .catcard-head .ico:hover { outline: 2px solid var(--accent); }
+.catcard-head b { flex: 1; }
+.budget { display: flex; align-items: center; gap: 8px; margin-top: 10px; font-size: 13px; color: var(--text-2); }
+.budget input { flex: 1; padding: 6px 10px; border-radius: 10px; }
+.chips { display: flex; flex-wrap: wrap; gap: 5px; margin-top: 10px; }
+.chip { font-size: 12px; background: var(--surface-2); border-radius: 999px; padding: 3px 4px 3px 10px; display: inline-flex; align-items: center; }
+.chip button { background: none; border: 0; cursor: pointer; color: var(--muted); padding: 0 5px; font-size: 14px; line-height: 1; }
+.chip button:hover { color: var(--bad); }
+.newkw { border: 1px dashed var(--border); background: none; border-radius: 999px; padding: 3px 10px; font-size: 12px; width: 110px; outline: none; }
+.newkw:focus { border-color: var(--accent); }
+.row-form { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; }
+.row-form .field { width: auto; flex: 1; min-width: 160px; }
+
+/* ---------- modal & toast ---------- */
+.backdrop { position: fixed; inset: 0; background: rgba(10, 12, 25, .45); backdrop-filter: blur(4px);
+  display: grid; place-items: center; z-index: 50; padding: 16px; animation: fade .15s; }
+.modal { background: var(--surface); border-radius: 22px; width: min(520px, 100%); max-height: calc(100vh - 32px);
+  overflow: auto; padding: 24px; box-shadow: 0 24px 60px rgba(0, 0, 0, .3); animation: pop .18s ease-out; }
+.modal.wide { width: min(680px, 100%); }
+.modal h3 { margin: 0 0 4px; font-size: 19px; letter-spacing: -.01em; }
+.modal .lead { color: var(--text-2); margin: 0 0 8px; font-size: 14px; }
+.modal-foot { display: flex; gap: 8px; justify-content: flex-end; margin-top: 22px; flex-wrap: wrap; }
+.modal-foot .left { margin-right: auto; }
+@keyframes fade { from { opacity: 0; } }
+@keyframes pop { from { opacity: 0; transform: translateY(8px) scale(.98); } }
+.kind-toggle { display: grid; grid-template-columns: 1fr 1fr; background: var(--surface-2); border-radius: 12px; padding: 4px; gap: 4px; }
+.kind-toggle button { border: 0; background: none; border-radius: 9px; padding: 8px; cursor: pointer; font-weight: 600; color: var(--text-2); }
+.kind-toggle button.on { background: var(--surface); color: var(--text); box-shadow: var(--shadow); }
+.amount-in { font-size: 30px !important; font-weight: 800; padding: 12px 14px !important; letter-spacing: -.01em; }
+.amount-hint { font-size: 13px; color: var(--muted); margin-top: 6px; min-height: 18px; }
+.catgrid { display: grid; grid-template-columns: repeat(auto-fill, minmax(118px, 1fr)); gap: 6px; }
+.catchip { display: flex; align-items: center; gap: 6px; border: 1px solid var(--border); background: var(--surface);
+  border-radius: 12px; padding: 7px 9px; cursor: pointer; font-size: 12.5px; text-align: left; line-height: 1.2; }
+.catchip span:first-child { font-size: 17px; }
+.catchip.on { border-color: var(--accent); background: var(--accent-soft); color: var(--accent); font-weight: 650; }
+.remember { margin-top: 12px; background: var(--accent-soft); border-radius: 12px; padding: 10px 12px; font-size: 13px; display: none; }
+.remember.show { display: block; }
+.remember label { display: flex; gap: 8px; align-items: center; }
+.remember input[type=text] { margin-top: 8px; }
+.steps { display: flex; gap: 6px; margin: 2px 0 18px; }
+.steps i { flex: 1; height: 4px; border-radius: 4px; background: var(--surface-2); }
+.steps i.on { background: var(--accent); }
+.step-ico { font-size: 40px; margin-bottom: 6px; }
+ol.howto { padding-left: 20px; color: var(--text-2); font-size: 14px; margin: 8px 0; }
+ol.howto li { margin: 5px 0; }
+.emoji-grid { display: grid; grid-template-columns: repeat(8, 1fr); gap: 4px; }
+.emoji-grid button { font-size: 22px; border: 0; background: none; border-radius: 10px; padding: 6px; cursor: pointer; }
+.emoji-grid button:hover { background: var(--surface-2); }
+#toasts { position: fixed; bottom: 24px; left: 50%; transform: translateX(-50%); display: flex; flex-direction: column;
+  gap: 8px; z-index: 70; align-items: center; pointer-events: none; }
+.toast { background: var(--text); color: var(--bg); padding: 11px 18px; border-radius: 14px; font-size: 14px;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, .25); animation: pop .2s ease-out; max-width: 90vw; }
+.toast.err { background: var(--bad); color: #fff; }
+.spin { display: inline-block; width: 14px; height: 14px; border: 2px solid currentColor; border-right-color: transparent;
+  border-radius: 50%; animation: rot .7s linear infinite; }
+@keyframes rot { to { transform: rotate(360deg); } }
+
+/* ---------- responsive ---------- */
+@media (max-width: 1000px) {
+  .cols, .grid3 { grid-template-columns: minmax(0, 1fr); }
+  .ocr-row { grid-template-columns: 26px minmax(0, 1fr) 120px; }
+  .ocr-row .d, .ocr-row .cat { grid-column: 2 / -1; }
+}
+@media (max-width: 760px) {
+  .shell { display: block; }
+  .side { position: fixed; bottom: 0; top: auto; left: 0; right: 0; width: auto; height: auto; padding: 6px 8px;
+    flex-direction: row; z-index: 40; border-right: 0; border-top: 1px solid var(--border); }
+  .brand, .side-foot { display: none; }
+  nav { flex-direction: row; width: 100%; justify-content: space-around; }
+  nav button { flex-direction: column; gap: 2px; font-size: 11px; padding: 6px 8px; }
+  .topbar { padding: 16px 16px 4px; }
+  main { padding: 12px 16px 100px; }
+  .hero { flex-direction: column; align-items: flex-start; padding: 22px; }
+  .big { font-size: 32px; }
+  .ring { width: 104px; height: 104px; align-self: flex-end; margin-top: -90px; }
+  .minis { grid-template-columns: minmax(0, 1fr); }
+  #addBtn span { display: none; }
+}
+</style>
+</head>
+<body>
+<div class="shell">
+  <aside class="side">
+    <div class="brand"><div class="logo">₫</div><div><b>Thu Chi</b><small>Gia đình</small></div></div>
+    <nav>
+      <button data-tab="overview" class="on"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 11l9-7 9 7"/><path d="M5 10v10h14V10"/><path d="M10 20v-6h4v6"/></svg><span>Tổng quan</span></button>
+      <button data-tab="tx"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M8 6h13M8 12h13M8 18h13"/><circle cx="3.5" cy="6" r="1"/><circle cx="3.5" cy="12" r="1"/><circle cx="3.5" cy="18" r="1"/></svg><span>Giao dịch</span></button>
+      <button data-tab="import"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3v12"/><path d="M7 10l5 5 5-5"/><path d="M4 17v3h16v-3"/></svg><span>Nhập dữ liệu</span></button>
+      <button data-tab="settings"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.7 1.7 0 00.3 1.8l.1.1a2 2 0 11-2.8 2.8l-.1-.1a1.7 1.7 0 00-1.8-.3 1.7 1.7 0 00-1 1.5V21a2 2 0 11-4 0v-.1a1.7 1.7 0 00-1.1-1.5 1.7 1.7 0 00-1.8.3l-.1.1a2 2 0 11-2.8-2.8l.1-.1a1.7 1.7 0 00.3-1.8 1.7 1.7 0 00-1.5-1H3a2 2 0 110-4h.1a1.7 1.7 0 001.5-1.1 1.7 1.7 0 00-.3-1.8l-.1-.1a2 2 0 112.8-2.8l.1.1a1.7 1.7 0 001.8.3H9a1.7 1.7 0 001-1.5V3a2 2 0 114 0v.1a1.7 1.7 0 001 1.5 1.7 1.7 0 001.8-.3l.1-.1a2 2 0 112.8 2.8l-.1.1a1.7 1.7 0 00-.3 1.8V9a1.7 1.7 0 001.5 1H21a2 2 0 110 4h-.1a1.7 1.7 0 00-1.5 1z"/></svg><span>Cài đặt</span></button>
+    </nav>
+    <div class="side-foot" id="sideFoot"></div>
+  </aside>
+
+  <div class="content">
+    <header class="topbar">
+      <div><div class="hello" id="hello">Xin chào 👋</div><div class="hello-sub" id="helloSub"></div></div>
+      <div class="grow"></div>
+      <div class="month">
+        <button id="prevM" aria-label="Tháng trước">‹</button>
+        <span id="monthLabel"></span>
+        <button id="nextM" aria-label="Tháng sau">›</button>
+        <button id="todayBtn" hidden>Tháng này</button>
+      </div>
+      <button class="btn primary" id="addBtn">＋ <span>Thêm khoản</span></button>
+    </header>
+
+    <main>
+      <!-- ================= OVERVIEW ================= -->
+      <section id="overview">
+        <div class="hero">
+          <div class="hero-main">
+            <div class="eyebrow" id="hEyebrow">Tổng chi tháng này</div>
+            <div class="big num" id="hExpense">0 ₫</div>
+            <div class="hero-meta">
+              <span>Thu nhập <b class="num" id="hIncome">0 ₫</b></span>
+              <span>Còn lại <b class="num" id="hLeft">0 ₫</b></span>
+              <span id="hDelta" hidden></span>
+            </div>
+          </div>
+          <div class="ring" id="ring"></div>
+        </div>
+        <div class="minis">
+          <div class="card mini"><span class="ico">🛍️</span><div><div class="k">Shopee</div><div class="v num" id="mShopee">0 ₫</div></div></div>
+          <div class="card mini"><span class="ico">🎵</span><div><div class="k">TikTok Shop</div><div class="v num" id="mTiktok">0 ₫</div></div></div>
+          <div class="card mini"><span class="ico">🧾</span><div><div class="k">Số giao dịch</div><div class="v num" id="mCount">0</div></div></div>
+        </div>
+        <div id="welcomeEmpty"></div>
+        <div class="cols">
+          <div class="card">
+            <div class="card-head"><h2>Chi theo hạng mục</h2><span class="muted" style="font-size:12px">% trên tổng chi</span></div>
+            <div class="cats" id="cats"></div>
+          </div>
+          <div>
+            <div class="card">
+              <div class="card-head"><h2>12 tháng gần nhất</h2><span class="muted" style="font-size:12px">Tổng chi mỗi tháng</span></div>
+              <div class="trend" id="trend"></div>
+            </div>
+            <div class="card">
+              <div class="card-head"><h2>Gần đây</h2><button class="link" data-goto="tx">Xem tất cả →</button></div>
+              <div class="txlist" id="recent"></div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- ================= TRANSACTIONS ================= -->
+      <section id="tx" hidden>
+        <div class="card">
+          <div class="toolbar">
+            <div class="search"><input class="field" id="fText" placeholder="Tìm theo mô tả…"></div>
+            <select class="field" id="fCat"></select>
+          </div>
+          <div class="segs" id="fSrc">
+            <button class="seg on" data-src="">Tất cả</button><button class="seg" data-src="shopee">Shopee</button>
+            <button class="seg" data-src="tiktok">TikTok</button><button class="seg" data-src="momo">MoMo</button><button class="seg" data-src="manual">Nhập tay</button>
+            <button class="seg" data-src="screenshot">Ảnh chụp</button><button class="seg" data-src="email">Email khác</button>
+          </div>
+          <p class="sumline" id="txSum"></p>
+          <div class="txlist" id="txList"></div>
+        </div>
+      </section>
+
+      <!-- ================= IMPORT ================= -->
+      <section id="import" hidden>
+        <div class="grid3">
+          <div class="card feature">
+            <div class="big-ico">✉️</div>
+            <h2>Gmail</h2>
+            <p>Tự đọc email đơn hàng Shopee, TikTok và biên lai MoMo. Mỗi đơn tính một lần, đơn huỷ tự bỏ ra. Không đọc Spam/Thùng rác.</p>
+            <div id="acctList"></div>
+            <div class="row-form">
+              <button class="btn primary" id="syncBtn">Đồng bộ ngay</button>
+              <button class="btn" data-action="gmail-wizard">＋ Thêm Gmail</button>
+            </div>
+            <div class="muted" style="font-size:12px;margin-top:10px" id="lastSync"></div>
+            <div id="syncResult"></div>
+          </div>
+          <div class="card feature">
+            <div class="big-ico">📸</div>
+            <h2>Ảnh chụp màn hình</h2>
+            <p>Trang "Đơn mua", biên lai chuyển khoản, hoá đơn điện nước… Đọc ngay trên máy.</p>
+            <label class="drop" id="drop"><span id="dropText">Kéo thả ảnh, dán (⌘V) hoặc bấm để chọn</span>
+              <input type="file" id="files" accept="image/*" multiple hidden></label>
+          </div>
+          <div class="card feature">
+            <div class="big-ico">✍️</div>
+            <h2>Nhập tay</h2>
+            <p>Học phí, tiền điện nước, đi chợ, lương… những khoản không qua Shopee/TikTok.</p>
+            <button class="btn primary" data-action="add">＋ Thêm khoản thu/chi</button>
+          </div>
+        </div>
+        <div class="card" id="ocrCard" hidden style="margin-top:16px">
+          <div class="card-head"><h2>Kết quả đọc ảnh</h2><span class="muted" style="font-size:12px">Kiểm tra, sửa nếu cần, rồi Lưu</span></div>
+          <div id="ocrRows"></div>
+          <div id="ocrRaw" style="margin-top:10px"></div>
+          <div class="modal-foot"><button class="btn" id="ocrCancel">Bỏ</button><button class="btn primary" id="ocrSave">Lưu các dòng đã chọn</button></div>
+        </div>
+        <div class="card" style="margin-top:16px">
+          <div class="card-head"><h2>Email chưa đọc được số tiền</h2><button class="btn sm" id="reparseBtn">Phân tích lại</button></div>
+          <p class="hint">Thường là email "đang giao/đã giao" không ghi giá — bấm Ẩn. Nếu là đơn mới, hãy nhập tay.</p>
+          <div id="emails"></div>
+        </div>
+      </section>
+
+      <!-- ================= SETTINGS ================= -->
+      <section id="settings" hidden>
+        <div class="card">
+          <h2>Hồ sơ</h2>
+          <p class="hint">Tên dùng để chào bạn trên màn hình chính.</p>
+          <form class="row-form" id="profileForm"><input class="field" name="user_name" placeholder="Tên của bạn"><button class="btn">Lưu</button></form>
+        </div>
+        <div class="card">
+          <div class="card-head"><h2>Tài khoản Gmail</h2><button class="btn sm primary" data-action="gmail-wizard">＋ Thêm Gmail</button></div>
+          <p class="hint">Có thể thêm nhiều tài khoản (của bạn và người nhà) để gom chung chi tiêu. App Password được cất trong Keychain của macOS.</p>
+          <div id="acctSettings"></div>
+          <details style="margin-top:12px"><summary class="muted" style="cursor:pointer;font-size:13px">Nâng cao: bộ lọc tìm email</summary>
+            <form class="row-form" id="queryForm" style="margin-top:10px"><input class="field" name="gmail_query"><button class="btn sm">Lưu</button></form>
+            <p class="hint" style="margin-top:6px">Cú pháp tìm kiếm của Gmail, ví dụ <code>from:(shopee OR tiktok) newer_than:2y</code></p>
+          </details>
+        </div>
+        <div class="card">
+          <div class="card-head"><h2>Hạng mục &amp; ngân sách</h2></div>
+          <p class="hint">Bấm biểu tượng để đổi. Từ khoá dùng để tự phân loại (không phân biệt dấu). Ngân sách để trống nếu không cần.</p>
+          <div class="set-grid" id="catSettings"></div>
+          <form class="row-form" id="catForm" style="margin-top:14px">
+            <input class="field" name="name" placeholder="Tên hạng mục mới" required>
+            <select class="field" name="kind" style="flex:0 0 auto;min-width:0"><option value="expense">Chi</option><option value="income">Thu</option></select>
+            <button class="btn">＋ Thêm hạng mục</button>
+          </form>
+        </div>
+        <div class="card">
+          <h2>Dữ liệu</h2>
+          <p class="hint">Mọi thứ nằm trong một file trên máy này: <code id="dataDir"></code></p>
+          <div class="row-form">
+            <a href="/api/export.csv" download><button class="btn" type="button">⬇︎ Xuất CSV (Excel/Numbers)</button></a>
+            <button class="btn" id="revealBtn" type="button">📂 Mở thư mục dữ liệu</button>
+            <button class="btn danger" id="quitBtn" type="button" hidden>Tắt ứng dụng</button>
+          </div>
+        </div>
+      </section>
+    </main>
+  </div>
+</div>
+<div id="modalRoot"></div>
+<div id="toasts"></div>
+<div id="tip"></div>
+
+<script>
+const $ = (s, el = document) => el.querySelector(s);
+const $$ = (s, el = document) => [...el.querySelectorAll(s)];
+const nf = new Intl.NumberFormat('vi-VN');
+const fmt = n => nf.format(Math.round(n || 0)) + ' ₫';
+const short = n => n >= 1e9 ? (n / 1e9).toFixed(1).replace('.', ',').replace(',0', '') + ' tỷ'
+  : n >= 1e6 ? (n / 1e6).toFixed(1).replace('.', ',').replace(',0', '') + ' tr' : n >= 1e3 ? Math.round(n / 1e3) + 'k' : String(n || 0);
+const pct1 = x => x.toFixed(1).replace('.', ',') + '%';
+const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({'&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;'}[c]));
+const SRC = {shopee: 'Shopee', tiktok: 'TikTok', momo: 'MoMo', manual: 'Nhập tay', screenshot: 'Ảnh chụp', email: 'Email'};
+const DOW = ['Chủ nhật', 'Thứ Hai', 'Thứ Ba', 'Thứ Tư', 'Thứ Năm', 'Thứ Sáu', 'Thứ Bảy'];
+const pad = n => String(n).padStart(2, '0');
+const todayISO = () => { const d = new Date(); return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`; };
+const thisMonth = () => todayISO().slice(0, 7);
+const monthName = m => `Tháng ${+m.slice(5)}, ${m.slice(0, 4)}`;
+
+async function api(path, opts = {}) {
+  const isForm = opts.body instanceof FormData;
+  const headers = {'X-Budget': '1', ...(opts.body && !isForm ? {'Content-Type': 'application/json'} : {})};
+  const r = await fetch(path, {...opts, headers, body: opts.body && !isForm ? JSON.stringify(opts.body) : opts.body});
+  const data = await r.json().catch(() => ({}));
+  if (!r.ok) throw new Error(data.error || `Lỗi ${r.status}`);
+  return data;
+}
+
+// "1.500.000", "1,5tr", "200k", "1.2 triệu" → integer VND
+function parseAmount(s) {
+  s = String(s ?? '').trim().toLowerCase().replace(/\s+/g, '').replace(/[₫đ]$/, '');
+  const m = s.match(/^([\d.,]+)(k|nghìn|ngàn|tr|triệu|m|tỷ|ty)?$/);
+  if (!m) return NaN;
+  const num = m[2] ? parseFloat(m[1].replace(',', '.')) : parseInt(m[1].replace(/[.,]/g, ''), 10);
+  return Math.round(num * ({k: 1e3, 'nghìn': 1e3, 'ngàn': 1e3, tr: 1e6, 'triệu': 1e6, m: 1e6, 'tỷ': 1e9, ty: 1e9}[m[2]] || 1));
+}
+
+// ---------------------------------------------------------------- toast, modal, confirm
+function toast(msg, err = false) {
+  const t = document.createElement('div');
+  t.className = 'toast' + (err ? ' err' : ''); t.textContent = msg;
+  $('#toasts').append(t); setTimeout(() => t.remove(), err ? 6000 : 3200);
+}
+function modal(html, {wide = false, onClose} = {}) {
+  const back = document.createElement('div');
+  back.className = 'backdrop';
+  back.innerHTML = `<div class="modal ${wide ? 'wide' : ''}" role="dialog">${html}</div>`;
+  const close = () => { back.remove(); document.removeEventListener('keydown', onKey); onClose && onClose(); };
+  const onKey = e => { if (e.key === 'Escape') close(); };
+  back.addEventListener('mousedown', e => { if (e.target === back) close(); });
+  document.addEventListener('keydown', onKey);
+  $('#modalRoot').append(back);
+  const el = $('.modal', back);
+  $$('[data-close]', el).forEach(b => b.onclick = close);
+  setTimeout(() => $('[autofocus]', el)?.focus(), 30);
+  return {el, close};
+}
+function confirmBox(title, text, okLabel = 'Đồng ý', danger = false) {
+  return new Promise(resolve => {
+    let answered = false;
+    const m = modal(`<h3>${esc(title)}</h3><p class="lead">${esc(text)}</p>
+      <div class="modal-foot"><button class="btn" data-close>Huỷ</button>
+      <button class="btn ${danger ? 'danger' : 'primary'}" id="okBtn">${esc(okLabel)}</button></div>`,
+      {onClose: () => answered || resolve(false)});
+    $('#okBtn', m.el).onclick = () => { answered = true; resolve(true); m.close(); };
+  });
+}
+async function busy(btn, fn) {
+  const label = btn.innerHTML; btn.disabled = true; btn.innerHTML = '<span class="spin"></span> ' + label;
+  try { return await fn(); } finally { btn.disabled = false; btn.innerHTML = label; }
+}
+
+// ---------------------------------------------------------------- state & navigation
+const state = {month: thisMonth(), cats: [], tx: [], info: {}, src: '', cat: ''};
+
+function showTab(name) {
+  $$('nav button').forEach(b => b.classList.toggle('on', b.dataset.tab === name));
+  $$('main > section').forEach(s => s.hidden = s.id !== name);
+  try { localStorage.setItem('tab', name); } catch {}
+  if (name === 'import') { renderAccounts(); loadEmails(); }
+  if (name === 'settings') renderSettings();
+  window.scrollTo(0, 0);
+}
+$$('nav button').forEach(b => b.onclick = () => showTab(b.dataset.tab));
+document.addEventListener('click', e => {
+  const g = e.target.closest('[data-goto]'); if (g) showTab(g.dataset.goto);
+  const a = e.target.closest('[data-action]'); if (!a) return;
+  if (a.dataset.action === 'add') txModal();
+  if (a.dataset.action === 'gmail-wizard') gmailWizard();
+});
+
+function setMonth(m) {
+  state.month = m;
+  $('#monthLabel').textContent = monthName(m);
+  $('#todayBtn').hidden = m === thisMonth();
+  refresh();
+}
+function shiftMonth(d) { const [y, m] = state.month.split('-').map(Number); const x = new Date(y, m - 1 + d, 1);
+  setMonth(`${x.getFullYear()}-${pad(x.getMonth() + 1)}`); }
+$('#prevM').onclick = () => shiftMonth(-1);
+$('#nextM').onclick = () => shiftMonth(1);
+$('#todayBtn').onclick = () => setMonth(thisMonth());
+$('#addBtn').onclick = () => txModal();
+
+async function refresh() { await Promise.all([loadSummary(), loadTx()]); }
+async function loadInfo() {
+  state.info = await api('/api/info');
+  const n = state.info.user_name;
+  $('#hello').textContent = n ? `Chào ${n} 👋` : 'Xin chào 👋';
+  $('#sideFoot').textContent = 'Phiên bản ' + state.info.version;
+  $('#quitBtn').hidden = state.info.desktop;
+  $('#revealBtn').hidden = !state.info.desktop;
+}
+async function loadCats() {
+  state.cats = await api('/api/categories');
+  $('#fCat').innerHTML = '<option value="">Mọi hạng mục</option>' +
+    state.cats.map(c => `<option value="${c.id}">${c.icon} ${esc(c.name)}</option>`).join('');
+  $('#fCat').value = state.cat;
+}
+const catById = id => state.cats.find(c => c.id === id);
+
+// ---------------------------------------------------------------- overview
+function ringSvg(p, size) {
+  const r = 52, C = 2 * Math.PI * r, v = Math.max(0, Math.min(1, p));
+  return `<svg width="${size}" height="${size}" viewBox="0 0 120 120"><circle cx="60" cy="60" r="${r}" fill="none" stroke="rgba(255,255,255,.22)" stroke-width="12"/>
+    <circle cx="60" cy="60" r="${r}" fill="none" stroke="#fff" stroke-width="12" stroke-linecap="round" stroke-dasharray="${C * v} ${C}"/></svg>`;
+}
+function deltaText(cur, prev) {
+  if (!prev) return '';
+  const d = (cur - prev) / prev * 100;
+  if (Math.abs(d) < 0.5) return '≈ tháng trước';
+  return `${d > 0 ? '▲' : '▼'} ${Math.abs(d).toFixed(0)}% so với T${+prevMonth(state.month).slice(5)}`;
+}
+function prevMonth(m) { const [y, mm] = m.split('-').map(Number); const x = new Date(y, mm - 2, 1); return `${x.getFullYear()}-${pad(x.getMonth() + 1)}`; }
+
+async function loadSummary() {
+  const s = await api('/api/summary?month=' + state.month);
+  $('#hEyebrow').textContent = `Tổng chi ${monthName(s.month).toLowerCase()}`;
+  $('#hExpense').textContent = fmt(s.expense);
+  $('#hIncome').textContent = fmt(s.income);
+  $('#hLeft').textContent = fmt(s.income - s.expense);
+  const prevExp = s.trend.at(-2)?.expense || 0;
+  $('#hDelta').hidden = !prevExp || !s.expense;
+  $('#hDelta').textContent = deltaText(s.expense, prevExp);
+  const narrow = matchMedia('(max-width: 760px)').matches;
+  $('#ring').innerHTML = ringSvg(s.income ? s.expense / s.income : 0, narrow ? 104 : 132) + (s.income
+    ? `<div class="c"><b>${Math.round(s.expense / s.income * 100)}%</b><small>thu nhập đã chi</small></div>`
+    : `<div class="c"><b>–</b><small>thêm thu nhập để xem tỷ lệ</small></div>`);
+  $('#mShopee').textContent = fmt(s.by_source.shopee);
+  $('#mTiktok').textContent = fmt(s.by_source.tiktok);
+  $('#mCount').textContent = nf.format(s.count);
+  $('#helloSub').textContent = s.expense
+    ? `${monthName(s.month)}: đã chi ${short(s.expense)}${s.categories[0] ? `, nhiều nhất cho ${s.categories[0].name.toLowerCase()}` : ''}.`
+    : 'Cùng xem tiền nhà mình đi đâu nhé.';
+
+  const hasAny = s.trend.some(t => t.expense || t.income);
+  $('#welcomeEmpty').innerHTML = hasAny ? '' : `
+    <div class="card" style="margin-bottom:16px;text-align:center;padding:30px">
+      <div style="font-size:44px">🌱</div><h2 style="margin:6px 0">Bắt đầu thôi!</h2>
+      <p class="muted" style="margin:0 0 16px">Chưa có dữ liệu. Chọn một cách để thêm khoản chi đầu tiên:</p>
+      <div class="row-form" style="justify-content:center">
+        <button class="btn primary" data-action="gmail-wizard">✉️ Kết nối Gmail</button>
+        <button class="btn" data-goto="import">📸 Thêm ảnh chụp</button>
+        <button class="btn" data-action="add">✍️ Nhập tay</button></div></div>`;
+
+  const max = Math.max(...s.categories.map(c => c.pct), 1);
+  $('#cats').innerHTML = s.categories.length ? s.categories.map(c => {
+    let budget = '';
+    if (c.budget) budget = c.amount > c.budget
+      ? `<span class="pill bad">⚠ Vượt ngân sách ${short(c.amount - c.budget)}</span>`
+      : `<span>Ngân sách ${short(c.budget)} · còn ${short(c.budget - c.amount)}</span>`;
+    const d = deltaText(c.amount, c.prev);
+    return `<div class="cat" data-cat="${c.id ?? ''}">
+      <span class="ico">${c.icon}</span>
+      <div class="cat-body">
+        <div class="cat-top"><span class="cat-name">${esc(c.name)}</span><span class="cat-amt num">${fmt(c.amount)}</span></div>
+        <div class="bar"><i style="width:${c.pct / max * 100}%"></i></div>
+        <div class="cat-meta"><span><b style="color:var(--text)">${pct1(c.pct)}</b> · ${c.count} giao dịch${d ? ' · ' + d : ''}</span>${budget}</div>
+      </div></div>`;
+  }).join('') : '<div class="empty">Chưa có khoản chi nào trong tháng này.</div>';
+  $$('#cats .cat').forEach(r => r.onclick = () => {
+    state.cat = r.dataset.cat; $('#fCat').value = state.cat; renderTx(); showTab('tx');
+  });
+
+  const tmax = Math.max(...s.trend.map(t => t.expense), 1);
+  $('#trend').innerHTML = s.trend.map(t => `
+    <div class="col ${t.month === s.month ? 'cur' : ''}" data-m="${t.month}" data-e="${t.expense}" data-i="${t.income}">
+      <div class="b" style="height:${t.expense / tmax * 86}%"></div><div class="l">T${+t.month.slice(5)}</div></div>`).join('');
+  $$('#trend .col').forEach(col => {
+    col.onmousemove = e => tip(e, `<b>${monthName(col.dataset.m)}</b><br>Chi: ${fmt(col.dataset.e)}<br>Thu: ${fmt(col.dataset.i)}`);
+    col.onmouseleave = () => $('#tip').style.display = 'none';
+    col.onclick = () => setMonth(col.dataset.m);
+  });
+  $('#recent').innerHTML = s.recent.length ? s.recent.map(txRow).join('') : '<div class="empty">Chưa có giao dịch.</div>';
+}
+function tip(e, html) {
+  const t = $('#tip'); t.innerHTML = html; t.style.display = 'block';
+  t.style.left = Math.min(e.clientX + 14, innerWidth - t.offsetWidth - 8) + 'px';
+  t.style.top = (e.clientY - t.offsetHeight - 12) + 'px';
+}
+
+// ---------------------------------------------------------------- transactions
+function txRow(t) {
+  const sub = [`<span class="pill ${t.source}">${SRC[t.source] || t.source}</span>`, esc(t.category || 'Chưa phân loại')];
+  if (t.status === 'cancelled') sub.push('<span class="pill bad">Không tính</span>');
+  const d = t.date;
+  return `<button class="txrow ${t.status === 'cancelled' ? 'cancelled' : ''}" data-id="${t.id}">
+    <span class="ico">${t.icon || '❔'}</span>
+    <span class="tx-main"><span class="tx-desc">${esc(t.description) || '<span class="muted">(không có mô tả)</span>'}</span>
+      <span class="tx-sub">${sub.join(' · ')} · ${d.slice(8)}/${d.slice(5, 7)}</span></span>
+    <span class="tx-amt num ${t.kind === 'income' ? 'inc' : ''}">${t.kind === 'income' ? '+' : '−'}${fmt(t.amount)}</span></button>`;
+}
+async function loadTx() { state.tx = await api('/api/transactions?month=' + state.month); renderTx(); }
+function renderTx() {
+  const q = $('#fText').value.trim().toLowerCase();
+  const rows = state.tx.filter(t => (!state.cat || String(t.category_id ?? '') === state.cat) && (!state.src || t.source === state.src)
+    && (!q || t.description.toLowerCase().includes(q)));
+  const spend = rows.filter(t => t.status === 'ok' && t.kind === 'expense').reduce((a, t) => a + t.amount, 0);
+  $('#txSum').textContent = `${monthName(state.month)} · ${rows.length} giao dịch · chi ${fmt(spend)}`;
+  if (!rows.length) { $('#txList').innerHTML = '<div class="empty">Không có giao dịch nào.</div>'; return; }
+  const days = {};
+  rows.forEach(t => (days[t.date] ||= []).push(t));
+  $('#txList').innerHTML = Object.entries(days).map(([d, list]) => {
+    const dt = new Date(d + 'T00:00:00');
+    const total = list.filter(t => t.status === 'ok' && t.kind === 'expense').reduce((a, t) => a + t.amount, 0);
+    return `<div class="dayhead"><span>${DOW[dt.getDay()]}, ${d.slice(8)}/${d.slice(5, 7)}</span><span class="num">${total ? '−' + fmt(total) : ''}</span></div>`
+      + list.map(txRow).join('');
+  }).join('');
+}
+$('#fText').oninput = renderTx;
+$('#fCat').onchange = () => { state.cat = $('#fCat').value; renderTx(); };
+$('#fSrc').onclick = e => {
+  const b = e.target.closest('.seg'); if (!b) return;
+  state.src = b.dataset.src; $$('#fSrc .seg').forEach(x => x.classList.toggle('on', x === b)); renderTx();
+};
+document.addEventListener('click', e => {
+  const row = e.target.closest('.txrow'); if (!row) return;
+  const id = +row.dataset.id;
+  const t = state.tx.find(x => x.id === id);
+  if (t) txModal(t); else api('/api/transactions?month=' + state.month).then(list => txModal(list.find(x => x.id === id)));
+});
+
+// Add / edit one transaction.
+function txModal(t = null) {
+  const edit = !!t;
+  let kind = t?.kind || 'expense', cat = t?.category_id || null;
+  const m = modal(`
+    <h3>${edit ? 'Sửa giao dịch' : 'Thêm khoản thu/chi'}</h3>
+    <p class="lead">${edit ? `${SRC[t.source] || t.source}${t.order_id && !t.order_id.startsWith('MSG-') ? ' · đơn #' + esc(t.order_id) : ''}` : 'Học phí, điện nước, đi chợ, lương…'}</p>
+    <div class="kind-toggle"><button data-k="expense">Khoản chi</button><button data-k="income">Khoản thu</button></div>
+    <label class="lbl">Số tiền</label>
+    <input class="field amount-in num" id="mAmt" inputmode="decimal" placeholder="0" autofocus value="${t ? nf.format(t.amount) : ''}">
+    <div class="amount-hint" id="mHint">Gõ 1.500.000 · 1,5tr · 200k đều được</div>
+    <label class="lbl">Mô tả</label>
+    <input class="field" id="mDesc" placeholder="vd. Học phí tháng 11 bé An" value="${esc(t?.description || '')}">
+    <label class="lbl">Ngày</label>
+    <input class="field" id="mDate" type="date" value="${t?.date || todayISO()}">
+    <label class="lbl">Hạng mục</label>
+    <div class="catgrid" id="mCats"></div>
+    <div class="remember" id="mRemember">
+      <label><input type="checkbox" id="mRem" checked> Ghi nhớ: mô tả có chữ này thì tự xếp vào hạng mục đã chọn</label>
+      <input class="field" type="text" id="mKw">
+    </div>
+    <div class="modal-foot">
+      ${edit ? `<button class="btn danger left" id="mDel">Xoá</button>
+        <button class="btn" id="mToggle">${t.status === 'cancelled' ? 'Tính lại' : 'Không tính'}</button>` : ''}
+      <button class="btn" data-close>Huỷ</button>
+      <button class="btn primary" id="mSave">${edit ? 'Lưu' : 'Thêm'}</button>
+    </div>`);
+  const el = m.el;
+  const drawCats = () => {
+    const list = state.cats.filter(c => c.kind === kind);
+    $('#mCats', el).innerHTML = (edit ? '' : `<button class="catchip ${!cat ? 'on' : ''}" data-c=""><span>✨</span><span>Tự động</span></button>`)
+      + list.map(c => `<button class="catchip ${c.id === cat ? 'on' : ''}" data-c="${c.id}"><span>${c.icon}</span><span>${esc(c.name)}</span></button>`).join('');
+    $$('.kind-toggle button', el).forEach(b => b.classList.toggle('on', b.dataset.k === kind));
+  };
+  drawCats();
+  $('.kind-toggle', el).onclick = e => { const b = e.target.closest('button'); if (!b) return;
+    kind = b.dataset.k; if (cat && catById(cat)?.kind !== kind) cat = null; drawCats(); };
+  $('#mCats', el).onclick = e => {
+    const b = e.target.closest('.catchip'); if (!b) return;
+    cat = b.dataset.c ? +b.dataset.c : null; drawCats();
+    if (edit && cat && cat !== t.category_id) {
+      $('#mRemember', el).classList.add('show');
+      $('#mKw', el).value ||= $('#mDesc', el).value.split(/[\s·,|-]+/).filter(w => w.length > 1).slice(0, 2).join(' ');
+    }
+  };
+  const amtIn = $('#mAmt', el);
+  amtIn.oninput = () => { const v = parseAmount(amtIn.value);
+    $('#mHint', el).textContent = v > 0 ? '= ' + fmt(v) : 'Gõ 1.500.000 · 1,5tr · 200k đều được'; };
+  amtIn.oninput();
+  el.addEventListener('keydown', e => { if (e.key === 'Enter' && e.target.tagName === 'INPUT') $('#mSave', el).click(); });
+
+  $('#mSave', el).onclick = () => busy($('#mSave', el), async () => {
+    const amount = parseAmount(amtIn.value);
+    if (!(amount > 0)) { amtIn.focus(); return toast('Số tiền chưa hợp lệ', true); }
+    const body = {amount, kind, description: $('#mDesc', el).value.trim(), date: $('#mDate', el).value || todayISO(), category_id: cat};
+    try {
+      if (edit) {
+        await api('/api/transactions/' + t.id, {method: 'PATCH', body: {...body, category_id: cat ?? t.category_id}});
+        const kw = $('#mKw', el).value.trim();
+        if ($('#mRemember', el).classList.contains('show') && $('#mRem', el).checked && kw) {
+          const r = await api('/api/rules', {method: 'POST', body: {keyword: kw, category_id: cat, apply_existing: true}});
+          toast(r.changed ? `Đã ghi nhớ và xếp lại ${r.changed} giao dịch khác` : 'Đã ghi nhớ quy tắc');
+          loadCats();
+        } else toast('Đã lưu');
+      } else {
+        await api('/api/transactions', {method: 'POST', body});
+        toast(`Đã thêm ${fmt(amount)}`);
+        if (body.date.slice(0, 7) !== state.month) setMonth(body.date.slice(0, 7));
+      }
+      m.close(); refresh();
+    } catch (err) { toast(err.message, true); }
+  });
+  if (edit) {
+    $('#mDel', el).onclick = async () => {
+      if (!await confirmBox('Xoá giao dịch?', 'Giao dịch sẽ bị xoá hẳn.', 'Xoá', true)) return;
+      await api('/api/transactions/' + t.id, {method: 'DELETE'}); m.close(); toast('Đã xoá'); refresh();
+    };
+    $('#mToggle', el).onclick = async () => {
+      await api('/api/transactions/' + t.id, {method: 'PATCH', body: {status: t.status === 'cancelled' ? 'ok' : 'cancelled'}});
+      m.close(); refresh();
+    };
+  }
+}
+
+// ---------------------------------------------------------------- Gmail
+function renderAccounts() {
+  const list = state.info.gmail_accounts || [];
+  $('#acctList').innerHTML = list.length ? list.map(a => `<div class="acct">✉️ <span>${esc(a)}</span></div>`).join('')
+    : '<div class="acct"><span class="muted">Chưa kết nối tài khoản nào</span></div>';
+  $('#syncBtn').hidden = !list.length;
+  $('#lastSync').textContent = state.info.gmail_last_sync ? 'Đồng bộ lần cuối: ' + state.info.gmail_last_sync.replace('T', ' lúc ') : '';
+}
+$('#syncBtn').onclick = () => busy($('#syncBtn'), async () => {
+  const box = $('#syncResult');
+  box.innerHTML = '<div class="result">Đang đọc Gmail… lần đầu có thể mất 1–2 phút.</div>';
+  try {
+    const r = await api('/api/gmail/sync', {method: 'POST'});
+    box.innerHTML = `<div class="result ok"><b>🎉 Đã nhập ${r.imported || 0} đơn mới</b><br>
+      <span class="muted">${r.found} email phù hợp · ${r.new} email mới · ${r.duplicate || 0} trùng đơn cũ · ${r.cancelled || 0} huỷ/hoàn · ${r.no_amount || 0} không có giá · ${r.skipped || 0} quảng cáo</span></div>`
+      + (r.new && !r.imported ? `<div class="result">Không có email nào là đơn hàng hay biên lai — ${r.skipped || 0} email là quảng cáo, khảo sát hoặc thông báo khác. Shopee/TikTok thường chỉ báo đơn trong app; khi đó hãy chụp màn hình trang "Đơn mua" và thêm ở ô Ảnh chụp.</div>` : '')
+      + (r.errors || []).map(e => `<div class="result err">${esc(e)}</div>`).join('');
+    await loadInfo(); renderAccounts(); refresh(); loadEmails();
+  } catch (err) { box.innerHTML = `<div class="result err">${esc(err.message)}</div>`; }
+});
+$('#reparseBtn').onclick = async () => {
+  const r = await api('/api/gmail/reparse', {method: 'POST'});
+  toast(`Phân tích lại xong: ${r.imported || 0} đơn mới`); refresh(); loadEmails();
+};
+async function loadEmails() {
+  const list = await api('/api/emails?status=no_amount');
+  $('#emails').innerHTML = list.length ? list.map(m => `
+    <details class="mail" data-id="${esc(m.message_id)}"><summary><span>${esc(m.received)} · ${esc(m.subject)}</span>
+      <button class="link dismiss">Ẩn</button></summary><pre>${esc(m.body)}</pre></details>`).join('')
+    : '<div class="muted" style="font-size:14px">Không có email nào. 👍</div>';
+  $$('#emails .dismiss').forEach(b => b.onclick = async e => {
+    e.preventDefault();
+    await api('/api/emails?id=' + encodeURIComponent(b.closest('details').dataset.id), {method: 'DELETE'});
+    loadEmails();
+  });
+}
+
+function gmailWizard(startStep = 0) {
+  let step = startStep;
+  const m = modal('<div id="wz"></div>', {wide: true});
+  const box = $('#wz', m.el);
+  const steps = () => `<div class="steps">${[0, 1, 2].map(i => `<i class="${i <= step ? 'on' : ''}"></i>`).join('')}</div>`;
+  const draw = () => {
+    if (step === 0) box.innerHTML = steps() + `
+      <div class="step-ico">🔐</div><h3>Bước 1 · Bật xác minh 2 bước</h3>
+      <p class="lead">Google chỉ cho ứng dụng đọc Gmail khi tài khoản đã bật Xác minh 2 bước. Nếu đã bật rồi, bấm Tiếp.</p>
+      <ol class="howto"><li>Bấm nút bên dưới để mở trang bảo mật Google (đăng nhập đúng tài khoản Gmail cần kết nối).</li>
+        <li>Chọn <b>Bật xác minh 2 bước</b> và làm theo hướng dẫn (thường là xác nhận bằng điện thoại).</li></ol>
+      <a class="btn" href="https://myaccount.google.com/signinoptions/twosv" target="_blank" rel="noopener">Mở trang Xác minh 2 bước ↗</a>
+      <div class="modal-foot"><button class="btn" data-x>Để sau</button><button class="btn primary" data-n>Đã bật, tiếp →</button></div>`;
+    if (step === 1) box.innerHTML = steps() + `
+      <div class="step-ico">🔑</div><h3>Bước 2 · Tạo mật khẩu ứng dụng</h3>
+      <p class="lead">Đây là mật khẩu riêng 16 ký tự chỉ dùng cho app này — <b>không phải</b> mật khẩu Gmail. Có thể thu hồi bất cứ lúc nào.</p>
+      <ol class="howto"><li>Bấm nút bên dưới để mở trang <b>Mật khẩu ứng dụng</b>.</li>
+        <li>Ô "Tên ứng dụng" gõ <b>Thu Chi</b> rồi bấm <b>Tạo</b>.</li>
+        <li>Google hiện 16 ký tự (dạng <code>abcd efgh ijkl mnop</code>) — <b>sao chép</b> lại.</li></ol>
+      <a class="btn" href="https://myaccount.google.com/apppasswords" target="_blank" rel="noopener">Mở trang Mật khẩu ứng dụng ↗</a>
+      <div class="modal-foot"><button class="btn" data-b>← Quay lại</button><button class="btn primary" data-n>Đã sao chép, tiếp →</button></div>`;
+    if (step === 2) box.innerHTML = steps() + `
+      <div class="step-ico">✉️</div><h3>Bước 3 · Kết nối</h3>
+      <p class="lead">Mật khẩu được cất trong Keychain của máy này, không gửi đi đâu ngoài Google.</p>
+      <label class="lbl">Địa chỉ Gmail</label><input class="field" id="wAddr" type="email" placeholder="ten@gmail.com" autofocus>
+      <label class="lbl">Mật khẩu ứng dụng (16 ký tự)</label><input class="field" id="wPass" placeholder="abcd efgh ijkl mnop" autocomplete="off" spellcheck="false">
+      <div id="wErr"></div>
+      <div class="modal-foot"><button class="btn" data-b>← Quay lại</button><button class="btn primary" id="wGo">Kết nối</button></div>`;
+    if (step === 3) box.innerHTML = steps() + `
+      <div class="step-ico">🎉</div><h3>Đã kết nối!</h3>
+      <p class="lead">Bấm <b>Đồng bộ ngay</b> để lấy các đơn Shopee/TikTok trong 6 tháng gần nhất. Lần sau chỉ cần bấm lại nút này trong mục Nhập dữ liệu.</p>
+      <div class="modal-foot"><button class="btn" data-x>Để sau</button><button class="btn primary" id="wSync">Đồng bộ ngay</button></div>`;
+    $('[data-n]', box)?.addEventListener('click', () => { step++; draw(); });
+    $('[data-b]', box)?.addEventListener('click', () => { step--; draw(); });
+    $('[data-x]', box)?.addEventListener('click', m.close);
+    $('#wGo', box)?.addEventListener('click', () => busy($('#wGo', box), async () => {
+      try {
+        await api('/api/gmail/accounts', {method: 'POST', body: {address: $('#wAddr', box).value, password: $('#wPass', box).value}});
+        await loadInfo(); renderAccounts(); renderSettings(); step = 3; draw();
+      } catch (err) { $('#wErr', box).innerHTML = `<div class="result err">${esc(err.message)}</div>`; }
+    }));
+    $('#wSync', box)?.addEventListener('click', () => { m.close(); showTab('import'); $('#syncBtn').click(); });
+    setTimeout(() => $('[autofocus]', box)?.focus(), 30);
+  };
+  draw();
+}
+
+// ---------------------------------------------------------------- screenshots
+const drop = $('#drop');
+drop.ondragover = e => { e.preventDefault(); drop.classList.add('over'); };
+drop.ondragleave = () => drop.classList.remove('over');
+drop.ondrop = e => { e.preventDefault(); drop.classList.remove('over'); uploadShots(e.dataTransfer.files); };
+$('#files').onchange = e => uploadShots(e.target.files);
+document.addEventListener('paste', e => {  // ⌘V a screenshot straight from the clipboard
+  const imgs = [...(e.clipboardData?.files || [])].filter(f => f.type.startsWith('image/'));
+  if (imgs.length) { showTab('import'); uploadShots(imgs); }
+});
+async function uploadShots(files) {
+  if (!files.length) return;
+  const fd = new FormData(); [...files].forEach(f => fd.append('files', f));
+  $('#dropText').innerHTML = '<span class="spin"></span> Đang đọc ảnh…';
+  try {
+    const res = await api('/api/screenshot', {method: 'POST', body: fd});
+    const cands = res.flatMap(r => r.candidates);
+    const opts = sel => state.cats.filter(c => c.kind === 'expense')
+      .map(c => `<option value="${c.id}" ${c.id === sel ? 'selected' : ''}>${c.icon} ${esc(c.name)}</option>`).join('');
+    $('#ocrRows').innerHTML = cands.length ? cands.map(c => `
+      <div class="ocr-row"><input type="checkbox" class="sel" ${c.selected ? 'checked' : ''}>
+        <input class="field d" type="date" value="${c.date}">
+        <input class="field desc" value="${esc(c.description)}" placeholder="Mô tả">
+        <select class="field cat">${opts(c.category_id)}</select>
+        <input class="field amt num" value="${nf.format(c.amount)}" style="text-align:right"></div>`).join('')
+      : '<div class="empty">Không thấy số tiền nào trong ảnh. Xem chữ đọc được bên dưới rồi nhập tay.</div>';
+    $('#ocrRaw').innerHTML = res.map(r => `<details><summary class="muted" style="cursor:pointer;font-size:13px">Chữ đọc được từ ${esc(r.file)}${r.error ? ' — lỗi: ' + esc(r.error) : ''}</summary><pre>${esc(r.text)}</pre></details>`).join('');
+    $('#ocrCard').hidden = false;
+    $('#ocrCard').scrollIntoView({behavior: 'smooth', block: 'start'});
+  } catch (err) { toast(err.message, true); }
+  $('#dropText').textContent = 'Kéo thả ảnh, dán (⌘V) hoặc bấm để chọn';
+  $('#files').value = '';
+}
+$('#ocrCancel').onclick = () => { $('#ocrCard').hidden = true; };
+$('#ocrSave').onclick = async () => {
+  const items = $$('#ocrRows .ocr-row').filter(r => $('.sel', r).checked).map(r => ({
+    date: $('.d', r).value, description: $('.desc', r).value, category_id: +$('.cat', r).value,
+    amount: parseAmount($('.amt', r).value), kind: 'expense', source: 'screenshot'}));
+  if (!items.length) return toast('Chưa chọn dòng nào', true);
+  if (items.some(i => !(i.amount > 0))) return toast('Có dòng số tiền chưa hợp lệ', true);
+  await api('/api/transactions', {method: 'POST', body: items});
+  $('#ocrCard').hidden = true; toast(`Đã lưu ${items.length} giao dịch`); refresh();
+};
+
+// ---------------------------------------------------------------- settings
+const EMOJIS = '🎓📚💡💧🔥📶📱💄🧴💅🛒🍚🥬🍜☕️🏠🧺🧹🛋️👗👟👜🍼🧸👶💊🏥🦷🚗⛽️🛵✈️🎬🎮🏖️🎁💝🐶🐱🌿💼💰🏦📈🧾📦❤️⭐️'.match(/\p{Extended_Pictographic}️?/gu);
+function renderSettings() {
+  $('#profileForm').user_name.value = state.info.user_name || '';
+  $('#queryForm').gmail_query.value = state.info.gmail_query || '';
+  $('#dataDir').textContent = state.info.data_dir || '';
+  const accts = state.info.gmail_accounts || [];
+  $('#acctSettings').innerHTML = accts.length ? accts.map(a => `<div class="acct">✉️ <span>${esc(a)}</span>
+    <button class="link" data-rm="${esc(a)}" style="color:var(--bad)">Gỡ</button></div>`).join('')
+    : '<div class="acct"><span class="muted">Chưa có tài khoản nào</span></div>';
+  $('#catSettings').innerHTML = state.cats.map(c => `
+    <div class="catcard" data-id="${c.id}">
+      <div class="catcard-head"><span class="ico" title="Đổi biểu tượng">${c.icon}</span><b>${esc(c.name)}</b>
+        <span class="pill">${c.kind === 'income' ? 'Thu' : 'Chi'}</span>
+        <button class="link delcat" title="Xoá hạng mục" style="color:var(--muted)">✕</button></div>
+      ${c.kind === 'expense' ? `<div class="budget">Ngân sách/tháng <input class="field bud num" placeholder="không đặt" value="${c.budget ? nf.format(c.budget) : ''}"></div>` : ''}
+      <div class="chips">${c.keywords.map(k => `<span class="chip">${esc(k)}<button data-kw="${esc(k)}" title="Xoá">×</button></span>`).join('')}
+        <input class="newkw" placeholder="＋ từ khoá"></div>
+    </div>`).join('');
+}
+$('#acctSettings').onclick = async e => {
+  const a = e.target.dataset.rm; if (!a) return;
+  if (!await confirmBox('Gỡ tài khoản?', `App sẽ ngừng đọc email từ ${a}. Các giao dịch đã nhập vẫn giữ nguyên.`, 'Gỡ', true)) return;
+  await api('/api/gmail/accounts?address=' + encodeURIComponent(a), {method: 'DELETE'});
+  await loadInfo(); renderSettings(); toast('Đã gỡ ' + a);
+};
+$('#profileForm').onsubmit = async e => {
+  e.preventDefault();
+  await api('/api/profile', {method: 'POST', body: {user_name: e.target.user_name.value}});
+  await loadInfo(); toast('Đã lưu');
+};
+$('#queryForm').onsubmit = async e => {
+  e.preventDefault();
+  await api('/api/profile', {method: 'POST', body: {gmail_query: e.target.gmail_query.value}});
+  await loadInfo(); toast('Đã lưu bộ lọc');
+};
+$('#catSettings').addEventListener('click', async e => {
+  const card = e.target.closest('.catcard'); if (!card) return;
+  const id = +card.dataset.id;
+  if (e.target.dataset.kw) {
+    await api('/api/rules/' + encodeURIComponent(e.target.dataset.kw), {method: 'DELETE'});
+  } else if (e.target.classList.contains('delcat')) {
+    if (!await confirmBox('Xoá hạng mục?', 'Các giao dịch thuộc hạng mục này sẽ thành "Chưa phân loại".', 'Xoá', true)) return;
+    await api('/api/categories/' + id, {method: 'DELETE'});
+  } else if (e.target.classList.contains('ico')) {
+    const m = modal(`<h3>Chọn biểu tượng</h3><div class="emoji-grid" style="margin-top:12px">${EMOJIS.map(x => `<button>${x}</button>`).join('')}</div>`);
+    $('.emoji-grid', m.el).onclick = async ev => {
+      const b = ev.target.closest('button'); if (!b) return;
+      await api('/api/categories/' + id, {method: 'PATCH', body: {icon: b.textContent}});
+      m.close(); await loadCats(); renderSettings(); refresh();
+    };
+    return;
+  } else return;
+  await loadCats(); renderSettings(); refresh();
+});
+$('#catSettings').addEventListener('change', async e => {
+  if (!e.target.classList.contains('bud')) return;
+  const id = +e.target.closest('.catcard').dataset.id, raw = e.target.value.trim();
+  const v = raw ? parseAmount(raw) : null;
+  if (raw && !(v > 0)) return toast('Ngân sách chưa hợp lệ', true);
+  await api('/api/categories/' + id, {method: 'PATCH', body: {budget: v}});
+  e.target.value = v ? nf.format(v) : '';
+  await loadCats(); toast(v ? `Ngân sách ${short(v)}/tháng` : 'Đã bỏ ngân sách'); refresh();
+});
+$('#catSettings').addEventListener('keydown', async e => {
+  if (e.key !== 'Enter' || !e.target.classList.contains('newkw')) return;
+  const id = +e.target.closest('.catcard').dataset.id;
+  try { await api('/api/rules', {method: 'POST', body: {keyword: e.target.value, category_id: id}}); }
+  catch (err) { return toast(err.message, true); }
+  await loadCats(); renderSettings();
+  $(`.catcard[data-id="${id}"] .newkw`)?.focus();
+});
+$('#catForm').onsubmit = async e => {
+  e.preventDefault();
+  await api('/api/categories', {method: 'POST', body: Object.fromEntries(new FormData(e.target))});
+  e.target.reset(); await loadCats(); renderSettings();
+};
+$('#revealBtn').onclick = () => api('/api/reveal-data', {method: 'POST'});
+$('#quitBtn').onclick = async () => {
+  if (!await confirmBox('Tắt ứng dụng?', 'Mở lại bằng "Thu Chi Gia Dinh.app".', 'Tắt', true)) return;
+  await api('/api/shutdown', {method: 'POST'}).catch(() => {});
+  document.body.innerHTML = '<p style="padding:60px;text-align:center;font-size:18px">Đã tắt. Hẹn gặp lại 👋</p>';
+};
+
+// ---------------------------------------------------------------- first run
+function welcome() {
+  const m = modal(`<div style="text-align:center"><div style="font-size:52px">👋</div>
+    <h3 style="font-size:22px">Chào mừng đến với Thu Chi Gia Đình</h3>
+    <p class="lead">Biết tiền nhà mình đi đâu mỗi tháng — học phí, điện nước, mỹ phẩm, Shopee, TikTok… Mọi dữ liệu chỉ nằm trên máy này.</p></div>
+    <label class="lbl">Bạn tên gì?</label><input class="field" id="wName" placeholder="vd. Lan" autofocus>
+    <div class="modal-foot"><button class="btn" id="wSkip">Bỏ qua</button><button class="btn primary" id="wNext">Bắt đầu →</button></div>`,
+    {wide: true});
+  const finish = async (gmail) => {
+    await api('/api/profile', {method: 'POST', body: {user_name: $('#wName', m.el).value, onboarded: 1}});
+    m.close(); await loadInfo();
+    if (gmail) gmailWizard();
+  };
+  $('#wSkip', m.el).onclick = () => finish(false);
+  $('#wNext', m.el).onclick = () => finish(true);
+  $('#wName', m.el).onkeydown = e => { if (e.key === 'Enter') finish(true); };
+}
+
+// ---------------------------------------------------------------- start
+(async () => {
+  await Promise.all([loadInfo(), loadCats()]);
+  let tab = 'overview'; try { tab = localStorage.getItem('tab') || tab; } catch {}
+  const hash = location.hash.slice(1);
+  if (['overview', 'tx', 'import', 'settings'].includes(hash)) tab = hash;
+  showTab(tab);
+  setMonth(state.month);
+  if (!state.info.onboarded) welcome();
+})();
+</script>
+</body>
+</html>

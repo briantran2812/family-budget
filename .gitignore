@@ -1,0 +1,11 @@
+.venv/
+data/
+__pycache__/
+demo-data/
+build/
+dist/
+*.spec
+release/
+qa/reports/
+.DS_Store
+.pytest_cache/

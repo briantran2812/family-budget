@@ -1,0 +1,65 @@
+# Giới hạn khi chạy local
+
+App chạy hoàn toàn trên một máy Mac: không có server, không có tài khoản online. Thiết kế này giúp dữ
+liệu riêng tư và không tốn chi phí, nhưng kéo theo các giới hạn dưới đây. Mỗi giới hạn kèm cách
+xử lý hiện có, nếu có.
+
+## Dữ liệu và đồng bộ giữa các máy
+
+| Giới hạn | Ảnh hưởng | Cách xử lý |
+| --- | --- | --- |
+| Dữ liệu chỉ nằm trên **một máy** | Vợ và chồng cài trên hai máy sẽ có hai bộ số liệu riêng; không xem chung được | Dồn về một máy và thêm Gmail của cả hai vào máy đó (Cài đặt → Thêm Gmail). Hoặc mỗi người xuất CSV rồi gộp lại |
+| **Không sao lưu tự động** | Mất máy, hỏng ổ cứng hay cài lại macOS thì mất dữ liệu | Định kỳ chép `~/Library/Application Support/ThuChiGiaDinh/budget.db` ra ổ ngoài hoặc iCloud Drive, hoặc dùng Time Machine |
+| **Không được** đặt file `budget.db` trong thư mục iCloud hay Dropbox để hai máy cùng mở | SQLite có thể hỏng file khi hai máy ghi cùng lúc | Chỉ chép ra đó làm bản sao lưu, không mở trực tiếp |
+| **Database không mã hoá** | Người dùng chung tài khoản macOS hoặc có quyền admin đọc được số liệu chi tiêu | Bật FileVault; mỗi người một tài khoản macOS riêng. Riêng mật khẩu Gmail thì nằm trong Keychain, không nằm trong database |
+| Không có trên iPhone/Android | Không nhập được khoản chi ngay lúc đang ở ngoài | Chụp màn hình biên lai trên điện thoại, về nhà AirDrop sang Mac để nhập |
+
+## Gmail
+
+| Giới hạn | Ảnh hưởng | Cách xử lý |
+| --- | --- | --- |
+| Chỉ đồng bộ **khi app đang mở và bạn bấm "Đồng bộ ngay"** | Không có đồng bộ chạy ngầm; số liệu chỉ mới tới lần đồng bộ gần nhất | Mở app và bấm đồng bộ mỗi tuần |
+| Cần **Xác minh 2 bước** và **App Password** | Bước cài đặt khó nhất với người mới (xem test case M-02) | Màn hình hướng dẫn 3 bước trong app |
+| Tài khoản Google Workspace (email công ty/trường) có thể **bị quản trị viên chặn** App Password hoặc IMAP | Không kết nối được | Dùng Gmail cá nhân để nhận email đơn hàng |
+| App Password **bị Google thu hồi** khi bạn đổi mật khẩu Google | Đồng bộ báo lỗi đăng nhập | Gỡ rồi thêm lại tài khoản với App Password mới |
+| Đọc email bằng **mẫu cố định** (regex), không dùng AI | Khi Shopee/TikTok đổi mẫu email, có thể không đọc được số tiền; đơn có nhiều sản phẩm được xếp theo sản phẩm khớp đầu tiên | Email lỗi hiện trong "Email chưa đọc được"; sửa `parsers.py` rồi bấm "Phân tích lại". Đơn sai hạng mục thì đổi tay |
+| Số tiền lấy là **tổng thanh toán của cả đơn** | Không tách được từng sản phẩm của một đơn sang các hạng mục khác nhau | Ghi rõ là giới hạn đã biết |
+| Lần đầu chỉ lấy **180 ngày** gần nhất | Không có đơn cũ hơn | Sửa bộ lọc ở Cài đặt → Nâng cao (ví dụ `newer_than:2y`) |
+| Chỉ hỗ trợ **Gmail** | Không đọc được Outlook, Yahoo, iCloud Mail | Chuyển tiếp email đơn hàng sang Gmail |
+| **Shopee/TikTok có thể không gửi email cho từng đơn.** Khi thử với hộp thư thật (31/10/2026), 180 ngày chỉ có bản tin, khảo sát và email tuyển dụng của Shopee, không có email đơn hàng nào | Nguồn Gmail có thể trống với nhiều người | Chụp màn hình trang "Đơn mua" (nhiều đơn trên một ảnh) và thêm ở ô Ảnh chụp; sau khi đồng bộ, app tự giải thích nếu không tìm thấy email đơn hàng |
+| **Không đọc Spam và Thùng rác** (chỉ đọc All Mail: Hộp thư đến, các tab Quảng cáo/Mạng xã hội/Cập nhật, thư đã lưu trữ) | Email đơn hàng bị Gmail đưa vào Spam sẽ bị bỏ sót | Đây là chủ ý: Spam hay có email giả danh Shopee/MoMo, đọc vào sẽ sinh giao dịch giả. Nếu thấy email thật nằm trong Spam, bấm "Không phải thư rác" rồi đồng bộ lại |
+| Mẫu email biên lai **MoMo** mới được viết theo biên lai hiển thị trong app MoMo, **chưa kiểm chứng với email MoMo thật** | Có thể không đọc được số tiền | Email lỗi hiện trong "Email chưa đọc được" kèm nội dung; gửi một mẫu (che số tài khoản) để chỉnh bộ đọc |
+
+## Ảnh chụp (OCR)
+
+| Giới hạn | Ảnh hưởng | Cách xử lý |
+| --- | --- | --- |
+| OCR có thể đọc sai ảnh mờ, ảnh chụp màn hình máy tính bằng điện thoại, hoặc chữ nằm đè lên hình nền | Sai số tiền | Màn hình duyệt kết quả bắt buộc xem trước khi lưu; số tiền sửa được |
+| Ngày lấy từ ảnh; ảnh không có ngày thì lấy **ngày hôm nay** | Giao dịch có thể rơi vào sai tháng | Sửa ngày trong màn hình duyệt |
+| Mỗi ảnh là một lần nhập thủ công | Không phù hợp để nhập hàng trăm giao dịch | Xem phần ngân hàng bên dưới: tính năng nhập sao kê sẽ giải quyết việc này |
+
+## Ngân hàng
+
+| Giới hạn | Ảnh hưởng | Cách xử lý |
+| --- | --- | --- |
+| **Không kết nối trực tiếp được với ngân hàng.** Việt Nam chưa có Open Banking cho cá nhân; các dịch vụ trung gian như Casso hay SePay cần gửi dữ liệu lên server của họ | Không tự lấy được giao dịch chuyển khoản, quẹt thẻ | Chụp màn hình biên lai chuyển khoản (đã hỗ trợ và đã test với mẫu của Vietcombank, Techcombank, MB) |
+| Chưa nhập được **file sao kê** (Excel/CSV/PDF) | Chưa xem được toàn bộ chi tiêu qua tài khoản ngân hàng | Đề xuất làm ở phiên bản tiếp theo |
+| Chưa đọc **email/SMS biến động số dư** | Như trên | Email: làm được với ngân hàng gửi email thông báo. SMS: chỉ làm được nếu iPhone đồng bộ tin nhắn sang Mac và app được cấp quyền Full Disk Access, nên chưa làm |
+
+## Cài đặt và cập nhật
+
+| Giới hạn | Ảnh hưởng | Cách xử lý |
+| --- | --- | --- |
+| Chỉ chạy trên **Mac chip Apple**, **macOS 13** trở lên | Không chạy trên Mac Intel, Windows hay Linux | Build Intel cần Python bản universal2; chưa làm |
+| **Không có chữ ký số của Apple** | Lần đầu mở phải bấm "Open Anyway"; một số máy công ty chặn hẳn | Có tài khoản Apple Developer (99 USD/năm) thì ký và notarize được |
+| **Không tự cập nhật** | Người dùng phải nhận và cài file `.dmg` mới bằng tay | Gửi bản mới qua Zalo; cài đè lên bản cũ thì dữ liệu vẫn giữ |
+| Sau khi cập nhật, macOS có thể **hỏi quyền truy cập Keychain** | Vì chữ ký ad-hoc thay đổi theo mỗi lần build | Chọn "Always Allow" |
+
+## Khác
+
+| Giới hạn | Ảnh hưởng |
+| --- | --- |
+| Chỉ hỗ trợ **VND** | Khoản chi bằng ngoại tệ phải tự quy đổi |
+| Ngân sách tính **theo tháng dương lịch** | Không đặt được kỳ ngân sách theo ngày nhận lương (ví dụ từ ngày 5 tới ngày 4 tháng sau) |
+| Không có quyền riêng cho từng người dùng | Ai mở được app trên máy thì thấy toàn bộ số liệu |
+| Server nội bộ chạy ở `127.0.0.1` | Chặn được trang web lạ gọi vào app (nhờ kiểm tra Host và header riêng), nhưng một chương trình khác đang chạy trên chính máy đó vẫn đọc được dữ liệu. Mức này tương đương với việc chương trình đó đọc thẳng file database |
