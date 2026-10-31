@@ -37,6 +37,17 @@ Test on **the RC file above**, following docs/UX-TEST-CASES.md. In the Result co
 | M-14 | P2 | Lan đọc lại toàn bộ chữ trong app | ☐ | |
 | M-15 | P2 | Hai tài khoản Gmail | ☐ | |
 
+## Known issues (accepted for this RC)
+
+| Severity | Issue |
+| --- | --- |
+| S4 | Link-style buttons ("Mở trang Mật khẩu ứng dụng ↗", "Mở trang Xác minh 2 bước ↗") show the browser's default blue text instead of the app text colour. Cosmetic; fix in the next build. |
+
+## Field test
+
+The RC was handed to the first real user for M-01/M-02 via `delivery/ThuChiGiaDinh-1.2.0/`
+(user guide + this exact RC file, SHA-256 above). Her answers to the guide's last page feed M-02 and M-14.
+
 ## Decision
 
 Decision: ☐ GO  ☐ NO-GO

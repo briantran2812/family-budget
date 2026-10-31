@@ -9,3 +9,5 @@ release/
 qa/reports/
 .DS_Store
 .pytest_cache/
+delivery/
+packaging/guide/_render.html

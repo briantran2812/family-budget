@@ -1,0 +1,221 @@
+<!doctype html>
+<html lang="vi">
+<head>
+<meta charset="utf-8">
+<title>Thu Chi Gia Đình — Hướng dẫn sử dụng</title>
+<style>
+@page { size: A4; margin: 16mm 16mm 18mm; }
+* { box-sizing: border-box; }
+body { font: 11pt/1.55 -apple-system, "SF Pro Text", "Helvetica Neue", Arial, sans-serif; color: #1b1e2b; margin: 0; }
+h1 { font-size: 26pt; margin: 0 0 4px; letter-spacing: -.02em; }
+h2 { font-size: 16pt; margin: 0 0 10px; color: #3d33c9; break-after: avoid; letter-spacing: -.01em; }
+h3 { font-size: 12pt; margin: 16px 0 6px; break-after: avoid; }
+p { margin: 6px 0; }
+section { break-before: page; }
+.cover { height: 250mm; display: flex; flex-direction: column; justify-content: center; }
+.logo { width: 64px; height: 64px; border-radius: 18px; background: linear-gradient(130deg, #5b4ff5, #8b5cf6 52%, #e0559c);
+  color: #fff; font-size: 36px; font-weight: 800; display: grid; place-items: center; margin-bottom: 18px; }
+.sub { font-size: 14pt; color: #575d72; margin: 0 0 24px; }
+.toc { background: #f4f5fb; border-radius: 14px; padding: 16px 22px; }
+.toc ol { margin: 6px 0; padding-left: 20px; } .toc li { margin: 3px 0; }
+.meta { color: #8d93a8; font-size: 9.5pt; margin-top: 26px; }
+ol.steps { counter-reset: s; list-style: none; padding: 0; margin: 8px 0; }
+ol.steps > li { counter-increment: s; position: relative; padding-left: 38px; margin: 10px 0; }
+ol.steps > li::before { content: counter(s); position: absolute; left: 0; top: -1px; width: 26px; height: 26px; border-radius: 50%;
+  background: #5b4ff5; color: #fff; font-weight: 700; font-size: 10.5pt; display: grid; place-items: center; }
+img.shot { display: block; max-width: 100%; border: 1px solid #e6e8f0; border-radius: 12px; margin: 10px auto;
+  box-shadow: 0 4px 14px rgba(20, 24, 40, .08); break-inside: avoid; }
+img.half { max-width: 56%; } img.third { max-width: 40%; }
+.tip, .warn, .note { border-radius: 12px; padding: 10px 14px; margin: 10px 0; break-inside: avoid; font-size: 10.5pt; }
+.tip { background: #eeecff; } .warn { background: #fff4d6; } .note { background: #f4f5fb; }
+.tip b:first-child, .warn b:first-child, .note b:first-child { display: block; margin-bottom: 2px; }
+kbd { font: 600 9.5pt -apple-system, sans-serif; border: 1px solid #c9ccd8; border-bottom-width: 2px; border-radius: 5px; padding: 0 5px; background: #fff; }
+code { font: 10pt "SF Mono", Menlo, monospace; background: #f1f2f8; padding: 1px 5px; border-radius: 4px; overflow-wrap: anywhere; }
+table { width: 100%; border-collapse: collapse; margin: 8px 0; font-size: 10.5pt; break-inside: avoid; }
+th, td { text-align: left; padding: 7px 8px; border-bottom: 1px solid #e6e8f0; vertical-align: top; }
+th { background: #f4f5fb; font-size: 10pt; }
+.two { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; align-items: start; }
+.feedback td { height: 34px; }
+</style>
+</head>
+<body>
+
+<div class="cover">
+  <div class="logo">₫</div>
+  <h1>Thu Chi Gia Đình</h1>
+  <p class="sub">Biết tiền nhà mình đi đâu mỗi tháng: học phí, điện nước, mỹ phẩm, Shopee, TikTok, MoMo…</p>
+  <div class="toc"><b>Nội dung</b>
+    <ol>
+      <li>Cài đặt (5 phút)</li>
+      <li>Mở lần đầu và kết nối Gmail</li>
+      <li>Đưa khoản chi vào app: Gmail, ảnh chụp, nhập tay</li>
+      <li>Xem tháng này chi bao nhiêu cho từng việc</li>
+      <li>Ngân sách và tự phân loại</li>
+      <li>Sao lưu và những điều cần biết</li>
+      <li>Ghi chú cho bản thử nghiệm</li>
+    </ol>
+  </div>
+  <p class="meta">Phiên bản {{VERSION}} (bản thử nghiệm) · Mọi dữ liệu chỉ nằm trên máy Mac của bạn, không gửi lên mạng.</p>
+</div>
+
+<section>
+  <h2>1. Cài đặt</h2>
+  <div class="note"><b>Trước khi bắt đầu, kiểm tra máy</b>Bấm vào biểu tượng  ở góc trên bên trái màn hình →
+    <b>About This Mac</b> (Giới thiệu về máy Mac này). Dòng <b>Chip</b> phải là <b>Apple M1, M2, M3…</b> và
+    <b>macOS</b> từ 13 trở lên. Máy chip Intel chưa dùng được app này.</div>
+  <ol class="steps">
+    <li>Mở file <b>“2. File cài đặt … .dmg”</b> trong thư mục này. Một cửa sổ hiện ra có biểu tượng app và thư mục <b>Applications</b>.</li>
+    <li><b>Kéo</b> biểu tượng <b>Thu Chi Gia Dinh</b> thả vào thư mục <b>Applications</b>.</li>
+    <li>Mở <b>Launchpad</b> (hoặc Finder → Applications) và bấm vào <b>Thu Chi Gia Dinh</b>.</li>
+    <li>Lần đầu, máy sẽ báo không mở được, với nội dung kiểu
+      <i>“Apple could not verify ‘Thu Chi Gia Dinh’ is free of malware…”</i>. Đây là bình thường vì app không tải
+      từ App Store. Bấm <b>Done</b> (Xong).</li>
+    <li>Vào <b>System Settings</b> (Cài đặt hệ thống) → <b>Privacy &amp; Security</b> (Quyền riêng tư &amp; Bảo mật).
+      Kéo xuống dưới cùng, thấy dòng nhắc tới “Thu Chi Gia Dinh”, bấm <b>Open Anyway</b> (Vẫn mở), rồi nhập mật khẩu máy.
+      Chỉ phải làm <b>một lần</b>.</li>
+  </ol>
+  <div class="tip"><b>Mẹo</b>Kéo biểu tượng app từ Launchpad xuống thanh Dock để lần sau mở nhanh.</div>
+
+  <h2 style="margin-top:22px">2. Mở lần đầu và kết nối Gmail</h2>
+  <p>App chào bạn và hỏi tên. Gõ tên rồi bấm <b>Bắt đầu →</b>, app sẽ dẫn bạn kết nối Gmail.</p>
+  <img class="shot half" src="img/welcome.png">
+</section>
+
+<section>
+  <h3>Bước 1 · Bật Xác minh 2 bước cho Gmail</h3>
+  <p>Google chỉ cho app đọc Gmail khi tài khoản đã bật <b>Xác minh 2 bước</b>. Nếu bạn đã bật rồi (đăng nhập Gmail
+    trên máy mới thì điện thoại hỏi xác nhận), bấm <b>Đã bật, tiếp →</b>.</p>
+  <img class="shot half" src="img/wiz1.png">
+  <h3>Bước 2 · Tạo “Mật khẩu ứng dụng”</h3>
+  <p>Đây là một mật khẩu <b>riêng cho app này</b>, gồm 16 ký tự, <b>không phải</b> mật khẩu Gmail của bạn. App chỉ dùng nó để đọc
+    email đơn hàng. Bạn có thể xoá nó trên trang Google bất cứ lúc nào.</p>
+  <ol class="steps">
+    <li>Bấm <b>Mở trang Mật khẩu ứng dụng ↗</b>. Trang Google mở ra; đăng nhập <b>đúng Gmail của bạn</b> nếu được hỏi.</li>
+    <li>Ô <b>Tên ứng dụng</b> (App name): gõ <b>Thu Chi</b> → bấm <b>Tạo</b> (Create).</li>
+    <li>Google hiện 16 ký tự trong khung vàng. Bôi đen rồi bấm <kbd>⌘</kbd> + <kbd>C</kbd> để sao chép.</li>
+    <li>Quay lại app, bấm <b>Đã sao chép, tiếp →</b>.</li>
+  </ol>
+  <img class="shot half" src="img/wiz2.png">
+  <div class="warn"><b>Nếu trang Google báo “The setting you are looking for is not available for your account”</b>
+    nghĩa là Xác minh 2 bước chưa bật, hoặc đây là Gmail công ty/trường học bị chặn tính năng này. Hãy bật Xác minh 2 bước
+    rồi thử lại, hoặc dùng Gmail cá nhân.</div>
+</section>
+
+<section>
+  <h3>Bước 3 · Kết nối</h3>
+  <p>Gõ địa chỉ Gmail, dán mật khẩu ứng dụng bằng <kbd>⌘</kbd> + <kbd>V</kbd> (có dấu cách hay không đều được), rồi bấm <b>Kết nối</b>.
+    Thấy <b>“Đã kết nối! 🎉”</b> là xong; bấm <b>Đồng bộ ngay</b>.</p>
+  <img class="shot half" src="img/wiz3.png">
+  <div class="note"><b>Mật khẩu này được cất ở đâu?</b>Trong <b>Keychain</b> (két sắt mật khẩu) của macOS, giống như mật khẩu
+    Wi-Fi. Không ai khác, kể cả người làm ra app, nhìn thấy được.</div>
+
+  <h2 style="margin-top:22px">3. Đưa khoản chi vào app</h2>
+  <p>Có ba cách, dùng kết hợp được. Tất cả nằm trong mục <b>Nhập dữ liệu</b> ở cột bên trái.</p>
+  <img class="shot" src="img/import.png">
+</section>
+
+<section>
+  <h3>Cách 1 · Gmail: tự động</h3>
+  <p>Bấm <b>Đồng bộ ngay</b> khoảng <b>mỗi tuần một lần</b>. App đọc email đơn hàng <b>Shopee</b>, <b>TikTok Shop</b> và biên lai
+    <b>MoMo</b> trong 6 tháng gần nhất:</p>
+  <ul>
+    <li>Mỗi đơn chỉ tính <b>một lần</b>, dù Shopee gửi nhiều email (đặt hàng, đang giao, đã giao).</li>
+    <li>Đơn <b>bị huỷ</b> tự động không tính.</li>
+    <li>Email quảng cáo, khảo sát thì bỏ qua.</li>
+    <li>App đọc Hộp thư đến, các tab Quảng cáo/Mạng xã hội và thư đã lưu trữ, nhưng <b>không đọc Spam/Thùng rác</b>.</li>
+  </ul>
+  <div class="warn"><b>Nếu đồng bộ xong mà không có đơn nào</b>Shopee và TikTok nhiều khi chỉ báo đơn trong app điện thoại, không gửi email.
+    Khi đó dùng <b>Cách 2</b>: chụp màn hình trang “Đơn mua”. Một ảnh chụp được nhiều đơn.</div>
+
+  <h3>Cách 2 · Ảnh chụp màn hình: MoMo, ngân hàng, Shopee “Đơn mua”, hoá đơn</h3>
+  <ol class="steps">
+    <li>Trên iPhone, mở biên lai trong MoMo hoặc app ngân hàng (hay trang <b>Đơn mua</b> của Shopee), rồi chụp màn hình.</li>
+    <li>Gửi ảnh sang Mac bằng <b>AirDrop</b> (ảnh sẽ nằm trong thư mục Downloads).</li>
+    <li>Kéo ảnh vào ô <b>“Kéo thả ảnh…”</b> trong app, hoặc bấm vào ô đó để chọn ảnh. Chọn được nhiều ảnh một lúc.</li>
+    <li>App đọc ảnh ngay trên máy (vài giây) và hiện kết quả. <b>Kiểm tra số tiền, ngày, hạng mục</b>, sửa nếu sai,
+      rồi bấm <b>Lưu các dòng đã chọn</b>.</li>
+  </ol>
+  <img class="shot" src="img/ocr.png">
+  <div class="two">
+    <div class="tip"><b>Ảnh đọc tốt nhất khi</b>là ảnh chụp màn hình trực tiếp trên điện thoại (không chụp màn hình bằng camera),
+      thấy rõ dòng <b>Số tiền</b> và <b>Thời gian</b>.</div>
+    <img class="shot" src="img/momo-sample.png" style="max-width:46%;margin:0 auto">
+  </div>
+</section>
+
+<section>
+  <h3>Cách 3 · Nhập tay: học phí, lương, đi chợ…</h3>
+  <p>Bấm nút <b>＋ Thêm khoản</b> ở góc trên bên phải. Gõ số tiền thoải mái: <code>1.500.000</code>, <code>1,5tr</code>,
+    <code>200k</code> đều được; app hiện số đã hiểu ngay bên dưới. Chọn <b>Khoản thu</b> khi nhập lương. Hạng mục để
+    <b>✨ Tự động</b> thì app tự đoán theo mô tả.</p>
+  <img class="shot half" src="img/add.png">
+  <div class="tip"><b>Nên nhập lương hằng tháng</b>để app tính được <b>% thu nhập đã chi</b> và số tiền còn lại.</div>
+</section>
+
+<section>
+  <h2>4. Xem tháng này chi bao nhiêu cho từng việc</h2>
+  <p>Mục <b>Tổng quan</b> cho biết:</p>
+  <ul>
+    <li><b>Thẻ tím</b>: tổng chi trong tháng, thu nhập, số còn lại, và vòng tròn <b>% thu nhập đã chi</b>.</li>
+    <li><b>Chi theo hạng mục</b>: mỗi việc chiếm bao nhiêu % tổng chi, kèm so sánh với tháng trước (▲ tăng / ▼ giảm).</li>
+    <li><b>12 tháng gần nhất</b>: rê chuột lên cột để xem số, bấm vào cột để mở tháng đó.</li>
+    <li>Nút <b>‹ ›</b> cạnh tên tháng dùng để xem tháng trước hoặc tháng sau.</li>
+  </ul>
+  <img class="shot" src="img/overview.png">
+  <p>Bấm vào một hạng mục để xem từng khoản chi trong đó. Bấm vào một giao dịch để <b>sửa</b>, <b>xoá</b>, hoặc đánh dấu
+    <b>Không tính</b> (ví dụ đơn đã trả hàng).</p>
+</section>
+
+<section>
+  <h2>5. Ngân sách và tự phân loại</h2>
+  <h3>Sửa hạng mục, và dạy app nhớ</h3>
+  <p>Nếu app xếp sai hạng mục, bấm vào giao dịch rồi chọn hạng mục đúng. App sẽ hỏi <b>“Ghi nhớ…”</b> kèm một từ khoá gợi ý.
+    Giữ dấu tick và bấm <b>Lưu</b>: lần sau mô tả nào có chữ đó sẽ tự vào đúng chỗ, và các giao dịch cũ giống vậy cũng được xếp lại.</p>
+  <img class="shot third" src="img/edit.png">
+  <h3>Đặt ngân sách tháng</h3>
+  <p>Vào <b>Cài đặt</b> → <b>Hạng mục &amp; ngân sách</b>, gõ số tiền vào ô <b>Ngân sách/tháng</b> (ví dụ <code>1,5tr</code>).
+    Khi chi quá, Tổng quan hiện cảnh báo đỏ <b>⚠ Vượt ngân sách</b>.</p>
+  <div class="two"><img class="shot" src="img/budget.png"><img class="shot" src="img/categories.png" style="max-width:88%"></div>
+</section>
+
+<section>
+  <h2>6. Sao lưu và những điều cần biết</h2>
+  <h3>Sao lưu: nên làm mỗi tháng</h3>
+  <p>Vào <b>Cài đặt</b> → <b>Dữ liệu</b>:</p>
+  <ul>
+    <li><b>📂 Mở thư mục dữ liệu</b> → chép file <code>budget.db</code> sang iCloud Drive hoặc USB. File này chứa toàn bộ dữ liệu.</li>
+    <li><b>⬇︎ Xuất CSV</b> → được file mở bằng Numbers hoặc Excel.</li>
+  </ul>
+  <h3>Những điều cần biết</h3>
+  <table>
+    <tr><th style="width:42%">Điều cần biết</th><th>Nên làm gì</th></tr>
+    <tr><td>Dữ liệu chỉ nằm trên <b>máy này</b>, không tự đồng bộ sang máy khác</td><td>Muốn xem chung với chồng/vợ: dùng một máy và thêm cả hai Gmail (Cài đặt → ＋ Thêm Gmail)</td></tr>
+    <tr><td>App chỉ đọc Gmail khi bạn <b>bấm Đồng bộ ngay</b></td><td>Đồng bộ mỗi tuần</td></tr>
+    <tr><td>Shopee/TikTok có thể không gửi email cho từng đơn</td><td>Chụp màn hình trang “Đơn mua”</td></tr>
+    <tr><td>App không đọc thư trong <b>Spam</b></td><td>Thấy email đơn hàng thật trong Spam thì bấm “Không phải thư rác”, rồi đồng bộ lại</td></tr>
+    <tr><td>Không kết nối thẳng được với ngân hàng</td><td>Chụp màn hình biên lai chuyển khoản</td></tr>
+    <tr><td>Đổi mật khẩu Gmail thì Google huỷ mật khẩu ứng dụng</td><td>Cài đặt → Gỡ tài khoản → ＋ Thêm Gmail lại (tạo mật khẩu ứng dụng mới)</td></tr>
+    <tr><td>Khi cài bản mới, máy có thể hỏi quyền dùng Keychain</td><td>Bấm <b>Always Allow</b> (Luôn cho phép)</td></tr>
+  </table>
+  <h3>Khi gặp lỗi</h3>
+  <p>Chụp màn hình lỗi (<kbd>⌘</kbd> <kbd>⇧</kbd> <kbd>4</kbd>) và gửi cho người cài app giúp bạn. Nếu được hỏi file log: Cài đặt → 📂 Mở thư mục dữ liệu → file <code>app.log</code>.</p>
+</section>
+
+<section>
+  <h2>7. Ghi chú cho bản thử nghiệm</h2>
+  <p>Đây là <b>bản thử nghiệm</b>. Ý kiến của bạn quyết định bản chính thức có được phát hành hay không. Vừa làm vừa ghi lại giúp nhé
+    (ghi tay hay nhắn tin đều được):</p>
+  <table class="feedback">
+    <tr><th style="width:52%">Câu hỏi</th><th>Ghi chú của bạn</th></tr>
+    <tr><td>Từ lúc mở file cài đặt tới lúc thấy “Đã kết nối!” mất bao nhiêu phút?</td><td></td></tr>
+    <tr><td>Bạn có phải hỏi ai không? Bị vướng ở bước nào?</td><td></td></tr>
+    <tr><td>Bước tạo “Mật khẩu ứng dụng” có dễ hiểu không?</td><td></td></tr>
+    <tr><td>Đồng bộ Gmail: có thấy đơn Shopee/TikTok/MoMo không? Số tiền có đúng không?</td><td></td></tr>
+    <tr><td>Ảnh chụp MoMo/ngân hàng: số tiền và ngày có đúng không?</td><td></td></tr>
+    <tr><td>Chữ nào trong app khó hiểu hoặc sai chính tả?</td><td></td></tr>
+    <tr><td>Bạn muốn app có thêm gì?</td><td></td></tr>
+  </table>
+  <p class="meta">Thu Chi Gia Đình {{VERSION}} · Hướng dẫn tạo ngày {{DATE}}</p>
+</section>
+</body>
+</html>
