@@ -101,3 +101,68 @@ def receipt_image(path: Path, header: str, rgb: tuple, title: str, amount: int, 
     img.unlockFocus()
     rep = NSBitmapImageRep.imageRepWithData_(img.TIFFRepresentation())
     rep.representationUsingType_properties_(NSPNGFileType, None).writeToFile_atomically_(str(path), True)
+
+
+# ---------------------------------------------------------------- bank / card statements
+
+def statement_csv(rows: list[tuple]) -> bytes:
+    """Bank-account export: separate Ghi nợ / Ghi có columns, a preamble and a balance row (as VN banks do)."""
+    import csv
+    import io
+    buf = io.StringIO()
+    w = csv.writer(buf)
+    w.writerow(["SAO KÊ TÀI KHOẢN", "", "", "", ""])
+    w.writerow(["Số tài khoản: 0123456789", "", "", "", ""])
+    w.writerow([])
+    w.writerow(["STT", "Ngày giao dịch", "Diễn giải", "Ghi nợ", "Ghi có"])
+    for i, (d, desc, amount, kind) in enumerate(rows, 1):
+        dd = f"{d[8:10]}/{d[5:7]}/{d[:4]}"
+        w.writerow([i, dd, desc, f"{amount:,}" if kind == "expense" else "", f"{amount:,}" if kind == "income" else ""])
+    w.writerow(["", "", "Số dư cuối kỳ", "", "12,345,678"])
+    return buf.getvalue().encode("utf-8-sig")
+
+
+def statement_xlsx(path: Path, rows: list[tuple]) -> None:
+    """Credit-card export: one Amount (VND) column, payments marked CR, plus a foreign-currency column to ignore."""
+    import openpyxl
+    from datetime import date as _date
+    wb = openpyxl.Workbook()
+    ws = wb.active
+    ws.append(["VISA PLATINUM — SAO KÊ THẺ TÍN DỤNG"])
+    ws.append([])
+    ws.append(["Transaction Date", "Posting Date", "Description", "Amount (USD)", "Amount (VND)"])
+    for d, desc, amount, kind in rows:
+        when = _date.fromisoformat(d)
+        ws.append([when, when, desc, None, amount if kind == "expense" else f"{amount:,} CR"])
+    ws.append([None, None, "Tổng phát sinh", None, sum(r[2] for r in rows)])
+    wb.save(path)
+
+
+def statement_pdf(path: Path, rows: list[tuple], password: str | None = None) -> None:
+    """Credit-card e-statement PDF as banks email it (often locked with a password)."""
+    from AppKit import NSFont, NSFontAttributeName, NSGraphicsContext, NSString
+    from Foundation import NSURL
+    from Quartz import (CGPDFContextBeginPage, CGPDFContextClose, CGPDFContextCreateWithURL, CGPDFContextEndPage,
+                        CGRectMake, PDFDocument, PDFDocumentOwnerPasswordOption, PDFDocumentUserPasswordOption)
+    url = NSURL.fileURLWithPath_(str(path))
+    ctx = CGPDFContextCreateWithURL(url, CGRectMake(0, 0, 595, 842), None)
+    CGPDFContextBeginPage(ctx, None)
+    NSGraphicsContext.saveGraphicsState()
+    NSGraphicsContext.setCurrentContext_(NSGraphicsContext.graphicsContextWithCGContext_flipped_(ctx, False))
+    font = {NSFontAttributeName: NSFont.fontWithName_size_("Menlo", 9)}
+    text = ["SAO KE THE TIN DUNG VISA", "Ngay sao ke: 25/10/2026     Han thanh toan: 10/11/2026",
+            "Du no cuoi ky 9,876,000", "", "Ngay GD   Ngay HT   Mo ta                                So tien (VND)"]
+    for d, desc, amount, kind in rows:
+        text.append(f"{d[8:10]}/{d[5:7]}     {d[8:10]}/{d[5:7]}     {desc:<36} {amount:>12,}{' CR' if kind == 'income' else ''}")
+    text.append("Tong phat sinh trong ky 9,876,000")
+    y = 800
+    for line in text:
+        NSString.stringWithString_(line).drawAtPoint_withAttributes_((36, y), font)
+        y -= 14
+    NSGraphicsContext.restoreGraphicsState()
+    CGPDFContextEndPage(ctx)
+    CGPDFContextClose(ctx)
+    if password:
+        doc = PDFDocument.alloc().initWithURL_(url)
+        doc.writeToURL_withOptions_(url, {PDFDocumentUserPasswordOption: password,
+                                          PDFDocumentOwnerPasswordOption: password + "-owner"})

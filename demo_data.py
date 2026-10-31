@@ -127,6 +127,40 @@ def main() -> None:
         conn.execute("INSERT INTO emails(message_id, received, sender, subject, body, status, transaction_id) "
                      "VALUES (?, ?, ?, ?, ?, ?, ?)", (mid, received, sender, subject, body, status, tx_id))
         stats["email"][status] = stats["email"].get(status, 0) + 1
+    # Visa purchases typed in by hand (the bank sends no email), and October's card statement to reconcile.
+    visa = "Visa Techcombank"
+    meals = [("Phở Thìn Lò Đúc", 85_000), ("Highlands Coffee", 65_000), ("Gogi House Vincom", 1_200_000),
+             ("Pizza 4P's Lê Thánh Tôn", 950_000), ("Uniqlo Vincom Đồng Khởi", 690_000), ("Bún chả Hương Liên", 120_000),
+             ("The Coffee House", 59_000), ("Lotte Mart", 1_450_000)]
+    typed = []
+    for month in MONTHS:
+        for name, price in random.sample(meals, 5):
+            d = f"{month}-{random.randint(1, 24):02d}"
+            amt = jitter(price, 0.1)
+            conn.execute("INSERT INTO transactions(date, amount, description, source, category_id, pay_account) "
+                         "VALUES (?, ?, ?, 'manual', ?, ?)", (d, amt, name, rules.categorize(conn, name, "expense", compiled), visa))
+            typed.append((d, name, amt))
+    if "2026-10" in MONTHS:
+        from datetime import timedelta
+        october = sorted(t for t in typed if t[0].startswith("2026-10"))
+        stmt = []
+        for i, (d, name, amt) in enumerate(october):
+            if i == len(october) - 1:
+                continue  # typed as Visa but actually paid in cash → "not on the statement"
+            posted = (date.fromisoformat(d) + timedelta(days=random.choice([0, 1, 1, 2]))).isoformat()
+            charged = amt + (round(amt * 0.1, -3) if i == 1 else 0)  # one dinner with a tip the receipt didn't show
+            stmt.append((posted, name.upper(), charged, "expense"))
+        stmt += [("2026-10-09", "GRAB*FOOD HCM", 168_000, "expense"), ("2026-10-21", "CGV CINEMAS VINCOM", 220_000, "expense"),
+                 ("2026-10-15", "THANH TOAN THE - CAM ON", 8_000_000, "income")]
+        for r in conn.execute("SELECT date, amount, description FROM transactions WHERE source = 'shopee' "
+                              "AND status = 'ok' AND date LIKE '2026-10%' LIMIT 3"):
+            stmt.append((r[0], "SHOPEE PAY " + r[2][:24].upper(), r[1], "expense"))
+        stmt.sort()
+        from samples import statement_pdf, statement_xlsx
+        statement_xlsx(DEMO / "sao-ke-visa-thang-10.xlsx", stmt)
+        statement_pdf(DEMO / "sao-ke-visa-thang-10.pdf", stmt, password="01011990")
+        print(f"  Visa statement: {len(stmt)} lines → sao-ke-visa-thang-10.xlsx / .pdf (password 01011990)")
+
     db.set_setting(conn, "gmail_last_sync", "2026-10-31T09:30")
     conn.commit()
 

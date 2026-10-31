@@ -101,6 +101,30 @@ label.lbl { display: block; font-size: 13px; color: var(--text-2); font-weight: 
 @media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) .pill.shopee { background: #4a2414; color: #f6b195; }
   :root:not([data-theme="light"]) .pill.tiktok { background: #18294a; color: #a9c6f0; } }
 .up { color: var(--bad); } .down { color: var(--good); }
+a.btn, a .btn { color: var(--text); }
+.pill.statement { background: #e3f4ee; color: #0f6b4c; }
+@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) .pill.statement { background: #12352a; color: #8fd9bb; } }
+.mini.link { cursor: pointer; transition: transform .12s, box-shadow .12s; }
+.mini.link:hover { transform: translateY(-1px); box-shadow: 0 8px 24px rgba(20, 24, 40, .1); }
+.mini .go { margin-left: auto; color: var(--muted); font-size: 18px; }
+.rec-tiles { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 12px; margin: 16px 0; }
+.rec-tiles .card + .card { margin-top: 0; }
+.rec-tile .k { font-size: 13px; color: var(--text-2); } .rec-tile .v { font-size: 22px; font-weight: 800; margin: 2px 0; }
+.rec-tile .s { font-size: 12px; color: var(--muted); }
+.rec-tile.bad { border-color: var(--bad); background: var(--bad-soft); } .rec-tile.bad .v { color: var(--bad); }
+.rec-tile.good .v { color: var(--good); }
+.recrow { display: flex; gap: 12px; align-items: flex-start; padding: 12px 0; border-bottom: 1px solid var(--border); }
+.recrow:last-child { border-bottom: 0; }
+.recrow .when { width: 52px; flex: none; color: var(--text-2); font-size: 13px; font-weight: 600; padding-top: 2px; }
+.recrow .what { flex: 1; min-width: 0; }
+.recrow .what b { display: block; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.recrow .amt { font-weight: 700; white-space: nowrap; }
+.recrow .acts { display: flex; gap: 6px; flex-wrap: wrap; margin-top: 8px; }
+.sugg { margin-top: 6px; font-size: 13px; background: var(--warn-soft); border-radius: 10px; padding: 7px 10px; }
+.pair { font-size: 13px; color: var(--text-2); margin-top: 3px; }
+details.recsec { margin-top: 16px; } details.recsec > summary { cursor: pointer; font-weight: 700; font-size: 15px; }
+.file-pick { position: relative; }
+@media (max-width: 1000px) { .rec-tiles { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
 
 /* ---------- overview ---------- */
 .hero { background: var(--hero); color: #fff; border-radius: 24px; padding: 28px 30px; display: flex; gap: 24px;
@@ -279,6 +303,7 @@ ol.howto li { margin: 5px 0; }
       <button data-tab="overview" class="on"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 11l9-7 9 7"/><path d="M5 10v10h14V10"/><path d="M10 20v-6h4v6"/></svg><span>Tổng quan</span></button>
       <button data-tab="tx"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M8 6h13M8 12h13M8 18h13"/><circle cx="3.5" cy="6" r="1"/><circle cx="3.5" cy="12" r="1"/><circle cx="3.5" cy="18" r="1"/></svg><span>Giao dịch</span></button>
       <button data-tab="import"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3v12"/><path d="M7 10l5 5 5-5"/><path d="M4 17v3h16v-3"/></svg><span>Nhập dữ liệu</span></button>
+      <button data-tab="recon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 11l3 3 8-8"/><path d="M20 12v7a2 2 0 01-2 2H6a2 2 0 01-2-2V5a2 2 0 012-2h9"/></svg><span>Đối chiếu</span></button>
       <button data-tab="settings"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.7 1.7 0 00.3 1.8l.1.1a2 2 0 11-2.8 2.8l-.1-.1a1.7 1.7 0 00-1.8-.3 1.7 1.7 0 00-1 1.5V21a2 2 0 11-4 0v-.1a1.7 1.7 0 00-1.1-1.5 1.7 1.7 0 00-1.8.3l-.1.1a2 2 0 11-2.8-2.8l.1-.1a1.7 1.7 0 00.3-1.8 1.7 1.7 0 00-1.5-1H3a2 2 0 110-4h.1a1.7 1.7 0 001.5-1.1 1.7 1.7 0 00-.3-1.8l-.1-.1a2 2 0 112.8-2.8l.1.1a1.7 1.7 0 001.8.3H9a1.7 1.7 0 001-1.5V3a2 2 0 114 0v.1a1.7 1.7 0 001 1.5 1.7 1.7 0 001.8-.3l.1-.1a2 2 0 112.8 2.8l-.1.1a1.7 1.7 0 00-.3 1.8V9a1.7 1.7 0 001.5 1H21a2 2 0 110 4h-.1a1.7 1.7 0 00-1.5 1z"/></svg><span>Cài đặt</span></button>
     </nav>
     <div class="side-foot" id="sideFoot"></div>
@@ -313,9 +338,9 @@ ol.howto li { margin: 5px 0; }
           <div class="ring" id="ring"></div>
         </div>
         <div class="minis">
-          <div class="card mini"><span class="ico">🛍️</span><div><div class="k">Shopee</div><div class="v num" id="mShopee">0 ₫</div></div></div>
-          <div class="card mini"><span class="ico">🎵</span><div><div class="k">TikTok Shop</div><div class="v num" id="mTiktok">0 ₫</div></div></div>
-          <div class="card mini"><span class="ico">🧾</span><div><div class="k">Số giao dịch</div><div class="v num" id="mCount">0</div></div></div>
+          <div class="card mini link" data-src-link="shopee" title="Xem các đơn Shopee"><span class="ico">🛍️</span><div><div class="k">Shopee</div><div class="v num" id="mShopee">0 ₫</div></div><span class="go">›</span></div>
+          <div class="card mini link" data-src-link="tiktok" title="Xem các đơn TikTok"><span class="ico">🎵</span><div><div class="k">TikTok Shop</div><div class="v num" id="mTiktok">0 ₫</div></div><span class="go">›</span></div>
+          <div class="card mini link" data-src-link="" title="Xem tất cả giao dịch"><span class="ico">🧾</span><div><div class="k">Số giao dịch</div><div class="v num" id="mCount">0</div></div><span class="go">›</span></div>
         </div>
         <div id="welcomeEmpty"></div>
         <div class="cols">
@@ -346,7 +371,7 @@ ol.howto li { margin: 5px 0; }
           <div class="segs" id="fSrc">
             <button class="seg on" data-src="">Tất cả</button><button class="seg" data-src="shopee">Shopee</button>
             <button class="seg" data-src="tiktok">TikTok</button><button class="seg" data-src="momo">MoMo</button><button class="seg" data-src="manual">Nhập tay</button>
-            <button class="seg" data-src="screenshot">Ảnh chụp</button><button class="seg" data-src="email">Email khác</button>
+            <button class="seg" data-src="screenshot">Ảnh chụp</button><button class="seg" data-src="statement">Sao kê</button><button class="seg" data-src="email">Email khác</button>
           </div>
           <p class="sumline" id="txSum"></p>
           <div class="txlist" id="txList"></div>
@@ -395,6 +420,23 @@ ol.howto li { margin: 5px 0; }
         </div>
       </section>
 
+      <!-- ================= RECONCILE ================= -->
+      <section id="recon" hidden>
+        <div class="card">
+          <h2>Đối chiếu sao kê thẻ / tài khoản</h2>
+          <p class="hint">Tải sao kê từ internet banking (Excel, CSV hoặc PDF) để xem khoản quẹt thẻ nào đã ghi, khoản nào còn thiếu, khoản nào ghi sai số tiền. File chỉ đọc trên máy này.</p>
+          <form class="row-form" id="stmtForm">
+            <input class="field" name="account" list="accountList" placeholder="Tên thẻ, ví dụ: Visa Techcombank" required style="max-width:280px">
+            <label class="btn file-pick">📄 <span id="stmtFile">Chọn file sao kê</span><input type="file" name="file" id="stmtInput" accept=".csv,.xlsx,.pdf,.txt" hidden></label>
+            <input class="field" name="password" type="password" id="stmtPass" placeholder="Mật khẩu PDF" hidden style="max-width:200px">
+            <button class="btn primary" id="stmtGo">Đối chiếu</button>
+          </form>
+          <div id="stmtMsg"></div>
+        </div>
+        <div id="stmtList" style="margin-top:16px"></div>
+        <div id="recResult"></div>
+      </section>
+
       <!-- ================= SETTINGS ================= -->
       <section id="settings" hidden>
         <div class="card">
@@ -434,6 +476,7 @@ ol.howto li { margin: 5px 0; }
     </main>
   </div>
 </div>
+<datalist id="accountList"></datalist>
 <div id="modalRoot"></div>
 <div id="toasts"></div>
 <div id="tip"></div>
@@ -447,7 +490,7 @@ const short = n => n >= 1e9 ? (n / 1e9).toFixed(1).replace('.', ',').replace(',0
   : n >= 1e6 ? (n / 1e6).toFixed(1).replace('.', ',').replace(',0', '') + ' tr' : n >= 1e3 ? Math.round(n / 1e3) + 'k' : String(n || 0);
 const pct1 = x => x.toFixed(1).replace('.', ',') + '%';
 const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({'&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;'}[c]));
-const SRC = {shopee: 'Shopee', tiktok: 'TikTok', momo: 'MoMo', manual: 'Nhập tay', screenshot: 'Ảnh chụp', email: 'Email'};
+const SRC = {shopee: 'Shopee', tiktok: 'TikTok', momo: 'MoMo', manual: 'Nhập tay', screenshot: 'Ảnh chụp', statement: 'Sao kê', email: 'Email'};
 const DOW = ['Chủ nhật', 'Thứ Hai', 'Thứ Ba', 'Thứ Tư', 'Thứ Năm', 'Thứ Sáu', 'Thứ Bảy'];
 const pad = n => String(n).padStart(2, '0');
 const todayISO = () => { const d = new Date(); return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`; };
@@ -516,6 +559,7 @@ function showTab(name) {
   try { localStorage.setItem('tab', name); } catch {}
   if (name === 'import') { renderAccounts(); loadEmails(); }
   if (name === 'settings') renderSettings();
+  if (name === 'recon') loadStatements();
   window.scrollTo(0, 0);
 }
 $$('nav button').forEach(b => b.onclick = () => showTab(b.dataset.tab));
@@ -534,12 +578,19 @@ function setMonth(m) {
 }
 function shiftMonth(d) { const [y, m] = state.month.split('-').map(Number); const x = new Date(y, m - 1 + d, 1);
   setMonth(`${x.getFullYear()}-${pad(x.getMonth() + 1)}`); }
+$$('[data-src-link]').forEach(el => el.onclick = () => {
+  state.src = el.dataset.srcLink; state.cat = ''; $('#fCat').value = ''; $('#fText').value = '';
+  $$('#fSrc .seg').forEach(x => x.classList.toggle('on', x.dataset.src === state.src));
+  renderTx(); showTab('tx');
+});
 $('#prevM').onclick = () => shiftMonth(-1);
 $('#nextM').onclick = () => shiftMonth(1);
 $('#todayBtn').onclick = () => setMonth(thisMonth());
 $('#addBtn').onclick = () => txModal();
 
-async function refresh() { await Promise.all([loadSummary(), loadTx()]); }
+async function refresh() {
+  await Promise.all([loadSummary(), loadTx(), $('#recon').hidden ? null : loadStatements()]);
+}
 async function loadInfo() {
   state.info = await api('/api/info');
   const n = state.info.user_name;
@@ -639,6 +690,7 @@ function tip(e, html) {
 // ---------------------------------------------------------------- transactions
 function txRow(t) {
   const sub = [`<span class="pill ${t.source}">${SRC[t.source] || t.source}</span>`, esc(t.category || 'Chưa phân loại')];
+  if (t.pay_account) sub.push('💳 ' + esc(t.pay_account));
   if (t.status === 'cancelled') sub.push('<span class="pill bad">Không tính</span>');
   const d = t.date;
   return `<button class="txrow ${t.status === 'cancelled' ? 'cancelled' : ''}" data-id="${t.id}">
@@ -674,7 +726,7 @@ document.addEventListener('click', e => {
   const row = e.target.closest('.txrow'); if (!row) return;
   const id = +row.dataset.id;
   const t = state.tx.find(x => x.id === id);
-  if (t) txModal(t); else api('/api/transactions?month=' + state.month).then(list => txModal(list.find(x => x.id === id)));
+  if (t) txModal(t); else api('/api/transactions/' + id).then(txModal);  // e.g. a row on the reconcile tab, other month
 });
 
 // Add / edit one transaction.
@@ -690,8 +742,10 @@ function txModal(t = null) {
     <div class="amount-hint" id="mHint">Gõ 1.500.000 · 1,5tr · 200k đều được</div>
     <label class="lbl">Mô tả</label>
     <input class="field" id="mDesc" placeholder="vd. Học phí tháng 11 bé An" value="${esc(t?.description || '')}">
-    <label class="lbl">Ngày</label>
-    <input class="field" id="mDate" type="date" value="${t?.date || todayISO()}">
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
+      <div><label class="lbl">Ngày</label><input class="field" id="mDate" type="date" value="${t?.date || todayISO()}"></div>
+      <div><label class="lbl">Trả bằng</label><input class="field" id="mPay" list="accountList" placeholder="Visa…, Tiền mặt" value="${esc(edit ? (t.pay_account || '') : lastPay())}"></div>
+    </div>
     <label class="lbl">Hạng mục</label>
     <div class="catgrid" id="mCats"></div>
     <div class="remember" id="mRemember">
@@ -731,7 +785,10 @@ function txModal(t = null) {
   $('#mSave', el).onclick = () => busy($('#mSave', el), async () => {
     const amount = parseAmount(amtIn.value);
     if (!(amount > 0)) { amtIn.focus(); return toast('Số tiền chưa hợp lệ', true); }
-    const body = {amount, kind, description: $('#mDesc', el).value.trim(), date: $('#mDate', el).value || todayISO(), category_id: cat};
+    const pay = $('#mPay', el).value.trim();
+    const body = {amount, kind, description: $('#mDesc', el).value.trim(), date: $('#mDate', el).value || todayISO(),
+      category_id: cat, pay_account: pay};
+    if (!edit) { try { localStorage.setItem('lastPay', pay); } catch {} }
     try {
       if (edit) {
         await api('/api/transactions/' + t.id, {method: 'PATCH', body: {...body, category_id: cat ?? t.category_id}});
@@ -889,6 +946,128 @@ $('#ocrSave').onclick = async () => {
   $('#ocrCard').hidden = true; toast(`Đã lưu ${items.length} giao dịch`); refresh();
 };
 
+// ---------------------------------------------------------------- reconcile
+function lastPay() { try { return localStorage.getItem('lastPay') || ''; } catch { return ''; } }
+async function loadAccounts() {
+  const list = await api('/api/accounts');
+  $('#accountList').innerHTML = list.map(a => `<option value="${esc(a)}">`).join('');
+}
+const dm = d => `${d.slice(8)}/${d.slice(5, 7)}`;
+let currentStmt = null;
+
+$('#stmtInput').onchange = e => {
+  const f = e.target.files[0];
+  $('#stmtFile').textContent = f ? f.name : 'Chọn file sao kê';
+  $('#stmtPass').hidden = true; $('#stmtPass').value = ''; $('#stmtMsg').innerHTML = '';
+};
+$('#stmtForm').onsubmit = e => {
+  e.preventDefault();
+  const form = e.target;
+  if (!$('#stmtInput').files[0]) return toast('Chọn file sao kê trước', true);
+  busy($('#stmtGo'), async () => {
+    try {
+      const rec = await api('/api/statements', {method: 'POST', body: new FormData(form)});
+      $('#stmtMsg').innerHTML = ''; $('#stmtPass').hidden = true;
+      form.reset(); $('#stmtFile').textContent = 'Chọn file sao kê';
+      currentStmt = rec.statement.id;
+      toast(`Đã nhập ${rec.summary.lines} dòng sao kê`);
+      await Promise.all([loadStatements(rec), loadAccounts()]); refresh();
+    } catch (err) {
+      const needPass = /mật khẩu/i.test(err.message);
+      $('#stmtPass').hidden = !needPass;
+      if (needPass) $('#stmtPass').focus();
+      $('#stmtMsg').innerHTML = `<div class="result err">${esc(err.message)}</div>`;
+    }
+  });
+};
+
+async function loadStatements(rec = null) {
+  const list = await api('/api/statements');
+  if (!list.length) { $('#stmtList').innerHTML = ''; $('#recResult').innerHTML = ''; return; }
+  if (!list.some(s => s.id === currentStmt)) currentStmt = list[0].id;
+  $('#stmtList').innerHTML = `<div class="row-form">
+    <select class="field" id="stmtSel" style="max-width:420px">${list.map(s => `<option value="${s.id}" ${s.id === currentStmt ? 'selected' : ''}>
+      ${esc(s.account)} · ${s.first ? dm(s.first) + '–' + dm(s.last) + '/' + s.last.slice(0, 4) : ''} · ${s.lines} dòng</option>`).join('')}</select>
+    <button class="btn sm danger" id="stmtDel">Xoá sao kê này</button></div>`;
+  $('#stmtSel').onchange = e => { currentStmt = +e.target.value; loadStatements(); };
+  $('#stmtDel').onclick = async () => {
+    if (!await confirmBox('Xoá sao kê?', 'Chỉ xoá dữ liệu sao kê và kết quả đối chiếu. Các giao dịch đã thêm vào app vẫn giữ nguyên.', 'Xoá', true)) return;
+    await api('/api/statements/' + currentStmt, {method: 'DELETE'}); currentStmt = null; loadStatements();
+  };
+  renderRecon(rec && rec.statement.id === currentStmt ? rec : await api('/api/statements/' + currentStmt));
+}
+
+function renderRecon(r) {
+  const s = r.summary, acct = esc(r.statement.account);
+  if (!s.lines) { $('#recResult').innerHTML = '<div class="card empty">Sao kê không có dòng nào.</div>'; return; }
+  const pct = s.debit_count ? Math.round(s.matched_count / (s.matched_count + s.missing_count || 1) * 100) : 0;
+  const lineRow = (l, extra = '', acts = '') => `<div class="recrow" data-line="${l.id}">
+      <div class="when num">${dm(l.date)}</div>
+      <div class="what"><b>${esc(l.description) || '(không có mô tả)'}</b>${extra}${acts ? `<div class="acts">${acts}</div>` : ''}</div>
+      <div class="amt num ${l.kind === 'income' ? 'down' : ''}">${l.kind === 'income' ? '+' : '−'}${fmt(l.amount)}</div></div>`;
+  const missing = r.missing.map(m => {
+    const sg = m.suggestion;
+    const extra = sg ? `<div class="sugg">Gần giống: <b style="display:inline">${esc(sg.description)}</b> · ${fmt(sg.amount)} · ${dm(sg.date)}
+        (lệch ${fmt(Math.abs(sg.amount - m.line.amount))})</div>` : '';
+    const acts = (sg ? `<button class="btn sm primary" data-act="link-fix" data-tx="${sg.id}">Ghép, sửa thành số sao kê</button>
+        <button class="btn sm" data-act="link" data-tx="${sg.id}">Ghép, giữ số của tôi</button>` : '')
+      + `<button class="btn sm ${sg ? '' : 'primary'}" data-act="add">＋ Thêm vào app</button>
+        <button class="btn sm" data-act="pick">Ghép với…</button>
+        <button class="btn sm ghost" data-act="ignore">Bỏ qua</button>`;
+    return lineRow(m.line, extra, acts);
+  }).join('');
+  const matched = r.matched.map(m => lineRow(m.line,
+    `<div class="pair">↔ ${m.tx.icon || ''} ${esc(m.tx.description)} · ${fmt(m.tx.amount)} · ${dm(m.tx.date)} · <span class="pill ${m.tx.source}">${SRC[m.tx.source] || m.tx.source}</span>${m.how === 'added' ? ' · thêm từ sao kê' : m.how === 'manual' ? ' · ghép tay' : ''}</div>`,
+    `<button class="btn sm ghost" data-act="unlink">${m.how === 'added' ? 'Hoàn tác thêm' : 'Bỏ ghép'}</button>`)).join('');
+  const ignored = r.ignored.map(l => lineRow(l, '', '<button class="btn sm ghost" data-act="unignore">Khôi phục</button>')).join('');
+  $('#recResult').innerHTML = `
+    <div class="rec-tiles">
+      <div class="card rec-tile good"><div class="k">✅ Đã khớp</div><div class="v num">${s.matched_count}</div><div class="s">${fmt(s.matched_total)} · ${pct}% sao kê</div></div>
+      <div class="card rec-tile ${s.missing_count ? 'bad' : ''}"><div class="k">⚠ Chưa ghi trong app</div><div class="v num">${s.missing_count}</div><div class="s">${fmt(s.missing_total)}${s.near_count ? ` · ${s.near_count} gần khớp` : ''}</div></div>
+      <div class="card rec-tile"><div class="k">💳 Ghi "${acct}" nhưng không có trên sao kê</div><div class="v num">${s.only_card_count}</div><div class="s">${fmt(s.only_card_total)}</div></div>
+      <div class="card rec-tile"><div class="k">Bỏ qua</div><div class="v num">${s.ignored_count}</div><div class="s">thanh toán thẻ, chuyển khoản…</div></div>
+    </div>
+    <p class="muted" style="font-size:13px;margin:0 0 12px">Kỳ sao kê ${dm(s.first)} – ${dm(s.last)}/${s.last.slice(0, 4)} · ${s.lines} dòng · tổng chi ${fmt(s.debit_total)}</p>
+    <div class="card">
+      <h2>⚠ Chưa ghi trong app <span class="muted" style="font-weight:400;font-size:13px">— quẹt thẻ nhưng chưa có trong app</span></h2>
+      ${missing || '<div class="empty">🎉 Mọi dòng trên sao kê đều đã có trong app.</div>'}
+    </div>
+    ${r.only_app_card.length ? `<div class="card"><h2>💳 Ghi là trả bằng ${acct} nhưng không có trên sao kê</h2>
+      <p class="hint">Có thể ghi nhầm số tiền/ngày, hoặc thật ra trả bằng cách khác. Bấm để sửa.</p>
+      <div class="txlist">${r.only_app_card.map(txRow).join('')}</div></div>` : ''}
+    <div class="card">
+      <details class="recsec" ${r.missing.length ? '' : 'open'}><summary>✅ Đã khớp (${r.matched.length})</summary>${matched || '<div class="empty">Chưa có.</div>'}</details>
+      ${r.ignored.length ? `<details class="recsec"><summary>Bỏ qua (${r.ignored.length})</summary>${ignored}</details>` : ''}
+      ${r.only_app_other.length ? `<details class="recsec"><summary>Khoản khác trong kỳ không qua thẻ này (${r.only_app_other.length})</summary>
+        <p class="hint" style="margin-top:8px">Tiền mặt, MoMo, thẻ khác… chỉ để tham khảo.</p><div class="txlist">${r.only_app_other.map(txRow).join('')}</div></details>` : ''}
+    </div>`;
+}
+
+$('#recResult').addEventListener('click', async e => {
+  const b = e.target.closest('[data-act]'); if (!b) return;
+  const lid = +b.closest('[data-line]').dataset.line, act = b.dataset.act;
+  if (act === 'pick') return pickTx(lid);
+  const map = {'link-fix': ['link', {tx_id: +b.dataset.tx, use_statement_amount: true}], link: ['link', {tx_id: +b.dataset.tx}]};
+  const [path, body] = map[act] || [act, {}];
+  const r = await busy(b, () => api(`/api/statement-lines/${lid}/${path}`, {method: 'POST', body}));
+  renderRecon(r); refresh();
+  toast({add: 'Đã thêm vào app', 'link-fix': 'Đã ghép và sửa số tiền', link: 'Đã ghép', ignore: 'Đã bỏ qua', unignore: 'Đã khôi phục',
+    unlink: 'Đã bỏ ghép'}[act] || 'Đã cập nhật');
+});
+
+async function pickTx(lid) {
+  const list = await api(`/api/statement-lines/${lid}/candidates`);
+  const m = modal(`<h3>Ghép với giao dịch nào?</h3><p class="lead">Các giao dịch trong khoảng ±7 ngày, gần số tiền nhất ở trên.</p>
+    <div class="txlist" id="pickList">${list.length ? list.map(txRow).join('') : '<div class="empty">Không có giao dịch nào gần ngày này.</div>'}</div>
+    <div class="modal-foot"><button class="btn" data-close>Đóng</button></div>`, {wide: true});
+  $('#pickList', m.el).addEventListener('click', async e => {
+    const row = e.target.closest('.txrow'); if (!row) return;
+    e.stopPropagation();  // don't open the edit dialog
+    renderRecon(await api(`/api/statement-lines/${lid}/link`, {method: 'POST', body: {tx_id: +row.dataset.id}}));
+    m.close(); refresh(); toast('Đã ghép');
+  }, true);
+}
+
 // ---------------------------------------------------------------- settings
 const EMOJIS = '🎓📚💡💧🔥📶📱💄🧴💅🛒🍚🥬🍜☕️🏠🧺🧹🛋️👗👟👜🍼🧸👶💊🏥🦷🚗⛽️🛵✈️🎬🎮🏖️🎁💝🐶🐱🌿💼💰🏦📈🧾📦❤️⭐️'.match(/\p{Extended_Pictographic}️?/gu);
 function renderSettings() {
@@ -993,10 +1172,10 @@ function welcome() {
 
 // ---------------------------------------------------------------- start
 (async () => {
-  await Promise.all([loadInfo(), loadCats()]);
+  await Promise.all([loadInfo(), loadCats(), loadAccounts()]);
   let tab = 'overview'; try { tab = localStorage.getItem('tab') || tab; } catch {}
   const hash = location.hash.slice(1);
-  if (['overview', 'tx', 'import', 'settings'].includes(hash)) tab = hash;
+  if (['overview', 'tx', 'import', 'recon', 'settings'].includes(hash)) tab = hash;
   showTab(tab);
   setMonth(state.month);
   if (!state.info.onboarded) welcome();

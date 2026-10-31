@@ -51,6 +51,7 @@ th { background: #f4f5fb; font-size: 10pt; }
       <li>Đưa khoản chi vào app: Gmail, ảnh chụp, nhập tay</li>
       <li>Xem tháng này chi bao nhiêu cho từng việc</li>
       <li>Ngân sách và tự phân loại</li>
+      <li>Đối chiếu sao kê thẻ Visa</li>
       <li>Sao lưu và những điều cần biết</li>
       <li>Ghi chú cho bản thử nghiệm</li>
     </ol>
@@ -147,7 +148,8 @@ th { background: #f4f5fb; font-size: 10pt; }
   <h3>Cách 3 · Nhập tay: học phí, lương, đi chợ…</h3>
   <p>Bấm nút <b>＋ Thêm khoản</b> ở góc trên bên phải. Gõ số tiền thoải mái: <code>1.500.000</code>, <code>1,5tr</code>,
     <code>200k</code> đều được; app hiện số đã hiểu ngay bên dưới. Chọn <b>Khoản thu</b> khi nhập lương. Hạng mục để
-    <b>✨ Tự động</b> thì app tự đoán theo mô tả.</p>
+    <b>✨ Tự động</b> thì app tự đoán theo mô tả. Ô <b>Trả bằng</b>: ghi tên thẻ (ví dụ <i>Visa Techcombank</i>) hoặc
+    <i>Tiền mặt</i>. App nhớ lựa chọn lần trước, và cuối tháng dùng thông tin này để đối chiếu với sao kê (phần 6).</p>
   <img class="shot half" src="img/add.png">
   <div class="tip"><b>Nên nhập lương hằng tháng</b>để app tính được <b>% thu nhập đã chi</b> và số tiền còn lại.</div>
 </section>
@@ -160,6 +162,7 @@ th { background: #f4f5fb; font-size: 10pt; }
     <li><b>Chi theo hạng mục</b>: mỗi việc chiếm bao nhiêu % tổng chi, kèm so sánh với tháng trước (▲ tăng / ▼ giảm).</li>
     <li><b>12 tháng gần nhất</b>: rê chuột lên cột để xem số, bấm vào cột để mở tháng đó.</li>
     <li>Nút <b>‹ ›</b> cạnh tên tháng dùng để xem tháng trước hoặc tháng sau.</li>
+    <li>Bấm ô <b>Shopee</b> hoặc <b>TikTok Shop</b> để xem ngay các đơn của sàn đó trong tháng.</li>
   </ul>
   <img class="shot" src="img/overview.png">
   <p>Bấm vào một hạng mục để xem từng khoản chi trong đó. Bấm vào một giao dịch để <b>sửa</b>, <b>xoá</b>, hoặc đánh dấu
@@ -179,7 +182,33 @@ th { background: #f4f5fb; font-size: 10pt; }
 </section>
 
 <section>
-  <h2>6. Sao lưu và những điều cần biết</h2>
+  <h2>6. Đối chiếu sao kê thẻ Visa</h2>
+  <p>Ngân hàng không gửi email cho mỗi lần quẹt thẻ, nên khoản chi bằng Visa phải ghi tay, và rất dễ quên hoặc ghi sai
+    (tiền tip, phí). Cuối tháng, đối chiếu với sao kê để bắt hết những khoản đó:</p>
+  <ol class="steps">
+    <li>Vào internet banking của ngân hàng, tải <b>sao kê thẻ</b> của tháng dưới dạng <b>Excel</b> (nên chọn) hoặc <b>PDF</b>.
+      Sao kê gửi qua email thường là PDF có mật khẩu (hay là ngày sinh hoặc số CCCD).</li>
+    <li>Trong app, vào mục <b>Đối chiếu</b>. Gõ tên thẻ <b>đúng như ô “Trả bằng”</b> (ví dụ <i>Visa Techcombank</i>),
+      bấm <b>Chọn file sao kê</b>, rồi bấm <b>Đối chiếu</b>. PDF có mật khẩu thì app sẽ hỏi mật khẩu.</li>
+  </ol>
+  <img class="shot" src="img/recon-form.png">
+  <p>App chia kết quả thành 4 ô:</p>
+  <img class="shot" src="img/recon-tiles.png">
+  <table>
+    <tr><th style="width:34%">Ô</th><th>Ý nghĩa và cách xử lý</th></tr>
+    <tr><td>✅ <b>Đã khớp</b></td><td>Dòng sao kê đã có trong app (ngày lệch 1–3 hôm vẫn tính là khớp). Không cần làm gì.</td></tr>
+    <tr><td>⚠ <b>Chưa ghi trong app</b></td><td>Đã quẹt thẻ nhưng chưa ghi. Bấm <b>＋ Thêm vào app</b>. Nếu app thấy một khoản <i>gần giống</i>
+      (lệch vì tiền tip, phí…), bấm <b>Ghép, sửa thành số sao kê</b>.</td></tr>
+    <tr><td>💳 <b>Ghi “Visa…” nhưng không có trên sao kê</b></td><td>Có thể ghi nhầm số tiền hoặc ngày, hay thật ra đã trả bằng tiền mặt. Bấm vào khoản đó để sửa.</td></tr>
+    <tr><td><b>Bỏ qua</b></td><td>Thanh toán thẻ, chuyển khoản… App tự bỏ qua; không phải khoản chi.</td></tr>
+  </table>
+  <img class="shot" src="img/recon-missing.png">
+  <div class="tip"><b>Mẹo</b>Đối chiếu xong, tổng chi trong tháng mới thật sự đầy đủ. Đơn Shopee nào đã thêm từ sao kê thì khi đồng bộ
+    Gmail về sau sẽ được gộp lại, không bị tính hai lần.</div>
+</section>
+
+<section>
+  <h2>7. Sao lưu và những điều cần biết</h2>
   <h3>Sao lưu: nên làm mỗi tháng</h3>
   <p>Vào <b>Cài đặt</b> → <b>Dữ liệu</b>:</p>
   <ul>
@@ -193,7 +222,7 @@ th { background: #f4f5fb; font-size: 10pt; }
     <tr><td>App chỉ đọc Gmail khi bạn <b>bấm Đồng bộ ngay</b></td><td>Đồng bộ mỗi tuần</td></tr>
     <tr><td>Shopee/TikTok có thể không gửi email cho từng đơn</td><td>Chụp màn hình trang “Đơn mua”</td></tr>
     <tr><td>App không đọc thư trong <b>Spam</b></td><td>Thấy email đơn hàng thật trong Spam thì bấm “Không phải thư rác”, rồi đồng bộ lại</td></tr>
-    <tr><td>Không kết nối thẳng được với ngân hàng</td><td>Chụp màn hình biên lai chuyển khoản</td></tr>
+    <tr><td>Không kết nối thẳng được với ngân hàng</td><td>Cuối tháng tải sao kê để đối chiếu (phần 6), hoặc chụp màn hình biên lai chuyển khoản</td></tr>
     <tr><td>Đổi mật khẩu Gmail thì Google huỷ mật khẩu ứng dụng</td><td>Cài đặt → Gỡ tài khoản → ＋ Thêm Gmail lại (tạo mật khẩu ứng dụng mới)</td></tr>
     <tr><td>Khi cài bản mới, máy có thể hỏi quyền dùng Keychain</td><td>Bấm <b>Always Allow</b> (Luôn cho phép)</td></tr>
   </table>
@@ -202,7 +231,7 @@ th { background: #f4f5fb; font-size: 10pt; }
 </section>
 
 <section>
-  <h2>7. Ghi chú cho bản thử nghiệm</h2>
+  <h2>8. Ghi chú cho bản thử nghiệm</h2>
   <p>Đây là <b>bản thử nghiệm</b>. Ý kiến của bạn quyết định bản chính thức có được phát hành hay không. Vừa làm vừa ghi lại giúp nhé
     (ghi tay hay nhắn tin đều được):</p>
   <table class="feedback">
@@ -212,6 +241,7 @@ th { background: #f4f5fb; font-size: 10pt; }
     <tr><td>Bước tạo “Mật khẩu ứng dụng” có dễ hiểu không?</td><td></td></tr>
     <tr><td>Đồng bộ Gmail: có thấy đơn Shopee/TikTok/MoMo không? Số tiền có đúng không?</td><td></td></tr>
     <tr><td>Ảnh chụp MoMo/ngân hàng: số tiền và ngày có đúng không?</td><td></td></tr>
+    <tr><td>Đối chiếu sao kê Visa: app có đọc đủ mọi dòng không? Có khoản nào ghép sai không?</td><td></td></tr>
     <tr><td>Chữ nào trong app khó hiểu hoặc sai chính tả?</td><td></td></tr>
     <tr><td>Bạn muốn app có thêm gì?</td><td></td></tr>
   </table>

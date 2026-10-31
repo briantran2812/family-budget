@@ -18,9 +18,11 @@ from flask import Flask, Response, abort, jsonify, request, send_from_directory
 import db
 import gmail_sync
 import parsers
+import reconcile
 import rules
+import statements
 
-VERSION = "1.2.0"
+VERSION = "1.3.0"
 RESOURCES = Path(getattr(sys, "_MEIPASS", Path(__file__).parent))  # PyInstaller unpacks data files here
 app = Flask(__name__, static_folder=str(RESOURCES / "static"))
 app.config["DESKTOP"] = False
@@ -188,9 +190,10 @@ def _insert(c, t: dict) -> int:
         raise ValueError("Số tiền phải lớn hơn 0")
     cid = t.get("category_id") or rules.categorize(c, t.get("description", ""), kind)
     return c.execute(
-        "INSERT INTO transactions(date, amount, kind, description, source, category_id) VALUES (?, ?, ?, ?, ?, ?)",
+        "INSERT INTO transactions(date, amount, kind, description, source, category_id, pay_account) "
+        "VALUES (?, ?, ?, ?, ?, ?, ?)",
         (t.get("date") or date.today().isoformat(), amount, kind, (t.get("description") or "").strip(),
-         t.get("source", "manual"), cid)).lastrowid
+         t.get("source", "manual"), cid, (t.get("pay_account") or "").strip() or None)).lastrowid
 
 
 @app.post("/api/transactions")
@@ -205,10 +208,20 @@ def add_transactions():
     return jsonify(ok=True, ids=ids)
 
 
+@app.get("/api/transactions/<int:tid>")
+def get_transaction(tid):
+    with conn() as c:
+        row = c.execute(TX_SELECT + "WHERE t.id = ?", (tid,)).fetchone()
+    return jsonify(dict(row)) if row else abort(404)
+
+
 @app.patch("/api/transactions/<int:tid>")
 def update_transaction(tid):
     data = request.get_json()
-    allowed = {k: data[k] for k in ("date", "amount", "kind", "description", "category_id", "status") if k in data}
+    allowed = {k: data[k] for k in ("date", "amount", "kind", "description", "category_id", "status", "pay_account")
+               if k in data}
+    if "pay_account" in allowed:
+        allowed["pay_account"] = (allowed["pay_account"] or "").strip() or None
     if not allowed:
         abort(400)
     with conn() as c:
@@ -335,6 +348,113 @@ def dismiss_email():
     with conn() as c:
         c.execute("UPDATE emails SET status = 'dismissed' WHERE message_id = ?", (request.args["id"],))
     return jsonify(ok=True)
+
+
+# ---------------------------------------------------------------- statements & reconciliation
+
+@app.get("/api/accounts")
+def list_accounts():
+    with conn() as c:
+        rows = c.execute("SELECT pay_account FROM transactions WHERE pay_account IS NOT NULL "
+                         "UNION SELECT account FROM statements ORDER BY 1").fetchall()
+    return jsonify([r[0] for r in rows])
+
+
+@app.post("/api/statements")
+def import_statement():
+    import hashlib
+    f = request.files.get("file")
+    account = (request.form.get("account") or "").strip()
+    if not f or not account:
+        return jsonify(error="Chọn file sao kê và nhập tên thẻ/tài khoản (ví dụ: Visa Techcombank)."), 400
+    data = f.read()
+    try:
+        lines = statements.parse_file(f.filename or "", data, request.form.get("password", ""))
+    except statements.NeedPassword as e:
+        return jsonify(error=str(e), need_password=True), 400
+    except statements.StatementError as e:
+        return jsonify(error=str(e)), 400
+    sha = hashlib.sha256(data).hexdigest()
+    with conn() as c:
+        old = c.execute("SELECT id FROM statements WHERE file_sha = ?", (sha,)).fetchone()
+        if old:
+            return jsonify(error="File sao kê này đã được nhập rồi.", id=old["id"]), 409
+        sid = c.execute("INSERT INTO statements(account, filename, file_sha) VALUES (?, ?, ?)",
+                        (account, f.filename, sha)).lastrowid
+        c.executemany("INSERT INTO statement_lines(statement_id, date, amount, kind, description, status) "
+                      "VALUES (?, ?, ?, ?, ?, ?)",
+                      [(sid, l["date"], l["amount"], l["kind"], l["description"], "ignored" if l["ignored"] else None)
+                       for l in lines])
+        return jsonify(reconcile.run(c, sid))
+
+
+@app.get("/api/statements")
+def list_statements():
+    with conn() as c:
+        rows = c.execute("SELECT s.*, MIN(l.date) AS first, MAX(l.date) AS last, COUNT(l.id) AS lines "
+                         "FROM statements s LEFT JOIN statement_lines l ON l.statement_id = s.id "
+                         "GROUP BY s.id ORDER BY last DESC, s.id DESC").fetchall()
+    return jsonify([dict(r) for r in rows])
+
+
+@app.get("/api/statements/<int:sid>")
+def get_statement(sid):
+    with conn() as c:
+        try:
+            return jsonify(reconcile.run(c, sid))
+        except KeyError:
+            abort(404)
+
+
+@app.delete("/api/statements/<int:sid>")
+def delete_statement(sid):
+    with conn() as c:
+        c.execute("DELETE FROM statements WHERE id = ?", (sid,))  # transactions added from it stay
+    return jsonify(ok=True)
+
+
+@app.get("/api/statement-lines/<int:lid>/candidates")
+def line_candidates(lid):
+    with conn() as c:
+        ln = c.execute("SELECT * FROM statement_lines WHERE id = ?", (lid,)).fetchone()
+        rows = c.execute(
+            "SELECT t.*, c.icon AS icon, c.name AS category FROM transactions t LEFT JOIN categories c ON c.id = t.category_id "
+            "WHERE t.status = 'ok' AND t.kind = ? AND t.date BETWEEN date(?, '-7 days') AND date(?, '+7 days') "
+            "AND t.id NOT IN (SELECT match_tx_id FROM statement_lines WHERE match_tx_id IS NOT NULL AND id != ?) "
+            "ORDER BY abs(t.amount - ?), abs(julianday(t.date) - julianday(?)) LIMIT 20",
+            (ln["kind"], ln["date"], ln["date"], lid, ln["amount"], ln["date"])).fetchall()
+    return jsonify([dict(r) for r in rows])
+
+
+@app.post("/api/statement-lines/<int:lid>/<action>")
+def line_action(lid, action):
+    data = request.get_json(silent=True) or {}
+    with conn() as c:
+        ln = c.execute("SELECT l.*, s.account FROM statement_lines l JOIN statements s ON s.id = l.statement_id "
+                       "WHERE l.id = ?", (lid,)).fetchone()
+        if not ln:
+            abort(404)
+        if action == "add":  # a card charge nobody recorded
+            tid = _insert(c, {"date": ln["date"], "amount": ln["amount"], "kind": ln["kind"],
+                              "description": ln["description"], "source": "statement", "pay_account": ln["account"]})
+            c.execute("UPDATE statement_lines SET status = 'added', match_tx_id = ? WHERE id = ?", (tid, lid))
+        elif action == "link":
+            tid = int(data["tx_id"])
+            c.execute("UPDATE statement_lines SET status = 'manual', match_tx_id = ? WHERE id = ?", (tid, lid))
+            if data.get("use_statement_amount"):  # the receipt amount was typed wrong (tip, FX fee…)
+                c.execute("UPDATE transactions SET amount = ? WHERE id = ?", (ln["amount"], tid))
+            c.execute("UPDATE transactions SET pay_account = COALESCE(pay_account, ?) WHERE id = ?", (ln["account"], tid))
+        elif action == "unlink":
+            if ln["status"] == "added":  # undo "add": the transaction only existed because of this line
+                c.execute("DELETE FROM transactions WHERE id = ? AND source = 'statement'", (ln["match_tx_id"],))
+            c.execute("UPDATE statement_lines SET status = NULL, match_tx_id = NULL WHERE id = ?", (lid,))
+        elif action == "ignore":
+            c.execute("UPDATE statement_lines SET status = 'ignored', match_tx_id = NULL WHERE id = ?", (lid,))
+        elif action == "unignore":
+            c.execute("UPDATE statement_lines SET status = NULL WHERE id = ?", (lid,))
+        else:
+            abort(404)
+        return jsonify(reconcile.run(c, ln["statement_id"]))
 
 
 @app.post("/api/screenshot")

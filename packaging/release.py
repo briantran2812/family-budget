@@ -20,6 +20,8 @@ from app import VERSION  # noqa: E402
 
 APP = ROOT / "dist" / "Thu Chi Gia Dinh.app"
 RC_DMG = ROOT / "dist" / f"ThuChiGiaDinh-{VERSION}-rc.dmg"
+# A Mac that sleeps mid-run fires every Playwright timeout at once on wake (seen in 1.3.0 RC); keep it awake.
+KEEP_AWAKE = ["caffeinate", "-i"] if sys.platform == "darwin" else []
 SIGNOFF = ROOT / "qa" / f"QA-SIGNOFF-{VERSION}.md"
 REPORTS = ROOT / "qa" / "reports" / VERSION
 CASES = ROOT / "docs" / "UX-TEST-CASES.md"
@@ -38,14 +40,27 @@ def sha256(path: Path) -> str:
     return hashlib.sha256(path.read_bytes()).hexdigest()
 
 
-def pytest(name: str, args: list, env=None) -> str:
+def pytest(name: str, args: list, env=None, timeout: int = 300) -> str:
+    """Run one suite in its own process group, so a hang (e.g. a stuck WebKit child) blocks the release
+    instead of the terminal — a timeout kills the whole group."""
+    import os
+    import signal
     REPORTS.mkdir(parents=True, exist_ok=True)
-    r = subprocess.run([str(PY), "-m", "pytest", "-q", f"--junitxml={REPORTS / name}.xml", *args],
-                       cwd=ROOT, capture_output=True, text=True, env=env)
-    summary = (r.stdout.strip().splitlines() or ["(no output)"])[-1]
-    (REPORTS / f"{name}.txt").write_text(r.stdout + r.stderr)
+    proc = subprocess.Popen([*KEEP_AWAKE, str(PY), "-m", "pytest", "-q", "-p", "no:cacheprovider", "-o", "faulthandler_timeout=120",
+                             f"--junitxml={REPORTS / name}.xml", *args],
+                            cwd=ROOT, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, text=True, env=env,
+                            start_new_session=True)
+    try:
+        out, _ = proc.communicate(timeout=timeout)
+    except subprocess.TimeoutExpired:
+        os.killpg(proc.pid, signal.SIGKILL)
+        out, _ = proc.communicate()
+        (REPORTS / f"{name}.txt").write_text(out or "")
+        fail(f"{name} tests did not finish within {timeout}s — see qa/reports/{VERSION}/{name}.txt")
+    summary = (out.strip().splitlines() or ["(no output)"])[-1]
+    (REPORTS / f"{name}.txt").write_text(out)
     print(f"    {name}: {summary}")
-    if r.returncode:
+    if proc.returncode:
         fail(f"{name} tests failed — see qa/reports/{VERSION}/{name}.txt")
     return summary
 
@@ -57,12 +72,17 @@ def manual_cases() -> list[tuple[str, str, str]]:
 
 def rc() -> None:
     import os
+    # Retire the previous RC and its sheet first: if this run is blocked, nothing stale may still look releasable.
+    for old in (RC_DMG, SIGNOFF):
+        if old.exists():
+            old.rename(old.with_name(f"{old.stem}.stale-{date.today()}{old.suffix}"))
+            print(f"    retired {old.relative_to(ROOT)}")
     step(f"Version {VERSION}: automated tests")
     unit = pytest("unit-integration", ["tests", "--ignore=tests/e2e", "--ignore=tests/test_packaged.py"])
     e2e = pytest("e2e-ux", ["tests/e2e"])
 
     step("Build")
-    subprocess.run([str(ROOT / "packaging" / "build.sh")], cwd=ROOT, check=True)
+    subprocess.run([*KEEP_AWAKE, str(ROOT / "packaging" / "build.sh")], cwd=ROOT, check=True)
     shutil.move(ROOT / "dist" / f"ThuChiGiaDinh-{VERSION}.dmg", RC_DMG)
 
     step("Smoke test of the packaged app")
@@ -70,9 +90,6 @@ def rc() -> None:
 
     digest = sha256(RC_DMG)
     step(f"QA sign-off sheet → {SIGNOFF.relative_to(ROOT)}")
-    if SIGNOFF.exists() and digest not in SIGNOFF.read_text():
-        SIGNOFF.rename(SIGNOFF.with_suffix(f".superseded-{date.today()}.md"))
-        print("    a sheet for an older RC build existed — kept as *.superseded-*.md")
     if not SIGNOFF.exists():
         rows = "\n".join(f"| {i} | {p} | {n} | ☐ | |" for i, p, n in manual_cases())
         SIGNOFF.write_text(f"""# QA sign-off — Thu Chi Gia Đình {VERSION}

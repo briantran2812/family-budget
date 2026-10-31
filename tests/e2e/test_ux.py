@@ -308,3 +308,133 @@ def test_ux25_one_year_of_data_loads_fast(onboarded, page):
     page.locator("nav button[data-tab=tx]").click()
     expect(page.locator("#txList .txrow").first).to_be_visible()
     assert time.perf_counter() - start < 3, "overview + month list should load within 3 s with 3,000 rows"
+
+
+# ---------------------------------------------------------------- 1.3.0: statements & reconciliation
+
+STMT_ROWS = [
+    ("2026-10-03", "HIGHLANDS COFFEE Q1", 65_000, "expense"),
+    ("2026-10-12", "GOGI HOUSE VINCOM", 1_350_000, "expense"),
+    ("2026-10-18", "CIRCLE K NGUYEN HUE", 89_000, "expense"),
+    ("2026-10-15", "THANH TOAN THE - CAM ON", 5_000_000, "income"),
+]
+
+
+def visa_entries():
+    with db.connect() as c:
+        for d, amt, desc in [("2026-10-02", 65_000, "Cà phê Highlands"), ("2026-10-12", 1_200_000, "Ăn tối Gogi"),
+                             ("2026-10-16", 250_000, "Nhà sách Fahasa")]:
+            c.execute("INSERT INTO transactions(date, amount, description, source, category_id, pay_account) "
+                      "VALUES (?, ?, ?, 'manual', ?, 'Visa Techcombank')", (d, amt, desc, rules.categorize(c, desc)))
+
+
+def import_statement(page, tmp_path, name="saoke.csv", data=None):
+    from samples import statement_csv
+    f = tmp_path / name
+    f.write_bytes(data if data is not None else statement_csv(STMT_ROWS))
+    page.locator("nav button[data-tab=recon]").click()
+    page.fill("#stmtForm [name=account]", "Visa Techcombank")
+    page.set_input_files("#stmtInput", str(f))
+    expect(page.locator("#stmtFile")).to_have_text(name)
+    page.locator("#stmtGo").click()
+
+
+def test_ux26_import_statement_shows_buckets(onboarded, page, tmp_path):
+    visa_entries()
+    import_statement(page, tmp_path)
+    expect(toast(page)).to_have_text("Đã nhập 4 dòng sao kê")
+    tiles = page.locator(".rec-tile")
+    expect(tiles.nth(0)).to_contain_text("1")              # coffee matched despite the 1-day posting lag
+    expect(tiles.nth(1)).to_contain_text("1.439.000 ₫")    # Gogi (near) + Circle K
+    expect(tiles.nth(1)).to_contain_text("1 gần khớp")
+    expect(tiles.nth(2)).to_contain_text("250.000 ₫")      # Fahasa: typed as Visa, not on the statement
+    expect(tiles.nth(3)).to_contain_text("1")              # the card payment, auto-ignored
+    expect(page.locator(".sugg")).to_contain_text("Ăn tối Gogi")
+
+
+def test_ux27_add_forgotten_card_charge(onboarded, page, tmp_path):
+    visa_entries()
+    import_statement(page, tmp_path)
+    row = page.locator(".recrow", has_text="CIRCLE K")
+    row.get_by_role("button", name="＋ Thêm vào app").click()
+    expect(toast(page)).to_have_text("Đã thêm vào app")
+    expect(page.locator(".rec-tile").nth(1)).to_contain_text("1.350.000 ₫")
+    page.locator("nav button[data-tab=tx]").click()
+    expect(page.locator("#txList .txrow", has_text="CIRCLE K")).to_contain_text("Sao kê")
+    expect(page.locator("#txList .txrow", has_text="CIRCLE K")).to_contain_text("💳 Visa Techcombank")
+
+
+def test_ux28_near_match_fix_amount(onboarded, page, tmp_path):
+    visa_entries()
+    import_statement(page, tmp_path)
+    page.locator(".recrow", has_text="GOGI").get_by_role("button", name="Ghép, sửa thành số sao kê").click()
+    expect(toast(page)).to_have_text("Đã ghép và sửa số tiền")
+    expect(page.locator(".rec-tile").nth(0)).to_contain_text("2")
+    page.locator("nav button[data-tab=tx]").click()
+    expect(page.locator("#txList .txrow", has_text="Ăn tối Gogi")).to_contain_text("1.350.000 ₫")
+
+
+def test_ux29_password_pdf(onboarded, page, tmp_path):
+    from samples import statement_pdf
+    pdf = tmp_path / "visa.pdf"
+    statement_pdf(pdf, STMT_ROWS, password="01011990")
+    import_statement(page, tmp_path, "visa.pdf", pdf.read_bytes())
+    expect(page.locator("#stmtMsg")).to_contain_text("mật khẩu")
+    expect(page.locator("#stmtPass")).to_be_visible()
+    page.fill("#stmtPass", "sai")
+    page.locator("#stmtGo").click()
+    expect(page.locator("#stmtMsg")).to_contain_text("Sai mật khẩu")
+    page.fill("#stmtPass", "01011990")
+    page.locator("#stmtGo").click()
+    expect(toast(page)).to_have_text("Đã nhập 4 dòng sao kê")
+    expect(page.locator("#stmtPass")).to_be_hidden()
+
+
+def test_ux30_manual_link_picker_and_ignore(onboarded, page, tmp_path):
+    visa_entries()
+    import_statement(page, tmp_path)
+    page.locator(".recrow", has_text="CIRCLE K").get_by_role("button", name="Ghép với…").click()
+    expect(page.locator("#pickList .txrow").first).to_be_visible()
+    page.locator("#pickList .txrow", has_text="Nhà sách Fahasa").click()
+    expect(toast(page)).to_have_text("Đã ghép")
+    expect(page.locator(".modal")).to_have_count(0)  # picking does not open the edit dialog
+    page.locator(".recrow", has_text="GOGI").get_by_role("button", name="Bỏ qua").click()
+    expect(page.locator(".rec-tile").nth(1)).to_contain_text("0")
+    expect(page.get_by_text("Mọi dòng trên sao kê đều đã có trong app")).to_be_visible()
+
+
+def test_ux31_pay_account_remembered(onboarded, page):
+    page.locator("#addBtn").click()
+    page.fill("#mAmt", "120k")
+    page.fill("#mDesc", "Bún bò")
+    page.fill("#mPay", "Visa Techcombank")
+    page.locator("#mSave").click()
+    expect(page.locator("#recent .txrow").first).to_contain_text("💳 Visa Techcombank")
+    page.locator("#addBtn").click()
+    expect(page.locator("#mPay")).to_have_value("Visa Techcombank")  # next entry defaults to the same card
+
+
+def test_ux32_mini_cards_open_filtered_list(onboarded, page):
+    d = page.evaluate("todayISO()")
+    add_tx(d, 465_000, "Kem chống nắng", source="shopee")
+    add_tx(d, 189_000, "Son kem", source="tiktok")
+    add_tx(d, 50_000, "Bánh mì")
+    reload(page)
+    page.locator("[data-src-link=shopee]").click()
+    expect(page.locator("#tx")).to_be_visible()
+    expect(page.locator("#txList .txrow")).to_have_count(1)
+    expect(page.locator("#fSrc .seg.on")).to_have_text("Shopee")
+    page.locator("nav button[data-tab=overview]").click()
+    page.locator("[data-src-link=tiktok]").click()
+    expect(page.locator("#txList")).to_contain_text("Son kem")
+    page.locator("nav button[data-tab=overview]").click()
+    page.locator("[data-src-link='']").click()
+    expect(page.locator("#txList .txrow")).to_have_count(3)
+
+
+def test_ux33_card_entry_missing_from_statement_opens_editor(onboarded, page, tmp_path):
+    visa_entries()
+    import_statement(page, tmp_path)
+    page.locator("#recResult .txrow", has_text="Nhà sách Fahasa").click()
+    expect(page.get_by_text("Sửa giao dịch")).to_be_visible()  # even though it is not the month on screen
+    expect(page.locator("#mPay")).to_have_value("Visa Techcombank")

@@ -24,7 +24,10 @@ def main() -> None:
     if not dmg.exists():
         sys.exit(f"missing {dmg.relative_to(ROOT)} — run packaging/release.py {'final' if final else 'rc'} first")
 
-    subprocess.run([str(ROOT / ".venv" / "bin" / "python"), str(GUIDE / "shoot.py")], check=True)
+    sheet = ROOT / "qa" / f"QA-SIGNOFF-{VERSION}.md"
+    if not sheet.exists() or hashlib.sha256(dmg.read_bytes()).hexdigest() not in sheet.read_text():
+        sys.exit(f"{dmg.name} is not the build recorded in {sheet.name} — run `release.py rc` (it must pass) first")
+    subprocess.run(["caffeinate", "-i", str(ROOT / ".venv" / "bin" / "python"), str(GUIDE / "shoot.py")], check=True)
     label = VERSION if final else f"{VERSION} thử nghiệm"
     html = (GUIDE / "guide.html").read_text().replace("{{VERSION}}", label).replace("{{DATE}}", date.today().strftime("%d/%m/%Y"))
     if final:

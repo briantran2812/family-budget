@@ -12,3 +12,4 @@ qa/reports/
 delivery/
 packaging/guide/_render.html
 demo-sep-oct/
+*.stale-*

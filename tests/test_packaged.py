@@ -88,3 +88,22 @@ def test_gmail_tls_reaches_google(running_app):
     if "kiểm tra mạng" in res.get("error", ""):
         pytest.skip("no network on this machine")
     assert status == 400 and "từ chối đăng nhập" in res["error"], res
+
+
+def test_statement_import_inside_bundle(running_app, tmp_path):
+    """openpyxl and PDFKit are imported lazily — make sure the bundle carries them."""
+    from samples import statement_pdf, statement_xlsx
+    rows = [("2026-10-03", "HIGHLANDS COFFEE", 65_000, "expense"), ("2026-10-15", "THANH TOAN THE", 5_000_000, "income")]
+    for name, make in (("v.xlsx", statement_xlsx), ("v.pdf", statement_pdf)):
+        f = tmp_path / name
+        make(f, rows)
+        boundary = "----thuchi"
+        body = (f"--{boundary}\r\nContent-Disposition: form-data; name=\"account\"\r\n\r\nVisa {name}\r\n"
+                f"--{boundary}\r\nContent-Disposition: form-data; name=\"file\"; filename=\"{name}\"\r\n"
+                f"Content-Type: application/octet-stream\r\n\r\n").encode() + f.read_bytes() + f"\r\n--{boundary}--\r\n".encode()
+        req = urllib.request.Request(running_app[0] + "/api/statements", data=body, method="POST",
+                                     headers={"X-Budget": "1", "Content-Type": f"multipart/form-data; boundary={boundary}"})
+        import json
+        with urllib.request.urlopen(req, timeout=60) as r:
+            rec = json.loads(r.read())
+        assert rec["summary"]["lines"] == 2 and rec["summary"]["ignored_count"] == 1, (name, rec["summary"])

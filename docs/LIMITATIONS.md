@@ -43,7 +43,12 @@ xử lý hiện có, nếu có.
 | Giới hạn | Ảnh hưởng | Cách xử lý |
 | --- | --- | --- |
 | **Không kết nối trực tiếp được với ngân hàng.** Việt Nam chưa có Open Banking cho cá nhân; các dịch vụ trung gian như Casso hay SePay cần gửi dữ liệu lên server của họ | Không tự lấy được giao dịch chuyển khoản, quẹt thẻ | Chụp màn hình biên lai chuyển khoản (đã hỗ trợ và đã test với mẫu của Vietcombank, Techcombank, MB) |
-| Chưa nhập được **file sao kê** (Excel/CSV/PDF) | Chưa xem được toàn bộ chi tiêu qua tài khoản ngân hàng | Đề xuất làm ở phiên bản tiếp theo |
+| Bộ đọc sao kê nhận ra cột theo **tên cột phổ biến** (Ngày GD, Diễn giải, Ghi nợ/Ghi có, Amount…), mới được kiểm thử với file mẫu chứ chưa với file thật của từng ngân hàng | Sao kê của một số ngân hàng có thể không đọc được | App báo "không tìm thấy dòng tiêu đề" hoặc "không đọc được dòng nào"; gửi một mẫu (che số thẻ) để bổ sung |
+| Không đọc được file **.xls** (Excel cũ) và **PDF dạng ảnh scan** (không có chữ thật) | | Mở .xls bằng Excel/Numbers rồi lưu thành .xlsx/.csv; với PDF dạng ảnh, dùng file Excel từ internet banking |
+| Giao dịch ngoại tệ: chỉ lấy cột **VND** | Sao kê chỉ có cột ngoại tệ thì sai số tiền | Dùng sao kê có cột quy đổi VND |
+| Ghép theo: **cùng số tiền (lệch ≤ 1.000đ), ngày lệch ≤ 3 ngày**. Lệch đến 15% thì chỉ **gợi ý**, không tự ghép | Hai khoản cùng số tiền trong cùng vài ngày có thể bị ghép chéo | Xem lại nhóm "Đã khớp"; bấm Bỏ ghép rồi Ghép với… để sửa |
+| Kỳ sao kê lấy từ **dòng đầu đến dòng cuối** trong file, không đọc ngày chốt sao kê | Khoản ghi tay sau dòng cuối cùng không được đưa vào nhóm "không có trên sao kê" | Đúng với mục đích đối chiếu |
+| Xoá sao kê **giữ lại** các giao dịch đã thêm từ sao kê đó | | Muốn bỏ thì bấm "Hoàn tác thêm" trước khi xoá sao kê |
 | Chưa đọc **email/SMS biến động số dư** | Như trên | Email: làm được với ngân hàng gửi email thông báo. SMS: chỉ làm được nếu iPhone đồng bộ tin nhắn sang Mac và app được cấp quyền Full Disk Access, nên chưa làm |
 
 ## Cài đặt và cập nhật

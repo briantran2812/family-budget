@@ -112,6 +112,14 @@ def process(conn, compiled, message_id, received, sender, subject, body) -> tupl
     if row:  # Shopee sends several emails per order (placed, paid, shipped); count it once
         return "duplicate", row["id"]
     cid = rules.categorize(conn, r["description"], kind, compiled)
+    added = conn.execute(  # the same charge was already added from a card statement: enrich it, don't duplicate
+        "SELECT id FROM transactions WHERE source = 'statement' AND status = 'ok' AND kind = ? AND amount = ? "
+        "AND abs(julianday(date) - julianday(?)) <= 3 ORDER BY abs(julianday(date) - julianday(?)) LIMIT 1",
+        (kind, r["amount"], received, received)).fetchone()
+    if added:
+        conn.execute("UPDATE transactions SET source = ?, description = ?, order_id = ?, category_id = ? WHERE id = ?",
+                     (source, r["description"][:300], r["order_id"], cid, added["id"]))
+        return "imported", added["id"]
     tx_id = conn.execute(
         "INSERT INTO transactions(date, amount, kind, description, source, category_id, order_id) "
         "VALUES (?, ?, ?, ?, ?, ?, ?)",

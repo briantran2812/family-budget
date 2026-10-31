@@ -30,6 +30,7 @@ CREATE TABLE IF NOT EXISTS transactions (
     category_id INTEGER REFERENCES categories(id) ON DELETE SET NULL,
     order_id    TEXT,
     status      TEXT NOT NULL DEFAULT 'ok',      -- ok | cancelled
+    pay_account TEXT,                            -- how it was paid, e.g. "Visa Techcombank"; NULL = unknown
     created_at  TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
     UNIQUE (source, order_id)
 );
@@ -42,6 +43,23 @@ CREATE TABLE IF NOT EXISTS emails (
     body           TEXT,                         -- kept so "Phân tích lại" works without re-downloading
     status         TEXT,                         -- imported | duplicate | cancelled | no_amount | skipped
     transaction_id INTEGER REFERENCES transactions(id) ON DELETE SET NULL
+);
+CREATE TABLE IF NOT EXISTS statements (
+    id          INTEGER PRIMARY KEY,
+    account     TEXT NOT NULL,                   -- card/account label, matched against transactions.pay_account
+    filename    TEXT,
+    file_sha    TEXT UNIQUE,
+    imported_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
+);
+CREATE TABLE IF NOT EXISTS statement_lines (
+    id           INTEGER PRIMARY KEY,
+    statement_id INTEGER NOT NULL REFERENCES statements(id) ON DELETE CASCADE,
+    date         TEXT NOT NULL,
+    amount       INTEGER NOT NULL,
+    kind         TEXT NOT NULL,
+    description  TEXT NOT NULL DEFAULT '',
+    status       TEXT,                           -- NULL | auto | manual | added | ignored
+    match_tx_id  INTEGER REFERENCES transactions(id) ON DELETE SET NULL
 );
 CREATE TABLE IF NOT EXISTS settings (
     key   TEXT PRIMARY KEY,
@@ -62,12 +80,12 @@ DEFAULT_CATEGORIES = [
                                       "loreal", "bioderma", "cocoon", "sap tay trang", "vitamin c", "serum vitamin"]),
     ("Ăn uống & đi chợ", "expense", "🛒", ["thuc pham", "do an", "gao", "sua tuoi", "banh", "keo", "ca phe", "tra sua",
                                      "mi tom", "gia vi", "nuoc mam", "dau an", "hat dieu", "trai cay", "grabfood",
-                                     "shopeefood", "bach hoa xanh", "winmart", "coopmart", "an vat", "nha hang", "quan an", "an uong", "di cho"]),
+                                     "shopeefood", "bach hoa xanh", "winmart", "coopmart", "an vat", "nha hang", "quan an", "an uong", "di cho", "pizza", "coffee", "highlands", "coffee house", "lotte mart", "circle k", "bun cha", "grab food", "baemin"]),
     ("Đồ gia dụng", "expense", "🏠", ["noi", "chao", "chen", "bat dia", "khan", "nuoc giat", "nuoc xa vai",
                                 "nuoc rua chen", "giay ve sinh", "khan giay", "ga giuong", "chan goi", "hop dung",
                                 "binh nuoc", "may hut", "quat", "den", "gia dung", "tui rac", "moc ao"]),
     ("Quần áo & giày dép", "expense", "👗", ["ao", "quan", "vay", "dam", "giay", "dep", "tui xach", "balo", "tat",
-                                       "ao khoac", "ao thun", "so mi", "do lot", "thoi trang"]),
+                                       "ao khoac", "ao thun", "so mi", "do lot", "thoi trang", "uniqlo", "zara", "h&m"]),
     ("Mẹ & bé", "expense", "🍼", ["bim", "ta dan", "ta quan", "sua cong thuc", "binh sua", "do choi", "xe day", "em be",
                             "tre em", "so sinh", "huggies", "bobby", "merries", "moony", "cho be"]),
     ("Sức khoẻ & thuốc", "expense", "💊", ["thuoc", "vitamin", "khau trang", "nha thuoc", "benh vien", "kham benh",
@@ -103,6 +121,8 @@ def init() -> None:
             conn.execute("ALTER TABLE categories ADD COLUMN budget INTEGER")
             for name, _kind, icon, _kw in DEFAULT_CATEGORIES:
                 conn.execute("UPDATE categories SET icon = ? WHERE name = ?", (icon, name))
+        if "pay_account" not in {r[1] for r in conn.execute("PRAGMA table_info(transactions)")}:
+            conn.execute("ALTER TABLE transactions ADD COLUMN pay_account TEXT")  # added in 1.3.0
         if conn.execute("SELECT COUNT(*) FROM categories").fetchone()[0]:
             return
         for sort, (name, kind, icon, keywords) in enumerate(DEFAULT_CATEGORIES):

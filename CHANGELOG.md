@@ -1,5 +1,24 @@
 # Changelog
 
+## 1.3.0 — đối chiếu sao kê
+
+- **Tab Đối chiếu (góp ý của người dùng):** nhập sao kê thẻ Visa hoặc tài khoản ngân hàng (CSV, Excel, PDF, kể cả
+  PDF có mật khẩu) rồi đối chiếu với khoản ghi tay, Gmail và ảnh chụp. Kết quả chia thành:
+  - Khớp;
+  - Chưa ghi trong app (bấm "Thêm vào app");
+  - Gần khớp (ghép và sửa số tiền theo sao kê);
+  - Ghi là trả bằng thẻ này nhưng không có trên sao kê;
+  - Bỏ qua (thanh toán thẻ được bỏ qua tự động).
+  Lựa chọn của người dùng được giữ qua các lần đối chiếu.
+- **Trường "Trả bằng"** trên giao dịch; lần nhập sau tự điền sẵn thẻ đã dùng lần trước.
+- **Không tính trùng:** đơn Gmail về sau được gộp vào giao dịch đã thêm từ sao kê.
+- **Ô Shopee / TikTok / Số giao dịch bấm được:** mở danh sách giao dịch đã lọc sẵn (góp ý của người dùng).
+- **Sửa lỗi:**
+  - Đọc PDF theo vị trí dòng: PDFKit tách bảng thành các khối cột khi mô tả ngắn (test UX phát hiện).
+  - Dấu CR trên sao kê thẻ không còn bị hiểu là dấu trừ.
+  - Màu chữ của nút dạng link (lỗi S4 của bản 1.2.0).
+- Thêm từ khoá ăn uống và quần áo; dữ liệu mẫu có thêm khoản quẹt Visa và sao kê Visa tháng 10.
+
 ## 1.2.0 — bản đầu tiên qua cổng QA
 
 - **Quy trình:** có test tự động (unit, integration, OCR, E2E UX trên WebKit, smoke test bản đóng

@@ -89,6 +89,16 @@ def main() -> None:
             pg.wait_for_selector("#ocrRows .ocr-row", timeout=20000)
             snap(pg, "ocr", "#ocrCard")
 
+            pg.locator("nav button[data-tab=recon]").click()
+            pg.fill("#stmtForm [name=account]", "Visa Techcombank")
+            pg.set_input_files("#stmtInput", str(ROOT / "demo-data" / "sao-ke-visa-thang-10.xlsx"))
+            snap(pg, "recon-form", "#recon > .card")
+            pg.click("#stmtGo")
+            pg.wait_for_selector(".rec-tile")
+            pg.wait_for_selector(".toast", state="detached", timeout=8000)
+            snap(pg, "recon-tiles", ".rec-tiles")
+            snap(pg, "recon-missing", "#recResult > .card:has(h2:has-text('Chưa ghi trong app'))")
+
             pg.locator("nav button[data-tab=settings]").click()
             snap(pg, "budget", ".catcard:has-text('Mỹ phẩm')")
             pg.locator("nav button[data-tab=overview]").click()
