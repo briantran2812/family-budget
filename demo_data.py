@@ -11,8 +11,15 @@ import sys
 from datetime import date
 from pathlib import Path
 
+import argparse
+
 ROOT = Path(__file__).parent
-DEMO = ROOT / "demo-data"
+ap = argparse.ArgumentParser()
+ap.add_argument("seed", nargs="?", type=int, default=2026)
+ap.add_argument("--months", default="2026-05,2026-06,2026-07,2026-08,2026-09,2026-10")
+ap.add_argument("--out", default="demo-data")
+ARGS = ap.parse_args()
+DEMO = ROOT / ARGS.out
 os.environ["BUDGET_DATA"] = str(DEMO)
 
 import db  # noqa: E402  (reads BUDGET_DATA at import)
@@ -22,13 +29,17 @@ import parsers  # noqa: E402
 import rules  # noqa: E402
 from samples import BILLS, PRODUCTS, jitter, momo_receipt, shopee_email, tiktok_email  # noqa: E402
 
-MONTHS = ["2026-05", "2026-06", "2026-07", "2026-08", "2026-09", "2026-10"]
+MONTHS = ARGS.months.split(",")
+# Per-month story so trends are visible: (online orders range, electricity factor, extra cosmetics orders)
+PROFILE = {"2026-09": ((4, 6), 1.30, 0),   # hot month: air-con, fewer online orders
+           "2026-10": ((9, 12), 0.85, 3)}  # 10.10 sale: many orders, cosmetics over budget
+DEFAULT_PROFILE = ((5, 10), 1.0, 0)
 SALARY = 50_000_000
 
 # ---------------------------------------------------------------- build
 
 def main() -> None:
-    random.seed(int(sys.argv[1]) if len(sys.argv) > 1 else 2026)
+    random.seed(ARGS.seed)
     if DEMO.exists():
         shutil.rmtree(DEMO)
     (DEMO / "momo").mkdir(parents=True)
@@ -62,12 +73,16 @@ def main() -> None:
             add_manual(f"{month}-{random.randint(1, 28):02d}", jitter(1_200_000, 0.4), "expense",
                        "Đi ăn nhà hàng cuối tuần")
 
+        (lo, hi), power, extra_beauty = PROFILE.get(month, DEFAULT_PROFILE)
+        beauty = [p for p in PRODUCTS if rules.categorize(conn, p[0], "expense", compiled) ==
+                  rules.categorize(conn, "my pham", "expense", compiled)]
         # Shopee + TikTok orders as emails
-        for i in range(random.randint(5, 10)):
+        for i in range(random.randint(lo, hi) + extra_beauty):
             platform = random.choice(["shopee", "shopee", "tiktok"])
             d = date(y, m, random.randint(1, last_day))
+            pool = beauty if i >= random.randint(lo, hi) else PRODUCTS  # the extra orders are cosmetics
             items = [(n, random.choice([1, 1, 1, 2]), jitter(p, 0.2))
-                     for n, p in random.sample(PRODUCTS, random.choice([1, 1, 2, 3]))]
+                     for n, p in random.sample(pool, random.choice([1, 1, 2]))]
             if platform == "shopee":
                 oid = f"{d:%y%m%d}{''.join(random.choices('ABCDEFGHJKLMNPQRSTUVWXYZ', k=4))}{random.randint(1000, 9999)}"
                 body = parsers.html_to_text(shopee_email(oid, items, random.choice([0, 15_000, 22_000]),
@@ -90,6 +105,8 @@ def main() -> None:
         # MoMo bills as screenshots → OCR → parser
         for b_i, (service, provider, base, jit) in enumerate(BILLS):
             amount = jitter(base, jit) if jit else base
+            if "điện EVN" in service:
+                amount = int(round(amount * power, -3))
             day = [3, 12, 13, 15][b_i]
             img = DEMO / "momo" / f"momo-{month}-{b_i + 1}.png"
             momo_receipt(img, service.format(m=m), provider, amount,

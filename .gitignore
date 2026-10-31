@@ -11,3 +11,4 @@ qa/reports/
 .pytest_cache/
 delivery/
 packaging/guide/_render.html
+demo-sep-oct/
