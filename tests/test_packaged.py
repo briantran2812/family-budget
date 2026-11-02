@@ -57,8 +57,12 @@ def call(base, path, method="GET", body=None, files=None):
 
 def test_window_loaded_ui_and_writes_log(running_app):
     base, data = running_app
-    time.sleep(2)
-    log = open(os.path.join(data, "app.log"), encoding="utf-8").read()
+    # Poll: the first launch of an x86_64 build under Rosetta (cold translation cache) took longer than 2 s.
+    for _ in range(40):
+        time.sleep(0.5)
+        log = open(os.path.join(data, "app.log"), encoding="utf-8").read()
+        if "GET /api/summary" in log:
+            break
     assert '"GET / HTTP' in log and "GET /api/summary" in log  # the WebKit window fetched the page
     assert "Traceback" not in log
 
@@ -107,3 +111,14 @@ def test_statement_import_inside_bundle(running_app, tmp_path):
         with urllib.request.urlopen(req, timeout=60) as r:
             rec = json.loads(r.read())
         assert rec["summary"]["lines"] == 2 and rec["summary"]["ignored_count"] == 1, (name, rec["summary"])
+
+
+def test_modules_added_since_1_3_are_bundled(running_app):
+    """piggy, notifications, alerts and the upgrade backup are plain imports; prove the frozen app has them."""
+    base, data = running_app
+    assert call(base, "/api/piggy")[0] == 200
+    assert call(base, "/api/notifications")[0] == 200
+    assert call(base, "/api/summary")[1]["alerts"] == []
+    import sqlite3
+    with sqlite3.connect(os.path.join(data, "budget.db")) as c:  # written by backups.open_database at start
+        assert c.execute("SELECT value FROM settings WHERE key = 'db_version'").fetchone()[0] == call(base, "/api/info")[1]["version"]

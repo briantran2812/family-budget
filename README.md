@@ -14,8 +14,10 @@ bản sao nằm trong Google Sheet của chính bạn.
 
 ## Cài cho người dùng (gửi cho người nhà)
 
-Gửi file **`dist/ThuChiGiaDinh-<phiên bản>.dmg`** qua AirDrop, Zalo hoặc Google Drive. Người nhận làm
-như sau:
+Triển khai thật (máy TEST của bạn, rồi máy PRODUCTION của vợ, hai Google Sheet riêng): **[docs/DEPLOY.md](docs/DEPLOY.md)**.
+
+Gửi file **`release/ThuChiGiaDinh-<phiên bản>-<arm64|x86_64>.dmg`** (đúng chip của máy nhận) qua AirDrop, Zalo
+hoặc Google Drive. Người nhận làm như sau:
 
 1. Mở file `.dmg` và kéo **Thu Chi Gia Dinh** vào **Applications**.
 2. Lần đầu mở, macOS sẽ chặn vì app không có chữ ký của Apple. Bấm **Done**, rồi vào
@@ -25,8 +27,8 @@ như sau:
 
 Trong file `.dmg` có sẵn `Hướng dẫn cài đặt.txt` ghi đúng các bước này.
 
-Yêu cầu: máy Mac **chip Apple** (M1 trở lên), **macOS 13** trở lên. Bản build hiện tại là arm64,
-không chạy trên Mac chip Intel.
+Yêu cầu: **macOS 11** trở lên; `-arm64.dmg` cho máy chip Apple, `-x86_64.dmg` cho máy chip Intel. Đọc ảnh
+chụp cần macOS 13 trở lên (xem `docs/LIMITATIONS.md`).
 
 **Dữ liệu** của mỗi người nằm ở `~/Library/Application Support/ThuChiGiaDinh/`:
 
@@ -34,6 +36,7 @@ không chạy trên Mac chip Intel.
 | --- | --- |
 | `budget.db` | Toàn bộ dữ liệu. Chép file này đi là đã sao lưu. |
 | `app.log` | Log, để xem khi có lỗi. |
+| `backups/` | Bản sao `budget.db` app tự chép trước mỗi lần nâng cấp phiên bản (giữ 10 bản). |
 
 App Password nằm trong **Keychain** (tên mục `family-budget-gmail`).
 
@@ -43,11 +46,14 @@ App Password nằm trong **Keychain** (tên mục `family-budget-gmail`).
 python3 -m venv .venv && .venv/bin/pip install -r requirements.txt pyinstaller
 .venv/bin/python desktop.py          # chạy trong cửa sổ riêng (giống bản đóng gói)
 .venv/bin/python app.py              # hoặc trong trình duyệt: http://127.0.0.1:8765
-packaging/build.sh                   # → dist/Thu Chi Gia Dinh.app + dist/ThuChiGiaDinh-<ver>.dmg
+packaging/setup_build_env.sh         # một lần: Python cho macOS 11+, venv .venv-build-arm64/-x86_64
+packaging/build.sh arm64             # → dist/arm64/Thu Chi Gia Dinh.app + dist/ThuChiGiaDinh-<ver>-arm64.dmg
+packaging/build.sh x86_64            # bản Intel, build dưới Rosetta
+.venv/bin/python packaging/release.py check   # mọi file trong app có chạy được trên macOS/CPU đã khai báo?
 ```
 
-Muốn ra phiên bản mới: tăng `VERSION` trong `app.py`, chạy `packaging/build.sh`, rồi gửi lại file
-`.dmg`. Người nhận chỉ cần kéo đè bản mới vào Applications; dữ liệu cũ vẫn giữ nguyên.
+Bản build không dùng Python của Homebrew: Python đó chỉ chạy trên đúng phiên bản macOS của máy build (lỗi S1
+của 1.3.0). Muốn ra phiên bản mới: theo `docs/RELEASE-PROCESS.md` và `docs/DEPLOY.md` mục E.
 
 ### Dữ liệu mẫu (mockup)
 

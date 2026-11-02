@@ -1,16 +1,25 @@
 THU CHI GIA ĐÌNH — CÀI ĐẶT
 
+0. Chọn đúng file cài đặt: bấm biểu tượng  (góc trên bên trái) → About This Mac.
+   - Dòng "Chip" ghi Apple M1, M2, M3…  → dùng file "chip Apple" (…-arm64.dmg).
+   - Dòng "Processor" ghi Intel          → dùng file "chip Intel" (…-x86_64.dmg).
+   Cần macOS 11 (Big Sur) trở lên.
+
 1. Kéo biểu tượng "Thu Chi Gia Dinh" vào thư mục Applications.
+   Đã có bản cũ thì chọn "Replace" (Thay thế): dữ liệu vẫn giữ nguyên, app tự sao lưu dữ liệu trước khi nâng cấp.
 
 2. Mở Launchpad (hoặc thư mục Applications) và bấm vào "Thu Chi Gia Dinh".
    Lần đầu máy sẽ báo không mở được vì ứng dụng không tải từ App Store. Cách mở:
      - Bấm "Xong" (Done) để đóng thông báo.
-     - Vào System Settings (Cài đặt hệ thống) → Privacy & Security (Quyền riêng tư & Bảo mật).
-     - Kéo xuống dưới, bấm "Open Anyway" (Vẫn mở) cạnh dòng "Thu Chi Gia Dinh", rồi nhập mật khẩu máy.
+     - macOS 13 trở lên: System Settings (Cài đặt hệ thống) → Privacy & Security (Quyền riêng tư & Bảo mật).
+       macOS 11, 12: System Preferences → Security & Privacy → tab General.
+     - Bấm "Open Anyway" (Vẫn mở) cạnh dòng "Thu Chi Gia Dinh", rồi nhập mật khẩu máy.
    Chỉ phải làm một lần.
 
-3. Làm theo màn hình chào mừng: nhập tên, rồi kết nối Gmail. App hướng dẫn từng bước cách tạo
+3. Làm theo màn hình chào mừng: nhập tên. Kết nối Gmail là tuỳ chọn; app hướng dẫn từng bước cách tạo
    "Mật khẩu ứng dụng" của Google.
 
-Dữ liệu chỉ nằm trên máy của bạn, không gửi đi đâu.
-Yêu cầu: máy Mac chip Apple (M1, M2, M3…), macOS 13 trở lên.
+4. Thích nền sáng: Cài đặt → Giao diện → Sáng.
+
+Dữ liệu nằm trên máy của bạn. Khoản ghi từ iPhone đi qua Google Sheet của gia đình.
+Đọc ảnh chụp biên lai cần macOS 13 trở lên; máy cũ hơn vẫn nhập tay và nhận khoản chi từ iPhone.

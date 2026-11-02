@@ -30,6 +30,7 @@ function fakeSheet() {
   const ss = {
     tabs,
     getId: () => 'sheet-1', getUrl: () => 'https://docs.google.com/spreadsheets/d/sheet-1',
+    getName: () => 'Thu Chi — TEST',
     getSheetByName: name => tabs[name] || null,
     insertSheet: name => (tabs[name] = newTab(ss)),
     getSpreadsheetTimeZone: () => 'Asia/Ho_Chi_Minh',
@@ -139,7 +140,21 @@ const tests = {
   ping() {
     const {ctx, secret} = load();
     assert.deepEqual(JSON.parse(ctx.doGet({parameter: {a: 'ping', k: secret}}).body),
-      {ok: true, sheet: 'https://docs.google.com/spreadsheets/d/sheet-1'});
+      {ok: true, sheet: 'https://docs.google.com/spreadsheets/d/sheet-1', name: 'Thu Chi — TEST', version: ctx.SCRIPT_VERSION});
+    assert.ok(Number.isInteger(ctx.SCRIPT_VERSION) && ctx.SCRIPT_VERSION >= 2);
+  },
+  list_reports_sheet_name_and_script_version() {
+    // The Mac re-reads these on every sync, so a Code.gs promoted later clears the "old script" warning.
+    const {ctx, secret} = load();
+    const body = JSON.parse(ctx.doGet({parameter: {a: 'list', k: secret}}).body);
+    assert.equal(body.name, 'Thu Chi — TEST');
+    assert.equal(body.version, ctx.SCRIPT_VERSION);
+  },
+  script_version_matches_what_the_mac_app_requires() {
+    const {ctx} = load();
+    const py = fs.readFileSync(new URL('../../phone_inbox.py', import.meta.url), 'utf8');
+    const required = Number(py.match(/^REQUIRED_SCRIPT_VERSION = (\d+)/m)[1]);
+    assert.ok(ctx.SCRIPT_VERSION >= required, `Code.gs ${ctx.SCRIPT_VERSION} < app's ${required}`);
   },
   rotate_secret_invalidates_old_code() {
     const {ctx, secret, store} = load();

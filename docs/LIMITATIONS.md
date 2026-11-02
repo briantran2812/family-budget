@@ -27,7 +27,7 @@ xử lý hiện có, nếu có.
 | Thay đổi chỉ được đẩy **khi app đang mở** (khoảng 10 giây sau thay đổi, và mỗi lần mở app) | Tắt app ngay sau khi sửa thì lần đẩy đó bị bỏ, đến lần mở sau mới đẩy | Bấm "Đẩy ngay" trong Cài đặt trước khi tắt nếu cần |
 | Ngày của khoản chi là **lúc gửi**, không chọn được ngày khác | Ghi bù khoản hôm qua sẽ vào ngày hôm nay | Sửa ngày trong app Mac, hoặc gõ ngày vào cột Thời gian trong sheet trước khi đồng bộ |
 | Lần cấp quyền đầu tiên, Google cảnh báo **"Google chưa xác minh ứng dụng này"** | Người cài có thể sợ và dừng lại | Đây là script của chính người dùng; bấm Nâng cao → Đi tới… (không an toàn). Xem `phone/README.md`, mục A |
-| Sửa `Code.gs` thì phải **triển khai phiên bản mới** (Quản lý bản triển khai → Sửa → Phiên bản mới) | Nếu không, iPhone vẫn chạy code cũ | Địa chỉ /exec và mã kết nối giữ nguyên khi triển khai phiên bản mới |
+| Sửa `Code.gs` thì phải **triển khai phiên bản mới** (Quản lý bản triển khai → Sửa → Phiên bản mới) | Nếu không, iPhone vẫn chạy code cũ | Địa chỉ /exec và mã kết nối giữ nguyên khi triển khai phiên bản mới. App Mac báo "Code.gs trên Google là bản cũ" khi `SCRIPT_VERSION` của sheet thấp hơn mức app cần |
 
 ## Gmail
 
@@ -74,10 +74,24 @@ xử lý hiện có, nếu có.
 
 | Giới hạn | Ảnh hưởng | Cách xử lý |
 | --- | --- | --- |
-| Chỉ chạy trên **Mac chip Apple**, **macOS 13** trở lên | Không chạy trên Mac Intel, Windows hay Linux | Build Intel cần Python bản universal2; chưa làm |
+| Chạy trên **macOS 11** (Big Sur) trở lên, có **hai file cài đặt**: chip Apple (`-arm64.dmg`) và chip Intel (`-x86_64.dmg`) | Chọn nhầm file thì app không mở. Không chạy trên Windows hay Linux | Xem chip ở  → About This Mac. Xem bảng "macOS 11/12 so với 13+" bên dưới |
+| Bản Intel được build và smoke test **dưới Rosetta** trên Mac chip Apple, chưa thử trên Mac Intel thật trước khi giao | Lỗi chỉ có trên CPU Intel thật sẽ chỉ lộ ra ở máy người dùng | Ca M-01 trên đúng máy Intel trước khi kết luận GO |
 | **Không có chữ ký số của Apple** | Lần đầu mở phải bấm "Open Anyway"; một số máy công ty chặn hẳn | Có tài khoản Apple Developer (99 USD/năm) thì ký và notarize được |
-| **Không tự cập nhật** | Người dùng phải nhận và cài file `.dmg` mới bằng tay | Gửi bản mới qua Zalo; cài đè lên bản cũ thì dữ liệu vẫn giữ |
+| **Không tự cập nhật** | Người dùng phải nhận và cài file `.dmg` mới bằng tay | Gửi bản mới qua Zalo; cài đè lên bản cũ thì dữ liệu vẫn giữ. Lần mở đầu tiên của bản mới tự chép `budget.db` vào `backups/` (giữ 10 bản gần nhất); quay về bản cũ xem `docs/DEPLOY.md` mục F |
 | Sau khi cập nhật, macOS có thể **hỏi quyền truy cập Keychain** | Vì chữ ký ad-hoc thay đổi theo mỗi lần build | Chọn "Always Allow" |
+
+### macOS 11/12 so với 13+
+
+| Tính năng | macOS 11, 12 | macOS 13+ |
+| --- | --- | --- |
+| Nhập tay, Tổng quan, ngân sách, cảnh báo, xuất CSV | Có | Có |
+| Nhập từ iPhone (Google Sheet), bản sao lên Sheet | Có | Có |
+| Gmail (Shopee/TikTok), sao kê Excel/CSV/PDF, đối chiếu | Có | Có |
+| **Đọc ảnh chụp** (biên lai MoMo, chuyển khoản, "Đơn mua") | **Không**: Vision của macOS chỉ đọc tiếng Việt từ macOS 13. App báo "Đọc ảnh cần macOS 13 trở lên…" thay vì treo | Có |
+| Giao diện | Cửa sổ app dùng WebKit của hệ điều hành (macOS 11 ≈ Safari 14). Trang đã bỏ các tính năng mới hơn Safari 14 (`tests/test_webkit_compat.py`). Trên macOS 11.0–11.2 (Safari 14.0) khoảng cách giữa một số nút có thể sát hơn và ô ngày là ô gõ chữ (YYYY-MM-DD): cập nhật Big Sur lên bản mới nhất | Đầy đủ |
+| "Open Anyway" lần đầu | System Preferences → Security & Privacy → General | System Settings → Privacy & Security |
+
+Chưa có máy macOS 11/12 thật để thử: các dòng trên dựa trên `minos` của từng file trong app (`release.py check`), phiên bản WebKit và tài liệu Vision. Ca M-01 trên máy cũ là phép thử thật.
 
 ## Cảnh báo ngân sách
 

@@ -49,3 +49,26 @@ def test_bank_transfer_receipt(api, tmp_path, bank, content, amount, want_cat):
     cats = {c["id"]: c["name"] for c in api.get("/api/categories").json}
     assert (c["amount"], c["description"], c["date"], cats[c["category_id"]]) == \
         (amount, content, "2026-10-31", want_cat)
+
+
+@pytest.mark.parametrize("ver", ["11.7.10", "12.7.6", "10.16"])
+def test_older_macos_gets_a_friendly_message_not_a_crash(api, tmp_path, monkeypatch, ver):
+    """The app runs from macOS 11, but Vision reads Vietnamese only from macOS 13."""
+    import platform
+    monkeypatch.setattr(platform, "mac_ver", lambda: (ver, ("", "", ""), "x86_64"))
+    img = tmp_path / "r.png"
+    img.write_bytes(b"not read")
+    with open(img, "rb") as f:
+        r = api.post("/api/screenshot", data={"files": (f, "r.png")})
+    assert r.status_code == 200
+    [res] = r.json
+    assert res["candidates"] == [] and res["error"].startswith("Đọc ảnh cần macOS 13 trở lên")
+    assert f"macOS {'.'.join(ver.split('.')[:2])}" in res["error"]
+
+
+def test_macos_13_and_later_are_supported(monkeypatch):
+    import platform
+    import ocr
+    for ver in ("13.0", "14.6.1", "26.5.2"):
+        monkeypatch.setattr(platform, "mac_ver", lambda v=ver: (v, ("", "", ""), "arm64"))
+        assert ocr.unsupported_reason() is None, ver
