@@ -12,7 +12,19 @@ xử lý hiện có, nếu có.
 | **Không sao lưu tự động** | Mất máy, hỏng ổ cứng hay cài lại macOS thì mất dữ liệu | Định kỳ chép `~/Library/Application Support/ThuChiGiaDinh/budget.db` ra ổ ngoài hoặc iCloud Drive, hoặc dùng Time Machine |
 | **Không được** đặt file `budget.db` trong thư mục iCloud hay Dropbox để hai máy cùng mở | SQLite có thể hỏng file khi hai máy ghi cùng lúc | Chỉ chép ra đó làm bản sao lưu, không mở trực tiếp |
 | **Database không mã hoá** | Người dùng chung tài khoản macOS hoặc có quyền admin đọc được số liệu chi tiêu | Bật FileVault; mỗi người một tài khoản macOS riêng. Riêng mật khẩu Gmail thì nằm trong Keychain, không nằm trong database |
-| Không có trên iPhone/Android | Không nhập được khoản chi ngay lúc đang ở ngoài | Chụp màn hình biên lai trên điện thoại, về nhà AirDrop sang Mac để nhập |
+
+## Nhập từ iPhone (Google Sheet)
+
+| Giới hạn | Ảnh hưởng | Cách xử lý |
+| --- | --- | --- |
+| Khoản ghi trên iPhone **đi qua Google** (Apps Script và Google Sheet trong Drive của người dùng) | Không còn đúng hoàn toàn câu "dữ liệu chỉ nằm trên máy này" khi bật tính năng này | Tính năng tuỳ chọn; dữ liệu nằm trong Drive của chính người dùng, không qua server nào khác |
+| **Ai có mã kết nối đều ghi và đọc được** sheet | Lộ mã thì người lạ đọc được các khoản ghi từ điện thoại và ghi thêm dòng rác | Gửi mã qua AirDrop hoặc Universal Clipboard, không dán lên nhóm chat. Lộ mã thì chạy `doiMa` trong Apps Script rồi dán mã mới vào app Mac và Phím tắt |
+| Phím tắt **cần mạng**. Mất sóng thì Phím tắt báo lỗi và không ghi gì | Mất khoản chi nếu người dùng không để ý thông báo lỗi | Gõ thẳng vào sheet bằng app Google Sheets (app này lưu tạm khi mất sóng); app Mac vẫn lấy về được |
+| Sửa hoặc xoá dòng trong sheet **sau khi** Mac đã lấy về thì app **không** cập nhật theo | Hai bên lệch nhau | Sửa hoặc xoá thẳng trong app Mac. Sửa trong sheet chỉ có tác dụng trước lần đồng bộ |
+| Chỉ ghi được **khoản chi**, chưa ghi khoản thu | | Khoản thu (lương…) vẫn nhập trên Mac |
+| Ngày của khoản chi là **lúc gửi**, không chọn được ngày khác | Ghi bù khoản hôm qua sẽ vào ngày hôm nay | Sửa ngày trong app Mac, hoặc gõ ngày vào cột Thời gian trong sheet trước khi đồng bộ |
+| Lần cấp quyền đầu tiên, Google cảnh báo **"Google chưa xác minh ứng dụng này"** | Người cài có thể sợ và dừng lại | Đây là script của chính người dùng; bấm Nâng cao → Đi tới… (không an toàn). Xem `phone/README.md`, mục A |
+| Sửa `Code.gs` thì phải **triển khai phiên bản mới** (Quản lý bản triển khai → Sửa → Phiên bản mới) | Nếu không, iPhone vẫn chạy code cũ | Địa chỉ /exec và mã kết nối giữ nguyên khi triển khai phiên bản mới |
 
 ## Gmail
 

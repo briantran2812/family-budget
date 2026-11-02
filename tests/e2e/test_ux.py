@@ -438,3 +438,58 @@ def test_ux33_card_entry_missing_from_statement_opens_editor(onboarded, page, tm
     page.locator("#recResult .txrow", has_text="Nhà sách Fahasa").click()
     expect(page.get_by_text("Sửa giao dịch")).to_be_visible()  # even though it is not the month on screen
     expect(page.locator("#mPay")).to_have_value("Visa Techcombank")
+
+
+# ---------------------------------------------------------------- iPhone via Google Sheet
+
+def phone_row(rid, amount, desc, time="2026-10-30T12:30:00", account="Tiền mặt"):
+    return {"id": rid, "time": time, "amount": amount, "description": desc, "account": account, "by": "iPhone", "row": 2}
+
+
+def test_ux34_connect_iphone_then_entries_appear(onboarded, page, fake_sheet):
+    PHONE_CODE = fake_sheet["code"]
+    fake_sheet["rows"] = [phone_row("p1", 45_000, "Phở bò"), phone_row("p2", 1_500_000, "Học phí tháng 10")]
+    page.locator("nav button[data-tab=import]").click()
+    page.locator("#phoneConnectBtn").click()
+    page.fill("#pwCode", "sai mã")
+    page.locator("#pwGo").click()
+    expect(page.locator("#pwMsg")).to_contain_text("Mã kết nối có dạng")
+    page.fill("#pwCode", PHONE_CODE)
+    page.locator("#pwGo").click()
+    expect(toast(page)).to_contain_text("Đã lấy 2 khoản mới từ iPhone")
+    expect(page.locator("#phoneSyncBtn")).to_be_visible()
+    expect(page.locator("#phoneConnectBtn")).to_be_hidden()
+    page.locator("nav button[data-tab=tx]").click()
+    page.locator("#fSrc .seg[data-src=phone]").click()
+    expect(page.locator("#txList .txrow")).to_have_count(2)
+    expect(page.locator("#txList")).to_contain_text("Học phí")
+
+
+def test_ux35_opening_the_app_pulls_new_phone_entries(onboarded, open_page, fake_sheet):
+    PHONE_CODE = fake_sheet["code"]
+    import phone_inbox
+    with db.connect() as c:
+        phone_inbox.connect(c, PHONE_CODE)
+    fake_sheet["rows"] = [phone_row("q1", 30_000, "Gửi xe")]
+    p = open_page()
+    expect(p.locator(".toast").last).to_contain_text("Đã lấy 1 khoản mới từ iPhone")
+    expect(p.locator("#recent")).to_contain_text("Gửi xe")
+    p.locator("nav button[data-tab=import]").click()
+    p.locator("#phoneSyncBtn").click()  # nothing new: says so instead of a silent no-op
+    expect(p.locator("#phoneResult")).to_contain_text("Đã lấy 0 khoản mới")
+    expect(p.locator("#phoneResult")).to_contain_text("1 đã có")
+
+
+def test_ux36_iphone_settings_copy_code_and_disconnect(onboarded, page, fake_sheet):
+    PHONE_CODE = fake_sheet["code"]
+    import phone_inbox
+    with db.connect() as c:
+        phone_inbox.connect(c, PHONE_CODE)
+    reload(page)
+    page.locator("nav button[data-tab=settings]").click()
+    expect(page.locator("#phoneSet")).to_contain_text("Đã kết nối")
+    page.locator("#phoneCopy").click()
+    expect(toast(page)).to_contain_text("Đã sao chép mã")
+    page.locator("#phoneOff").click()
+    page.locator("#okBtn").click()
+    expect(page.locator("#phoneSet")).to_contain_text("Kết nối Google Sheet")

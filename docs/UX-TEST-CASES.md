@@ -51,6 +51,9 @@ Có hai loại test case:
 | UX-31 | Trường "Trả bằng" | Hiện trên giao dịch; lần nhập sau tự điền sẵn thẻ đã dùng lần trước |
 | UX-32 | Bấm ô Shopee / TikTok / Số giao dịch | Mở tab Giao dịch, đã lọc đúng nguồn |
 | UX-33 | Khoản ghi Visa mà không có trên sao kê | Bấm vào thì mở cửa sổ sửa, kể cả khi giao dịch thuộc tháng khác tháng đang xem |
+| UX-34 | Kết nối iPhone | Mã sai thì báo ngay trong cửa sổ; mã đúng thì kết nối, tự lấy khoản chi về và lọc được theo nguồn "iPhone" |
+| UX-35 | Mở app khi đã kết nối iPhone | Tự lấy khoản mới, báo bằng thông báo nhỏ; bấm Đồng bộ khi không có gì mới thì vẫn báo kết quả |
+| UX-36 | Cài đặt → iPhone | Sao chép được mã cho iPhone; Ngắt kết nối có hỏi lại |
 
 Bản đóng gói còn được kiểm tra tự động bằng `tests/test_packaged.py`: cửa sổ tải được giao diện,
 Keychain hoạt động, OCR chạy bên trong bundle, và kết nối TLS tới Gmail thành công.
@@ -81,6 +84,11 @@ hàng.
 | M-16 | P1 | Đối chiếu sao kê Visa thật | Ghi tay các khoản quẹt Visa trong 1 tháng → tải sao kê tháng đó từ internet banking (Excel hoặc PDF) → Đối chiếu → nhập sao kê | Mọi dòng trên sao kê đều được đọc (đếm tay để so); khoản đã ghi được ghép đúng; khoản quên ghi nằm trong "Chưa ghi trong app"; thanh toán thẻ được tự bỏ qua |
 | M-17 | P2 | PDF sao kê gửi qua email (có mật khẩu) | Lưu file PDF đính kèm email sao kê → nhập kèm mật khẩu của ngân hàng | Đọc được; nếu không đọc được thì thông báo gợi ý dùng file Excel/CSV |
 | M-18 | P2 | Không tính trùng khi Gmail về sau | Thêm một dòng sao kê là đơn Shopee vào app → sau đó Đồng bộ Gmail | Vẫn chỉ có một giao dịch, mang tên sản phẩm từ email |
+| M-19 | P1 | Cài Apps Script và kết nối | Làm theo `phone/README.md` phần A trên tài khoản Google thật | Không bước nào cần hỏi người khác ngoài cảnh báo "chưa xác minh" đã có trong hướng dẫn; app Mac báo Đã kết nối |
+| M-20 | P1 | Ghi khoản chi trên iPhone thật | Thêm Phím tắt từ file đã ký → dán mã → ghi 45 "Phở" Tiền mặt | Thông báo "✓ Đã ghi 45.000 ₫ · Phở" trong vòng 10 giây; có dòng mới trong sheet; Mac đồng bộ thì có giao dịch, đúng hạng mục, nguồn iPhone |
+| M-21 | P2 | Ghi nhanh không mở khoá | Gán Phím tắt cho Chạm vào mặt sau (hoặc nút Tác vụ) → ghi 3 khoản liên tiếp, đếm giây | Mỗi khoản dưới 10 giây kể từ lúc chạm |
+| M-22 | P2 | Mất sóng | Bật Chế độ máy bay → chạy Phím tắt → gõ một dòng vào app Google Sheets → tắt Chế độ máy bay → đồng bộ trên Mac | Phím tắt báo lỗi rõ ràng (không báo "Đã ghi"); dòng gõ trong Google Sheets về được Mac |
+| M-23 | P1 | Lan tự cài Phím tắt | Gửi Lan file Phím tắt qua AirDrop và mã kết nối; không hướng dẫn thêm | Lan tự thêm được Phím tắt và ghi được một khoản |
 
 ## Mức độ lỗi
 

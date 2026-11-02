@@ -190,6 +190,11 @@ details.recsec { margin-top: 16px; } details.recsec > summary { cursor: pointer;
 /* ---------- import ---------- */
 .grid3 { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 16px; }
 .grid3 .card + .card { margin-top: 0; }
+.grid3.two { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+.code-box { display: flex; gap: 8px; margin-top: 8px; }
+.code-box input { font-family: ui-monospace, Menlo, monospace; font-size: 12px; }
+.steps { margin: 8px 0 14px; padding-left: 20px; color: var(--text-2); font-size: 14px; }
+.steps li { margin-bottom: 6px; }
 .feature .big-ico { width: 52px; height: 52px; border-radius: 16px; display: grid; place-items: center; font-size: 26px;
   background: var(--accent-soft); margin-bottom: 14px; }
 .feature p { color: var(--text-2); font-size: 14px; margin: 4px 0 16px; }
@@ -274,7 +279,7 @@ ol.howto li { margin: 5px 0; }
 
 /* ---------- responsive ---------- */
 @media (max-width: 1000px) {
-  .cols, .grid3 { grid-template-columns: minmax(0, 1fr); }
+  .cols, .grid3, .grid3.two { grid-template-columns: minmax(0, 1fr); }
   .ocr-row { grid-template-columns: 26px minmax(0, 1fr) 120px; }
   .ocr-row .d, .ocr-row .cat { grid-column: 2 / -1; }
 }
@@ -370,7 +375,7 @@ ol.howto li { margin: 5px 0; }
           </div>
           <div class="segs" id="fSrc">
             <button class="seg on" data-src="">Tất cả</button><button class="seg" data-src="shopee">Shopee</button>
-            <button class="seg" data-src="tiktok">TikTok</button><button class="seg" data-src="momo">MoMo</button><button class="seg" data-src="manual">Nhập tay</button>
+            <button class="seg" data-src="tiktok">TikTok</button><button class="seg" data-src="momo">MoMo</button><button class="seg" data-src="manual">Nhập tay</button><button class="seg" data-src="phone">iPhone</button>
             <button class="seg" data-src="screenshot">Ảnh chụp</button><button class="seg" data-src="statement">Sao kê</button><button class="seg" data-src="email">Email khác</button>
           </div>
           <p class="sumline" id="txSum"></p>
@@ -380,7 +385,7 @@ ol.howto li { margin: 5px 0; }
 
       <!-- ================= IMPORT ================= -->
       <section id="import" hidden>
-        <div class="grid3">
+        <div class="grid3 two">
           <div class="card feature">
             <div class="big-ico">✉️</div>
             <h2>Gmail</h2>
@@ -392,6 +397,18 @@ ol.howto li { margin: 5px 0; }
             </div>
             <div class="muted" style="font-size:12px;margin-top:10px" id="lastSync"></div>
             <div id="syncResult"></div>
+          </div>
+          <div class="card feature" id="phoneCard">
+            <div class="big-ico">📱</div>
+            <h2>Từ iPhone</h2>
+            <p>Ghi khoản chi ngay trên điện thoại bằng Phím tắt "Ghi chi tiêu", không cần mở máy Mac. App tự lấy về mỗi lần mở.</p>
+            <div id="phoneState"></div>
+            <div class="row-form">
+              <button class="btn primary" id="phoneSyncBtn">Đồng bộ ngay</button>
+              <button class="btn" data-action="phone-wizard" id="phoneConnectBtn">Kết nối Google Sheet</button>
+            </div>
+            <div class="muted" style="font-size:12px;margin-top:10px" id="phoneLast"></div>
+            <div id="phoneResult"></div>
           </div>
           <div class="card feature">
             <div class="big-ico">📸</div>
@@ -453,6 +470,11 @@ ol.howto li { margin: 5px 0; }
             <p class="hint" style="margin-top:6px">Cú pháp tìm kiếm của Gmail, ví dụ <code>from:(shopee OR tiktok) newer_than:2y</code></p>
           </details>
         </div>
+        <div class="card" id="phoneSettings">
+          <div class="card-head"><h2>iPhone (Google Sheet)</h2></div>
+          <p class="hint">Khoản chi ghi trên iPhone đi vào Google Sheet "Hộp thư đến" trong Drive của bạn; app đọc về khi đồng bộ. Mã kết nối được cất trong Keychain.</p>
+          <div id="phoneSet"></div>
+        </div>
         <div class="card">
           <div class="card-head"><h2>Hạng mục &amp; ngân sách</h2></div>
           <p class="hint">Bấm biểu tượng để đổi. Từ khoá dùng để tự phân loại (không phân biệt dấu). Ngân sách để trống nếu không cần.</p>
@@ -490,7 +512,7 @@ const short = n => n >= 1e9 ? (n / 1e9).toFixed(1).replace('.', ',').replace(',0
   : n >= 1e6 ? (n / 1e6).toFixed(1).replace('.', ',').replace(',0', '') + ' tr' : n >= 1e3 ? Math.round(n / 1e3) + 'k' : String(n || 0);
 const pct1 = x => x.toFixed(1).replace('.', ',') + '%';
 const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({'&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;'}[c]));
-const SRC = {shopee: 'Shopee', tiktok: 'TikTok', momo: 'MoMo', manual: 'Nhập tay', screenshot: 'Ảnh chụp', statement: 'Sao kê', email: 'Email'};
+const SRC = {shopee: 'Shopee', tiktok: 'TikTok', momo: 'MoMo', manual: 'Nhập tay', phone: 'iPhone', screenshot: 'Ảnh chụp', statement: 'Sao kê', email: 'Email'};
 const DOW = ['Chủ nhật', 'Thứ Hai', 'Thứ Ba', 'Thứ Tư', 'Thứ Năm', 'Thứ Sáu', 'Thứ Bảy'];
 const pad = n => String(n).padStart(2, '0');
 const todayISO = () => { const d = new Date(); return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`; };
@@ -557,7 +579,7 @@ function showTab(name) {
   $$('nav button').forEach(b => b.classList.toggle('on', b.dataset.tab === name));
   $$('main > section').forEach(s => s.hidden = s.id !== name);
   try { localStorage.setItem('tab', name); } catch {}
-  if (name === 'import') { renderAccounts(); loadEmails(); }
+  if (name === 'import') { renderAccounts(); renderPhone(); loadEmails(); }
   if (name === 'settings') renderSettings();
   if (name === 'recon') loadStatements();
   window.scrollTo(0, 0);
@@ -568,6 +590,7 @@ document.addEventListener('click', e => {
   const a = e.target.closest('[data-action]'); if (!a) return;
   if (a.dataset.action === 'add') txModal();
   if (a.dataset.action === 'gmail-wizard') gmailWizard();
+  if (a.dataset.action === 'phone-wizard') phoneWizard();
 });
 
 function setMonth(m) {
@@ -1068,9 +1091,83 @@ async function pickTx(lid) {
   }, true);
 }
 
+// ---------------------------------------------------------------- iPhone (Google Sheet)
+async function copyText(text) {
+  try { await navigator.clipboard.writeText(text); return true; } catch {}
+  const t = document.createElement('textarea');  // the app window's WebKit may refuse the async clipboard
+  t.value = text; document.body.append(t); t.select();
+  const ok = document.execCommand('copy'); t.remove(); return ok;
+}
+function renderPhone() {
+  const on = state.info.phone_connected, last = state.info.phone_last_sync;
+  $('#phoneState').innerHTML = on ? '<div class="acct">✅ <span>Đã kết nối Google Sheet</span></div>'
+    : '<div class="acct"><span class="muted">Chưa kết nối</span></div>';
+  $('#phoneSyncBtn').hidden = !on;
+  $('#phoneConnectBtn').hidden = on;
+  $('#phoneLast').textContent = last ? 'Đồng bộ lần cuối: ' + last.replace(' ', ' lúc ') : '';
+  $('#phoneSet').innerHTML = on ? `<div class="acct">✅ <span>Đã kết nối</span>
+      ${state.info.phone_sheet_url ? `<a class="link" href="${esc(state.info.phone_sheet_url)}" target="_blank" rel="noopener">Mở Google Sheet</a>` : ''}
+      <button class="link" id="phoneOff" style="color:var(--bad)">Ngắt</button></div>
+    <div class="row-form" style="margin-top:10px"><button class="btn" id="phoneCopy" type="button">📋 Sao chép mã cho iPhone</button></div>
+    <p class="hint" style="margin-top:8px">Dán mã này khi thêm Phím tắt "Ghi chi tiêu" trên iPhone. Giữ kín như mật khẩu: ai có mã đều ghi được vào sheet.</p>`
+    : '<div class="row-form"><button class="btn primary" data-action="phone-wizard" type="button">Kết nối Google Sheet</button></div>';
+  $('#phoneOff')?.addEventListener('click', async () => {
+    if (!await confirmBox('Ngắt kết nối iPhone?', 'App sẽ ngừng lấy khoản chi từ Google Sheet. Các khoản đã lấy về vẫn giữ nguyên.', 'Ngắt', true)) return;
+    await api('/api/phone', {method: 'DELETE'}); await loadInfo(); renderPhone(); toast('Đã ngắt kết nối');
+  });
+  $('#phoneCopy')?.addEventListener('click', async () => {
+    const {code} = await api('/api/phone/code');
+    toast(await copyText(code) ? 'Đã sao chép mã — dán vào iPhone (cùng Apple ID thì dán thẳng được)' : 'Không sao chép được', false);
+  });
+}
+async function phoneSync(quiet = false) {
+  const box = $('#phoneResult');
+  try {
+    const r = await api('/api/phone/sync', {method: 'POST'});
+    if (!quiet || r.imported) {
+      const msg = `📱 Đã lấy ${r.imported} khoản mới từ iPhone`;
+      box.innerHTML = `<div class="result ok"><b>${msg}</b><br><span class="muted">${r.total} dòng trong sheet · ${r.duplicate} đã có · ${r.invalid} dòng không đọc được${r.bad_rows.length ? ' (dòng ' + r.bad_rows.join(', ') + ')' : ''}</span></div>`;
+      if (quiet) toast(msg);
+    }
+    await loadInfo(); renderPhone(); if (r.imported) refresh();
+  } catch (err) {
+    box.innerHTML = `<div class="result err">${esc(err.message)}</div>`;
+    if (!quiet) throw err;
+  }
+}
+$('#phoneSyncBtn').onclick = () => busy($('#phoneSyncBtn'), () => phoneSync().catch(() => {}));
+function phoneWizard() {
+  const m = modal(`<h3>Kết nối iPhone qua Google Sheet</h3>
+    <p class="lead">Làm một lần trên máy tính, khoảng 5 phút. Chi tiết có ảnh trong hướng dẫn kèm app.</p>
+    <ol class="steps">
+      <li>Mở <b>sheets.new</b> (tạo Google Sheet mới), đặt tên ví dụ "Thu Chi Gia Đình".</li>
+      <li>Menu <b>Tiện ích mở rộng → Apps Script</b>, xoá hết rồi dán nội dung file <code>Code.gs</code>
+        <button class="link" id="pwCopyScript" type="button">(sao chép Code.gs)</button>, bấm 💾 Lưu.</li>
+      <li>Chọn hàm <b>caiDat</b> → <b>Chạy</b> → cho phép quyền truy cập.</li>
+      <li><b>Triển khai → Bản triển khai mới → Ứng dụng web</b> (Deploy → New deployment → Web app): thực thi với tư cách <b>Tôi</b> (Me), người có quyền truy cập <b>Bất kỳ ai</b> (Anyone) → Triển khai.</li>
+      <li>Chọn hàm <b>layMaKetNoi</b> → <b>Chạy</b>, sao chép dòng mã kết nối trong Nhật ký thực thi và dán vào đây:</li>
+    </ol>
+    <input class="field" id="pwCode" placeholder="https://script.google.com/macros/s/…/exec?k=…" autofocus>
+    <div id="pwMsg"></div>
+    <div class="modal-foot"><button class="btn" data-close>Để sau</button><button class="btn primary" id="pwGo">Kết nối</button></div>`, {wide: true});
+  $('#pwCopyScript', m.el).onclick = async () => {
+    const r = await fetch('/api/phone/script'); toast(await copyText(await r.text()) ? 'Đã sao chép Code.gs' : 'Không sao chép được', false);
+  };
+  const go = () => busy($('#pwGo', m.el), async () => {
+    try {
+      await api('/api/phone/connect', {method: 'POST', body: {code: $('#pwCode', m.el).value}});
+      m.close(); await loadInfo(); renderPhone(); toast('✅ Đã kết nối Google Sheet');
+      phoneSync(true);
+    } catch (err) { $('#pwMsg', m.el).innerHTML = `<div class="result err">${esc(err.message)}</div>`; }
+  });
+  $('#pwGo', m.el).onclick = go;
+  $('#pwCode', m.el).onkeydown = e => { if (e.key === 'Enter') go(); };
+}
+
 // ---------------------------------------------------------------- settings
 const EMOJIS = '🎓📚💡💧🔥📶📱💄🧴💅🛒🍚🥬🍜☕️🏠🧺🧹🛋️👗👟👜🍼🧸👶💊🏥🦷🚗⛽️🛵✈️🎬🎮🏖️🎁💝🐶🐱🌿💼💰🏦📈🧾📦❤️⭐️'.match(/\p{Extended_Pictographic}️?/gu);
 function renderSettings() {
+  renderPhone();
   $('#profileForm').user_name.value = state.info.user_name || '';
   $('#queryForm').gmail_query.value = state.info.gmail_query || '';
   $('#dataDir').textContent = state.info.data_dir || '';
@@ -1179,6 +1276,7 @@ function welcome() {
   showTab(tab);
   setMonth(state.month);
   if (!state.info.onboarded) welcome();
+  if (state.info.phone_connected) phoneSync(true);  // the point of the phone inbox: no button to remember
 })();
 </script>
 </body>

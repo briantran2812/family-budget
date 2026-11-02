@@ -1,5 +1,16 @@
 # Changelog
 
+## Chưa phát hành — nhập từ iPhone
+
+- **Ghi khoản chi trên iPhone, không cần mở Mac:** Phím tắt "Ghi chi tiêu" hỏi số tiền, nội dung và cách trả, rồi
+  gửi tới Apps Script trong tài khoản Google của người dùng. Script ghi một dòng vào sheet "Hộp thư đến". App trên Mac
+  tự lấy các dòng mới mỗi lần mở (tab Nhập liệu → Từ iPhone), tự phân loại, không nhập trùng, và gộp với khoản đã
+  thêm từ sao kê nếu có. Dòng gõ thẳng vào sheet bằng app Google Sheets (dùng được khi mất sóng) cũng được lấy về.
+- Số tiền gõ dưới 1000 được hiểu là nghìn đồng (45 = 45.000 ₫); nhận cả cách viết 45k, 1tr5, 1,5tr, 1.500.000.
+- Mã kết nối nằm trong Keychain. Đổi mã bằng hàm `doiMa`; mã cũ ngừng hoạt động ngay.
+- Code: `phone/Code.gs` (Apps Script), `phone/make_shortcut.py` (tạo và ký file Phím tắt), `phone_inbox.py`.
+  Hướng dẫn cài và test: `phone/README.md`.
+
 ## 1.3.0 — đối chiếu sao kê
 
 - **Tab Đối chiếu (góp ý của người dùng):** nhập sao kê thẻ Visa hoặc tài khoản ngân hàng (CSV, Excel, PDF, kể cả

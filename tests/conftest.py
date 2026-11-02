@@ -71,3 +71,26 @@ def fake_keyring(monkeypatch):
     monkeypatch.setattr(gmail_sync.keyring, "get_password", lambda s, u: store.get((s, u)))
     monkeypatch.setattr(gmail_sync.keyring, "delete_password", lambda s, u: store.pop((s, u), None))
     return store
+
+
+PHONE_CODE = "https://script.google.com/macros/s/AKfyc-test_1/exec?k=0123456789abcdef01234567"
+
+
+@pytest.fixture
+def fake_sheet(monkeypatch, fake_keyring):
+    """Fake web app: `rows` is what action=list returns."""
+    import phone_inbox
+    state = {"rows": [], "calls": [], "code": PHONE_CODE}
+    monkeypatch.setattr(phone_inbox.keyring, "set_password", lambda s, u, p: fake_keyring.__setitem__((s, u), p))
+    monkeypatch.setattr(phone_inbox.keyring, "get_password", lambda s, u: fake_keyring.get((s, u)))
+    monkeypatch.setattr(phone_inbox.keyring, "delete_password", lambda s, u: fake_keyring.pop((s, u), None))
+
+    def fake_get(code, action):
+        state["calls"].append((code, action))
+        if code != PHONE_CODE:
+            raise phone_inbox.InboxError("Apps Script báo lỗi: Mã kết nối sai. Lấy lại mã kết nối bằng layMaKetNoi.")
+        if action == "ping":
+            return {"ok": True, "sheet": "https://docs.google.com/spreadsheets/d/abc"}
+        return {"ok": True, "rows": state["rows"]}
+    monkeypatch.setattr(phone_inbox, "_get", fake_get)
+    return state

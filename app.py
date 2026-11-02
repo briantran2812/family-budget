@@ -18,6 +18,7 @@ from flask import Flask, Response, abort, jsonify, request, send_from_directory
 import db
 import gmail_sync
 import parsers
+import phone_inbox
 import reconcile
 import rules
 import statements
@@ -68,7 +69,10 @@ def info():
                        onboarded=db.get_setting(c, "onboarded") == "1",
                        gmail_accounts=gmail_sync.accounts(c),
                        gmail_query=db.get_setting(c, "gmail_query", gmail_sync.DEFAULT_QUERY),
-                       gmail_last_sync=db.get_setting(c, "gmail_last_sync"))
+                       gmail_last_sync=db.get_setting(c, "gmail_last_sync"),
+                       phone_connected=phone_inbox.connected(c),
+                       phone_sheet_url=db.get_setting(c, "phone_sheet_url"),
+                       phone_last_sync=db.get_setting(c, "phone_last_sync"))
 
 
 @app.post("/api/profile")
@@ -348,6 +352,47 @@ def dismiss_email():
     with conn() as c:
         c.execute("UPDATE emails SET status = 'dismissed' WHERE message_id = ?", (request.args["id"],))
     return jsonify(ok=True)
+
+
+# ---------------------------------------------------------------- import: iPhone via Google Sheet
+
+@app.post("/api/phone/connect")
+def phone_connect():
+    try:
+        with conn() as c:
+            return jsonify(ok=True, sheet=phone_inbox.connect(c, (request.get_json() or {}).get("code", "")))
+    except phone_inbox.InboxError as e:
+        return jsonify(error=str(e)), 400
+
+
+@app.delete("/api/phone")
+def phone_disconnect():
+    with conn() as c:
+        phone_inbox.disconnect(c)
+    return jsonify(ok=True)
+
+
+@app.get("/api/phone/code")
+def phone_code():
+    try:
+        with conn() as c:
+            return jsonify(code=phone_inbox.code(c))
+    except phone_inbox.InboxError as e:
+        return jsonify(error=str(e)), 400
+
+
+@app.get("/api/phone/script")
+def phone_script():
+    return send_from_directory(RESOURCES / "phone", "Code.gs", mimetype="text/plain")
+
+
+@app.post("/api/phone/sync")
+def phone_sync():
+    try:
+        with conn() as c:
+            return jsonify(phone_inbox.sync(c))
+    except phone_inbox.InboxError as e:
+        return jsonify(error=str(e)), 400
 
 
 # ---------------------------------------------------------------- statements & reconciliation

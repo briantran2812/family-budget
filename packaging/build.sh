@@ -13,6 +13,7 @@ rm -rf build dist
   --name "$NAME" --icon packaging/AppIcon.icns \
   --osx-bundle-identifier vn.family.thuchi \
   --add-data "static:static" \
+  --add-data "phone/Code.gs:phone" \
   --hidden-import keyring.backends.macOS \
   desktop.py
 
