@@ -11,6 +11,9 @@ máy chủ Google dưới dạng Apps Script, miễn phí và không cần máy 
 
 Làm theo thứ tự **A → D trên máy của bạn trước**. Đạt hết mục D mới làm mục E cho vợ.
 
+> Triển khai thật dùng **hai sheet riêng**, "Thu Chi — TEST" (máy anh) và "Thu Chi — PRODUCTION" (máy vợ, hai iPhone),
+> và Phím tắt `--env test` cho sheet TEST: xem [docs/DEPLOY.md](../docs/DEPLOY.md). Mục E dưới đây áp dụng cho sheet PRODUCTION.
+
 ## A. Cài Apps Script (một lần, trên Mac, khoảng 5 phút)
 
 1. Mở <https://sheets.new> bằng tài khoản Google **của bạn** và đặt tên sheet, ví dụ

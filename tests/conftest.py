@@ -80,7 +80,8 @@ PHONE_CODE = "https://script.google.com/macros/s/AKfyc-test_1/exec?k=0123456789a
 def fake_sheet(monkeypatch, fake_keyring):
     """Fake web app: `rows` is what action=list returns."""
     import phone_inbox
-    state = {"rows": [], "calls": [], "code": PHONE_CODE}
+    state = {"rows": [], "calls": [], "code": PHONE_CODE, "name": "Thu Chi — PRODUCTION",
+             "version": phone_inbox.REQUIRED_SCRIPT_VERSION}
     monkeypatch.setattr(phone_inbox.keyring, "set_password", lambda s, u, p: fake_keyring.__setitem__((s, u), p))
     monkeypatch.setattr(phone_inbox.keyring, "get_password", lambda s, u: fake_keyring.get((s, u)))
     monkeypatch.setattr(phone_inbox.keyring, "delete_password", lambda s, u: fake_keyring.pop((s, u), None))
@@ -89,9 +90,10 @@ def fake_sheet(monkeypatch, fake_keyring):
         state["calls"].append((code, action))
         if code != PHONE_CODE:
             raise phone_inbox.InboxError("Apps Script báo lỗi: Mã kết nối sai. Lấy lại mã kết nối bằng layMaKetNoi.")
+        script = {"name": state["name"], "version": state["version"]}  # what Code.gs SCRIPT_VERSION 2+ adds
         if action == "ping":
-            return {"ok": True, "sheet": "https://docs.google.com/spreadsheets/d/abc"}
-        return {"ok": True, "rows": state["rows"]}
+            return {"ok": True, "sheet": "https://docs.google.com/spreadsheets/d/abc", **script}
+        return {"ok": True, "rows": state["rows"], **script}
     monkeypatch.setattr(phone_inbox, "_get", fake_get)
     state["pushes"] = []
 

@@ -80,7 +80,7 @@ def info():
                        phone_push=db.get_setting(c, "phone_push", "1") == "1",
                        phone_last_push=db.get_setting(c, "phone_last_push"),
                        phone_push_error=db.get_setting(c, "phone_push_error"),
-                       device_name=phone_inbox.device_name(c))
+                       device_name=phone_inbox.device_name(c), **phone_inbox.environment(c))
 
 
 @app.get("/api/notifications")

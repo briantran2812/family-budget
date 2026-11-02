@@ -57,8 +57,12 @@ def call(base, path, method="GET", body=None, files=None):
 
 def test_window_loaded_ui_and_writes_log(running_app):
     base, data = running_app
-    time.sleep(2)
-    log = open(os.path.join(data, "app.log"), encoding="utf-8").read()
+    # Poll: the first launch of an x86_64 build under Rosetta (cold translation cache) took longer than 2 s.
+    for _ in range(40):
+        time.sleep(0.5)
+        log = open(os.path.join(data, "app.log"), encoding="utf-8").read()
+        if "GET /api/summary" in log:
+            break
     assert '"GET / HTTP' in log and "GET /api/summary" in log  # the WebKit window fetched the page
     assert "Traceback" not in log
 

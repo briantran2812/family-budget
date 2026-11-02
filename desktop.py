@@ -7,8 +7,9 @@ import urllib.request
 
 import webview
 
+import backups
 import db
-from app import app
+from app import VERSION, app
 
 
 def free_port() -> int:
@@ -21,7 +22,7 @@ def main() -> None:
     if getattr(sys, "frozen", False):  # a packaged .app has no terminal: keep a log next to the data
         db.DATA_DIR.mkdir(parents=True, exist_ok=True)
         sys.stdout = sys.stderr = open(db.DATA_DIR / "app.log", "a", buffering=1, encoding="utf-8")
-    db.init()
+    backups.open_database(VERSION)  # backs up budget.db first when this is a new version
     port = free_port()
     app.config["DESKTOP"] = True
     threading.Thread(target=lambda: app.run(host="127.0.0.1", port=port, threaded=True, use_reloader=False),

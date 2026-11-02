@@ -14,3 +14,4 @@ packaging/guide/_render.html
 demo-sep-oct/
 *.stale-*
 phone/dist/
+.venv-build-*/

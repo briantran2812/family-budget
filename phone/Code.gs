@@ -9,7 +9,13 @@
  *   doiMa()        đổi mã bí mật (mã cũ ngừng hoạt động ngay)
  *
  * App Mac còn ghi bản sao giao dịch vào tab "Giao dịch" và số tổng theo tháng vào tab "Tổng hợp" (doPost).
+ *
+ * Mỗi môi trường (PRODUCTION, TEST) là một Google Sheet riêng với bản Code.gs riêng: docs/DEPLOY.md.
  */
+
+// Bump when the Mac app needs something new from this script; the app warns when the deployed copy is older
+// (phone_inbox.REQUIRED_SCRIPT_VERSION). Promote Code.gs test → production like the app itself.
+var SCRIPT_VERSION = 2;
 
 var SHEET = 'Hộp thư đến';
 var HEADERS = ['Mã', 'Thời gian', 'Số tiền', 'Mô tả', 'Trả bằng', 'Người nhập', 'Hạng mục'];  // add columns at the end only
@@ -66,8 +72,11 @@ function doGet(e) {
         : json_({ok: false, error: 'Mã kết nối sai'});
   }
   if (action === 'add') return add_(p);
-  if (action === 'list') return json_({ok: true, rows: list_()});
-  if (action === 'ping') return json_({ok: true, sheet: sheet_().getParent().getUrl()});
+  if (action === 'list') return json_({ok: true, rows: list_(), name: sheet_().getParent().getName(), version: SCRIPT_VERSION});
+  if (action === 'ping') {
+    var ss = sheet_().getParent();
+    return json_({ok: true, sheet: ss.getUrl(), name: ss.getName(), version: SCRIPT_VERSION});
+  }
   return json_({ok: false, error: 'Thiếu tham số a'});
 }
 

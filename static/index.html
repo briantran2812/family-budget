@@ -75,6 +75,8 @@ nav button.on { background: var(--accent-soft); color: var(--accent); font-weigh
 .topbar { display: flex; align-items: center; gap: 16px; padding: 22px 32px 6px; flex-wrap: wrap; }
 .hello { font-size: 22px; font-weight: 700; letter-spacing: -.01em; }
 .hello-sub { color: var(--text-2); font-size: 14px; }
+.env-badge { display: inline-block; vertical-align: middle; margin-left: 8px; padding: 2px 8px; border-radius: 6px; background: #f59e0b;
+  color: #1f1300; font-size: 12px; font-weight: 800; letter-spacing: .08em; cursor: help; }
 .topbar .grow { flex: 1; }
 .bell { position: relative; }
 .bell-btn { position: relative; width: 42px; padding: 0; justify-content: center; font-size: 17px; }
@@ -178,7 +180,7 @@ details.recsec { margin-top: 16px; } details.recsec > summary { cursor: pointer;
 .hero-meta span { background: rgba(255, 255, 255, .16); border-radius: 999px; padding: 5px 12px; font-size: 13px; }
 .ring { position: relative; width: 132px; height: 132px; flex: none; z-index: 1; }
 .ring svg { transform: rotate(-90deg); }
-.ring .c { position: absolute; inset: 0; display: grid; place-content: center; text-align: center; }
+.ring .c { position: absolute; top: 0; right: 0; bottom: 0; left: 0; display: grid; place-content: center; text-align: center; }
 .ring .c b { font-size: 26px; font-weight: 800; } .ring .c small { font-size: 11px; opacity: .85; line-height: 1.2; max-width: 90px; }
 .alerts { display: grid; gap: 8px; margin-top: 16px; }
 .alert { display: flex; align-items: center; gap: 10px; width: 100%; padding: 11px 14px; border: 1px solid transparent;
@@ -283,7 +285,7 @@ details pre { white-space: pre-wrap; font-size: 12px; background: var(--surface-
 .row-form .field { width: auto; flex: 1; min-width: 160px; }
 
 /* ---------- modal & toast ---------- */
-.backdrop { position: fixed; inset: 0; background: rgba(10, 12, 25, .45); backdrop-filter: blur(4px);
+.backdrop { position: fixed; top: 0; right: 0; bottom: 0; left: 0; background: rgba(10, 12, 25, .45); -webkit-backdrop-filter: blur(4px); backdrop-filter: blur(4px);
   display: grid; place-items: center; z-index: 50; padding: 16px; animation: fade .15s; }
 .modal { background: var(--surface); border-radius: 22px; width: min(520px, 100%); max-height: calc(100vh - 32px);
   overflow: auto; padding: 24px; box-shadow: 0 24px 60px rgba(0, 0, 0, .3); animation: pop .18s ease-out; }
@@ -365,7 +367,7 @@ ol.howto li { margin: 5px 0; }
 
   <div class="content">
     <header class="topbar">
-      <div><div class="hello" id="hello">Xin chào 👋</div><div class="hello-sub" id="helloSub"></div></div>
+      <div><div class="hello"><span id="hello">Xin chào 👋</span><span class="env-badge" id="envBadge" hidden>TEST</span></div><div class="hello-sub" id="helloSub"></div></div>
       <div class="grow"></div>
       <div class="month">
         <button id="prevM" aria-label="Tháng trước">‹</button>
@@ -714,6 +716,8 @@ async function loadInfo() {
   $('#revealBtn').hidden = !state.info.desktop;
   renderSyncBtn();
   applyTheme(state.info.theme);
+  $('#envBadge').hidden = !state.info.phone_env_test;  // this Mac is on the TEST Google Sheet (docs/DEPLOY.md)
+  $('#envBadge').title = `Máy này đang dùng Google Sheet "${state.info.phone_sheet_name}" — môi trường thử nghiệm`;
 }
 async function loadCats() {
   state.cats = await api('/api/categories');
@@ -744,7 +748,7 @@ async function loadSummary() {
   $('#hExpense').textContent = fmt(s.expense);
   $('#hIncome').textContent = fmt(s.income);
   $('#hLeft').textContent = fmt(s.income - s.expense);
-  const prevExp = s.trend.at(-2)?.expense || 0;
+  const prevExp = s.trend[s.trend.length - 2]?.expense || 0;  // not at(-2): macOS 11 WebKit lacks it
   $('#hDelta').hidden = !prevExp || !s.expense;
   $('#hDelta').textContent = deltaText(s.expense, prevExp);
   const narrow = matchMedia('(max-width: 760px)').matches;
@@ -1103,6 +1107,7 @@ async function uploadShots(files) {
         <select class="field cat">${opts(c.category_id)}</select>
         <input class="field amt num" value="${nf.format(c.amount)}" style="text-align:right">
         ${c.duplicate ? '<div class="muted dup-note">↑ Đã có khoản cùng số tiền, cùng ngày trong app — bỏ chọn để không nhập trùng</div>' : ''}</div>`).join('')
+      : res.length && res.every(r => r.error) ? `<div class="result err">${esc(res[0].error)}</div>`
       : '<div class="empty">Không thấy số tiền nào trong ảnh. Xem chữ đọc được bên dưới rồi nhập tay.</div>';
     $('#ocrRaw').innerHTML = res.map(r => `<details><summary class="muted" style="cursor:pointer;font-size:13px">Chữ đọc được từ ${esc(r.file)}${r.error ? ' — lỗi: ' + esc(r.error) : ''}</summary><pre>${esc(r.text)}</pre></details>`).join('');
     $('#ocrCard').hidden = false;
@@ -1253,14 +1258,18 @@ async function copyText(text) {
 }
 function renderPhone() {
   const on = state.info.phone_connected, last = state.info.phone_last_sync;
-  $('#phoneState').innerHTML = on ? '<div class="acct">✅ <span>Đã kết nối Google Sheet</span></div>'
+  const sheetName = state.info.phone_sheet_name ? ` <b>${esc(state.info.phone_sheet_name)}</b>` : '';
+  const outdated = on && state.info.phone_script_outdated ? `<div class="result err" style="margin-top:8px">Code.gs trên Google là bản cũ
+    (${state.info.phone_script_version}, app cần ${state.info.phone_script_required}). Dán Code.gs mới, ⌘S, rồi Deploy → Manage deployments → ✏️ →
+    Version: New version → Deploy.</div>` : '';
+  $('#phoneState').innerHTML = on ? `<div class="acct">✅ <span>Đã kết nối Google Sheet${sheetName}</span></div>${outdated}`
     : '<div class="acct"><span class="muted">Chưa kết nối</span></div>';
   $('#phoneSyncBtn').hidden = !on;
   $('#phoneConnectBtn').hidden = on;
   $('#phoneLast').textContent = last ? 'Đồng bộ lần cuối: ' + last.replace(' ', ' lúc ') : '';
-  $('#phoneSet').innerHTML = on ? `<div class="acct">✅ <span>Đã kết nối</span>
+  $('#phoneSet').innerHTML = on ? `<div class="acct">✅ <span>Đã kết nối${sheetName}</span>
       ${state.info.phone_sheet_url ? `<a class="link" href="${esc(state.info.phone_sheet_url)}" target="_blank" rel="noopener">Mở Google Sheet</a>` : ''}
-      <button class="link" id="phoneOff" style="color:var(--bad)">Ngắt</button></div>
+      <button class="link" id="phoneOff" style="color:var(--bad)">Ngắt</button></div>${outdated}
     <div class="row-form" style="margin-top:10px"><button class="btn" id="phoneCopy" type="button">📋 Sao chép mã cho iPhone</button></div>
     <p class="hint" style="margin-top:8px">Dán mã này khi thêm Phím tắt "Ghi chi tiêu" trên iPhone. Giữ kín như mật khẩu: ai có mã đều ghi được vào sheet.</p>
     <h3 style="margin:18px 0 6px;font-size:15px">Bản sao trên Google Sheet</h3>

@@ -58,3 +58,18 @@ def test_category_list_matches_the_entry_form():
     assert items[0] == "✨ Tự động"
     assert items[1:] == [f"{icon} {name}" for name, kind, icon, _ in
                          sorted(db.DEFAULT_CATEGORIES, key=lambda c: c[1] != "expense")]
+
+
+def test_test_variant_differs_in_name_colour_and_prompts_only():
+    """The TEST shortcut sits next to the production one on the same iPhone; nothing else may differ."""
+    prod, test = make_shortcut.build(), make_shortcut.build("test")
+    assert make_shortcut.out_path().name == "Ghi chi tiêu.shortcut"
+    assert make_shortcut.out_path("test").name == "Ghi chi tiêu TEST.shortcut"
+    assert prod["WFWorkflowIcon"]["WFWorkflowIconStartColor"] != test["WFWorkflowIcon"]["WFWorkflowIconStartColor"]
+    assert "TEST" in test["WFWorkflowImportQuestions"][0]["Text"]
+    assert "TEST" not in prod["WFWorkflowImportQuestions"][0]["Text"]
+    ids = lambda w: [a["WFWorkflowActionIdentifier"] for a in w["WFWorkflowActions"]]
+    assert ids(prod) == ids(test)
+    title = lambda w: next(a["WFWorkflowActionParameters"]["WFNotificationActionTitle"] for a in w["WFWorkflowActions"]
+                           if a["WFWorkflowActionIdentifier"] == "is.workflow.actions.notification")
+    assert (title(prod), title(test)) == ("Thu Chi Gia Đình", "Thu Chi Gia Đình TEST")

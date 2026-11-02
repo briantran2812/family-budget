@@ -18,6 +18,8 @@ import rules
 KEYRING_SERVICE = "family-budget-phone"
 KEYRING_USER = "connection"
 # Google Workspace accounts get /a/macros/<domain>/s/…; a signed-in browser may add /u/<n>/.
+# Code.gs SCRIPT_VERSION this app needs; an older deployed script gets a warning in the app (docs/DEPLOY.md E).
+REQUIRED_SCRIPT_VERSION = 2
 CODE_RE = re.compile(r"^https://script\.google\.com/(?:a/)?macros/(?:[\w.-]+/)?(?:u/\d+/)?s/[\w-]+/exec\?k=[0-9a-f]{16,64}$")
 
 
@@ -83,11 +85,30 @@ def connect(conn: sqlite3.Connection, code: str) -> str:
     if not CODE_RE.match(code):
         raise InboxError("Mã kết nối có dạng https://script.google.com/macros/s/…/exec?k=… — "
                          "chạy layMaKetNoi trong Apps Script rồi sao chép cả dòng.")
-    sheet = _get(code, "ping").get("sheet", "")
+    reply = _get(code, "ping")
+    sheet = reply.get("sheet", "")
     keyring.set_password(KEYRING_SERVICE, KEYRING_USER, code)
     db.set_setting(conn, "phone_connected", "1")
     db.set_setting(conn, "phone_sheet_url", sheet)
+    _remember_script(conn, reply)
     return sheet
+
+
+def _remember_script(conn: sqlite3.Connection, reply: dict) -> None:
+    """Sheet name (shows which environment this Mac is on) and Code.gs version; scripts before 2 send neither."""
+    if reply.get("name"):
+        db.set_setting(conn, "phone_sheet_name", str(reply["name"]))
+    db.set_setting(conn, "phone_script_version", str(int(reply.get("version") or 1)))
+
+
+def environment(conn: sqlite3.Connection) -> dict:
+    """For /api/info: which Sheet this Mac talks to, and whether its Code.gs is older than this app needs."""
+    name = db.get_setting(conn, "phone_sheet_name")
+    version = int(db.get_setting(conn, "phone_script_version") or 0)
+    return {"phone_sheet_name": name, "phone_script_version": version,
+            "phone_script_required": REQUIRED_SCRIPT_VERSION,
+            "phone_script_outdated": connected(conn) and version < REQUIRED_SCRIPT_VERSION,
+            "phone_env_test": bool(re.search(r"\btest", name, re.I))}
 
 
 def disconnect(conn: sqlite3.Connection) -> None:
@@ -95,7 +116,7 @@ def disconnect(conn: sqlite3.Connection) -> None:
         keyring.delete_password(KEYRING_SERVICE, KEYRING_USER)
     except keyring.errors.PasswordDeleteError:
         pass
-    for key in ("phone_connected", "phone_sheet_url"):
+    for key in ("phone_connected", "phone_sheet_url", "phone_sheet_name", "phone_script_version"):
         db.set_setting(conn, key, "")
 
 
@@ -150,7 +171,9 @@ def apply_row(conn: sqlite3.Connection, compiled, row: dict) -> str:
 
 
 def sync(conn: sqlite3.Connection) -> dict:
-    rows = _get(code(conn), "list").get("rows", [])
+    reply = _get(code(conn), "list")
+    _remember_script(conn, reply)
+    rows = reply.get("rows", [])
     compiled = rules.load(conn)
     counts = {"imported": 0, "duplicate": 0, "invalid": 0}
     bad_rows = []

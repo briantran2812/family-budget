@@ -256,3 +256,30 @@ def test_income_category_records_money_in(conn, fake_sheet):
     phone_inbox.sync(conn)
     t = conn.execute("SELECT t.kind, c.name FROM transactions t JOIN categories c ON c.id = t.category_id").fetchone()
     assert tuple(t) == ("income", "Thu nhập khác")
+
+
+def test_environment_name_and_test_badge(api, fake_sheet):
+    """The Sheet's name tells which environment this Mac is on; a TEST sheet gets a badge in the top bar."""
+    fake_sheet["name"] = "Thu Chi — TEST"
+    api.post("/api/phone/connect", json={"code": CODE})
+    info = api.get("/api/info").get_json()
+    assert (info["phone_sheet_name"], info["phone_env_test"], info["phone_script_outdated"]) == ("Thu Chi — TEST", True, False)
+    fake_sheet["name"] = "Thu Chi — PRODUCTION"  # renamed in Google: picked up on the next sync
+    api.post("/api/phone/sync")
+    info = api.get("/api/info").get_json()
+    assert (info["phone_sheet_name"], info["phone_env_test"]) == ("Thu Chi — PRODUCTION", False)
+    api.delete("/api/phone")
+    info = api.get("/api/info").get_json()
+    assert (info["phone_sheet_name"], info["phone_env_test"], info["phone_script_outdated"]) == ("", False, False)
+
+
+def test_old_code_gs_is_flagged_until_promoted(api, fake_sheet):
+    """A script from before SCRIPT_VERSION sends no name or version: connect works, the app warns."""
+    fake_sheet["version"], fake_sheet["name"] = None, None
+    assert api.post("/api/phone/connect", json={"code": CODE}).get_json()["ok"]
+    info = api.get("/api/info").get_json()
+    assert info["phone_script_outdated"] and info["phone_script_version"] == 1
+    assert info["phone_script_required"] == phone_inbox.REQUIRED_SCRIPT_VERSION
+    fake_sheet["version"] = phone_inbox.REQUIRED_SCRIPT_VERSION  # new version deployed in Apps Script
+    api.post("/api/phone/sync")
+    assert not api.get("/api/info").get_json()["phone_script_outdated"]
