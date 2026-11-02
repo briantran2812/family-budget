@@ -5,6 +5,7 @@ import subprocess
 import sys
 import tempfile
 import time
+from datetime import datetime
 import urllib.request
 from pathlib import Path
 
@@ -47,6 +48,7 @@ def main() -> None:
 
             def page(url, tab="overview"):
                 pg = ctx.new_page()
+                pg.clock.set_fixed_time(datetime(2026, 10, 31, 10, 0))  # demo data ends in October 2026
                 pg.goto(f"{url}/#{tab}")
                 pg.wait_for_selector("#monthLabel:not(:empty)")
                 pg.wait_for_timeout(500)

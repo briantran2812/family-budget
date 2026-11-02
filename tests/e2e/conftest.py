@@ -1,5 +1,6 @@
 """End-to-end UX tests: the real page in WebKit (the engine of the app's window) against a live server."""
 import threading
+from datetime import datetime
 
 import pytest
 from playwright.sync_api import sync_playwright
@@ -53,9 +54,13 @@ def fake_gmail(monkeypatch, fake_keyring):
     return mailbox
 
 
+FROZEN_NOW = datetime(2026, 10, 31, 10, 0)
+
+
 def _page(browser, server, **ctx):
     context = browser.new_context(viewport=ctx.pop("viewport", {"width": 1280, "height": 860}), locale="vi-VN", **ctx)
     page = context.new_page()
+    page.clock.set_fixed_time(FROZEN_NOW)  # the fixtures are dated October 2026; "this month" must not drift
     page.js_errors = []
     page.on("pageerror", lambda e: page.js_errors.append(str(e)))
     page.goto(server + "/")
