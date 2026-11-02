@@ -72,13 +72,19 @@ function doGet(e) {
 }
 
 function add_(p) {
-  var amount = parseAmount(p.so);
-  if (!(amount > 0)) return text_('✗ Số tiền "' + (p.so || '') + '" chưa đúng. Ví dụ: 45 (= 45.000 ₫) hoặc 1500000.');
+  var amount = parseShortcutAmount(p.so);
+  if (!(amount > 0)) return text_('✗ Số tiền "' + (p.so || '') + '" chưa đúng. Nhập theo nghìn đồng: 45 = 45.000 ₫, 7000 = 7.000.000 ₫.');
+  if (amount >= 1e9) return text_('✗ ' + vnd_(amount) + ' quá lớn. Nhập theo nghìn đồng: 45 = 45.000 ₫, 7000 = 7.000.000 ₫.');
   var desc = String(p.d || '').trim().slice(0, 300);
   var lock = LockService.getScriptLock();
   lock.waitLock(10000);
   try {
-    sheet_().appendRow([newId_(), new Date(), amount, desc, String(p.t || '').trim(), String(p.n || '').trim()]);
+    var sh = sheet_();
+    if (!props.getProperty('ID_AS_TEXT')) {  // an all-digit or "12e45678" id would otherwise turn into a number
+      sh.getRange('A:A').setNumberFormat('@');
+      props.setProperty('ID_AS_TEXT', '1');
+    }
+    sh.appendRow([newId_(), new Date(), amount, desc, String(p.t || '').trim(), String(p.n || '').trim()]);
   } finally {
     lock.releaseLock();
   }
@@ -178,6 +184,14 @@ function replaceRows_(ss, name, headers, deviceCol, device, rows, sortCol, forma
 }
 
 // ---------------------------------------------------------------- parsing (shared with the tests)
+
+/** From the Shortcut's number pad: always thousands (45 → 45.000, 7000 → 7.000.000); "45k", "1tr5" still work. */
+function parseShortcutAmount(raw) {
+  var s = String(raw === undefined || raw === null ? '' : raw).replace(/\s+/g, '');
+  if (/^\d{1,3}([.,]\d{3})+$/.test(s)) s = s.replace(/[.,]/g, '');  // the phone may group digits: "7.000"
+  if (/^\d+$/.test(s)) return parseInt(s, 10) * 1000;
+  return parseAmount(raw);
+}
 
 /** "45" → 45000 (under 1000 means thousands), "45k", "1,5tr", "1tr5", "1.500.000" → VND. NaN if unreadable. */
 function parseAmount(raw) {

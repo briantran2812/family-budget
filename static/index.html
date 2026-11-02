@@ -326,6 +326,7 @@ ol.howto li { margin: 5px 0; }
         <button id="nextM" aria-label="Tháng sau">›</button>
         <button id="todayBtn" hidden>Tháng này</button>
       </div>
+      <button class="btn" id="syncAllBtn" hidden title="Lấy khoản mới từ iPhone và Gmail">↻ <span>Đồng bộ</span></button>
       <button class="btn primary" id="addBtn">＋ <span>Thêm khoản</span></button>
     </header>
 
@@ -525,6 +526,8 @@ const fmt = n => nf.format(Math.round(n || 0)) + ' ₫';
 const short = n => n >= 1e9 ? (n / 1e9).toFixed(1).replace('.', ',').replace(',0', '') + ' tỷ'
   : n >= 1e6 ? (n / 1e6).toFixed(1).replace('.', ',').replace(',0', '') + ' tr' : n >= 1e3 ? Math.round(n / 1e3) + 'k' : String(n || 0);
 const pct1 = x => x.toFixed(1).replace('.', ',') + '%';
+// Under 10% a rounded whole number hides real spending (238k of 50tr showed as 0%).
+const ringPct = x => x > 0 && x < 10 ? pct1(x) : Math.round(x) + '%';
 const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({'&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;'}[c]));
 const SRC_ICON = {shopee: '🛍️', tiktok: '🎵', momo: '👛', manual: '✍️', phone: '📱', screenshot: '📸', statement: '🏦', email: '✉️'};
 const SRC = {shopee: 'Shopee', tiktok: 'TikTok', momo: 'MoMo', manual: 'Nhập tay', phone: 'iPhone', screenshot: 'Ảnh chụp', statement: 'Sao kê', email: 'Email'};
@@ -636,6 +639,7 @@ async function loadInfo() {
   $('#sideFoot').textContent = 'Phiên bản ' + state.info.version;
   $('#quitBtn').hidden = state.info.desktop;
   $('#revealBtn').hidden = !state.info.desktop;
+  renderSyncBtn();
 }
 async function loadCats() {
   state.cats = await api('/api/categories');
@@ -670,7 +674,7 @@ async function loadSummary() {
   $('#hDelta').textContent = deltaText(s.expense, prevExp);
   const narrow = matchMedia('(max-width: 760px)').matches;
   $('#ring').innerHTML = ringSvg(s.income ? s.expense / s.income : 0, narrow ? 104 : 132) + (s.income
-    ? `<div class="c"><b>${Math.round(s.expense / s.income * 100)}%</b><small>thu nhập đã chi</small></div>`
+    ? `<div class="c"><b>${ringPct(s.expense / s.income * 100)}</b><small>thu nhập đã chi</small></div>`
     : `<div class="c"><b>–</b><small>thêm thu nhập để xem tỷ lệ</small></div>`);
   // The two biggest sources this month (iPhone, Shopee…); Shopee/TikTok fill in when there are fewer.
   const top = Object.entries(s.by_source).filter(([k, v]) => v > 0).sort((a, b) => b[1] - a[1]).map(([k]) => k);
@@ -1251,6 +1255,34 @@ function phoneWizard() {
   $('#pwCode', m.el).onkeydown = e => { if (e.key === 'Enter') go(); };
 }
 
+// ---------------------------------------------------------------- sync everything (header button, app start, timer)
+let lastSyncAll = 0, syncing = false;
+function renderSyncBtn() {
+  $('#syncAllBtn').hidden = !(state.info.phone_connected || (state.info.gmail_accounts || []).length);
+}
+// Quiet runs (start, timer) only speak up when something new arrived; Gmail runs at start at most every 6 hours.
+async function syncAll(quiet = false, {gmail = true} = {}) {
+  if (syncing || !(state.info.phone_connected || (state.info.gmail_accounts || []).length)) return;
+  syncing = true; lastSyncAll = Date.now();
+  const got = [], errors = [];
+  try {
+    if (state.info.phone_connected) {
+      try { const r = await api('/api/phone/sync', {method: 'POST'}); if (r.imported) got.push(`${r.imported} khoản từ iPhone`); }
+      catch (err) { errors.push(err.message); }
+    }
+    const lastMail = Date.parse((state.info.gmail_last_sync || '').replace(' ', 'T')) || 0;
+    if (gmail && (state.info.gmail_accounts || []).length && (!quiet || Date.now() - lastMail > 6 * 3600 * 1000)) {
+      try { const r = await api('/api/gmail/sync', {method: 'POST'}); if (r.imported) got.push(`${r.imported} đơn từ Gmail`); }
+      catch (err) { errors.push(err.message); }
+    }
+    await loadInfo().catch(() => {}); renderPhone(); renderAccounts();
+    if (got.length) { refresh(); toast('↻ Đã lấy ' + got.join(', ')); }
+    else if (!quiet) toast(errors.length ? 'Đồng bộ chưa xong' : '↻ Đã đồng bộ — không có gì mới', !!errors.length);
+    if (errors.length && !quiet) errors.forEach(e => toast(e, true));
+  } finally { syncing = false; }
+}
+$('#syncAllBtn').onclick = () => busy($('#syncAllBtn'), () => syncAll(false));
+
 // ---------------------------------------------------------------- settings
 const EMOJIS = '🎓📚💡💧🔥📶📱💄🧴💅🛒🍚🥬🍜☕️🏠🧺🧹🛋️👗👟👜🍼🧸👶💊🏥🦷🚗⛽️🛵✈️🎬🎮🏖️🎁💝🐶🐱🌿💼💰🏦📈🧾📦❤️⭐️'.match(/\p{Extended_Pictographic}️?/gu);
 function renderSettings() {
@@ -1363,7 +1395,12 @@ function welcome() {
   showTab(tab);
   setMonth(state.month);
   if (!state.info.onboarded) welcome();
-  if (state.info.phone_connected) phoneSync(true);  // the point of the phone inbox: no button to remember
+  syncAll(true).catch(() => {});  // the point of the phone inbox: no button to remember
+  // While the window stays open, pick up new phone entries every few minutes and when it comes back to the front.
+  setInterval(() => document.hidden || syncAll(true, {gmail: false}).catch(() => {}), 5 * 60 * 1000);
+  document.addEventListener('visibilitychange', () => {
+    if (!document.hidden && Date.now() - lastSyncAll > 2 * 60 * 1000) syncAll(true, {gmail: false}).catch(() => {});
+  });
 })();
 </script>
 </body>

@@ -177,6 +177,20 @@ Object.assign(tests, {
   },
 });
 
+Object.assign(tests, {
+  shortcut_amounts_are_thousands() {
+    const {ctx, sheet, secret} = load();
+    for (const [so, want] of [['45', 45000], ['7000', 7000000], ['7.000', 7000000], ['1tr5', 1500000], ['45k', 45000]]) {
+      const r = ctx.doGet({parameter: {a: 'add', k: secret, so, d: 'x'}});
+      assert.match(r.body, /^✓/, so);
+      assert.equal(sheet.rows.at(-1)[2], want, so);
+    }
+    const big = ctx.doGet({parameter: {a: 'add', k: secret, so: '1500000', d: 'typed in đồng by mistake'}});
+    assert.match(big.body, /quá lớn/);
+    assert.equal(sheet.rows.length, 6);
+  },
+});
+
 const only = process.argv[2];
 let failed = 0;
 for (const [name, fn] of Object.entries(tests)) {

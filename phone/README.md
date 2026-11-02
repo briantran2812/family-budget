@@ -84,7 +84,7 @@ Cách mở cho nhanh (chọn một):
 | # | Làm gì | Mong đợi | ✓ |
 | --- | --- | --- | --- |
 | T1 | Chạy Phím tắt: gõ `45`, "Phở bò", chọn Tiền mặt | Trong vòng 10 giây có thông báo **"✓ Đã ghi 45.000 ₫ · Phở bò"**; sheet có thêm một dòng, cột Người nhập là tên iPhone của bạn | |
-| T2 | Gõ `1500000`, "Học phí tháng 11", Chuyển khoản | Thông báo ghi **1.500.000 ₫** | |
+| T2 | Gõ `1500`, "Học phí tháng 11", Chuyển khoản | Thông báo ghi **1.500.000 ₫** (số luôn tính theo nghìn đồng) | |
 | T3 | Gõ `0` | Thông báo **"✗ Số tiền… chưa đúng"**, sheet không thêm dòng | |
 | T4 | Trên Mac bấm **Đồng bộ ngay** | "Đã lấy 2 khoản mới từ iPhone". Tab Giao dịch → lọc **iPhone** thấy hai khoản; Học phí tự vào hạng mục Học phí; "Trả bằng" đúng như đã chọn | |
 | T5 | Bấm **Đồng bộ ngay** lần nữa | "Đã lấy 0 khoản mới · 2 đã có", không có giao dịch trùng | |

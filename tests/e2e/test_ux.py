@@ -474,7 +474,7 @@ def test_ux35_opening_the_app_pulls_new_phone_entries(onboarded, open_page, fake
         phone_inbox.connect(c, PHONE_CODE)
     fake_sheet["rows"] = [phone_row("q1", 30_000, "Gửi xe")]
     p = open_page()
-    expect(p.locator(".toast").last).to_contain_text("Đã lấy 1 khoản mới từ iPhone")
+    expect(p.locator(".toast").last).to_contain_text("Đã lấy 1 khoản từ iPhone")
     expect(p.locator("#recent")).to_contain_text("Gửi xe")
     p.locator("nav button[data-tab=import]").click()
     p.locator("#phoneSyncBtn").click()  # nothing new: says so instead of a silent no-op
@@ -563,3 +563,28 @@ def test_ux39_mirror_to_sheet_settings(onboarded, page, fake_sheet):
     assert fake_sheet["pushes"][-1]["device"] == "MacBook Lan"
     page.locator("#pushOn").uncheck()
     expect(page.locator("#pushNow")).to_be_disabled()
+
+
+
+def test_ux40_header_sync_button(onboarded, page, fake_sheet, fake_gmail):
+    expect(page.locator("#syncAllBtn")).to_be_hidden()      # nothing connected: nothing to sync
+    import phone_inbox
+    with db.connect() as c:
+        phone_inbox.connect(c, fake_sheet["code"])
+    reload(page)
+    expect(page.locator("#syncAllBtn")).to_be_visible()
+    page.locator("#syncAllBtn").click()
+    expect(toast(page)).to_contain_text("không có gì mới")
+    fake_sheet["rows"] = [phone_row("h1", 35_000, "Bánh mì")]
+    page.locator("#syncAllBtn").click()
+    expect(toast(page)).to_contain_text("Đã lấy 1 khoản từ iPhone")
+    expect(page.locator("#recent")).to_contain_text("Bánh mì")
+
+
+
+def test_ux41_small_share_of_income_is_not_shown_as_zero(onboarded, page):
+    d = page.evaluate("todayISO()")
+    add_tx(d, 50_000_000, "Lương", kind="income")
+    add_tx(d, 237_590, "Đổ xăng")
+    reload(page)
+    expect(page.locator("#ring")).to_contain_text("0,5%")
