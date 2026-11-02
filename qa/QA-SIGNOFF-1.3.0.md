@@ -40,6 +40,14 @@ Test on **the RC file above**, following docs/UX-TEST-CASES.md. In the Result co
 | M-17 | P2 | PDF sao kê gửi qua email (có mật khẩu) | ☐ | |
 | M-18 | P2 | Không tính trùng khi Gmail về sau | ☐ | |
 
+## Defects found after the automated gates
+
+| Severity | Defect |
+| --- | --- |
+| **S1** | The bundle only runs on **macOS 26 + Apple silicon**: the bundled Homebrew Python and its libraries are built with minos 26.0, and the app is arm64-only. Info.plist, the user guide and docs promise macOS 13+. On an older Mac the app quits at launch. Found 2026-11-02 when asked about an older MacBook; the gate now checks every binary (`check_bundle` in release.py). Fix: rebuild with a Python whose binaries target an older macOS, and decide the CPU architectures. |
+
+Decision for this RC: **NO-GO** (S1).
+
 ## Decision
 
 Decision: ☐ GO  ☐ NO-GO

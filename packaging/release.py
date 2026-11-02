@@ -65,6 +65,37 @@ def pytest(name: str, args: list, env=None, timeout: int = 300) -> str:
     return summary
 
 
+# Architectures the bundle must run on. Smoke tests only run on the build machine, so a library that needs a
+# newer macOS or another CPU passes them and fails on the user's Mac (1.3.0 RC: Homebrew libs required macOS 26).
+REQUIRED_ARCHS = {"arm64"}
+
+
+def check_bundle(app: Path) -> str:
+    plist = app / "Contents" / "Info.plist"
+    declared = subprocess.run(["/usr/libexec/PlistBuddy", "-c", "Print :LSMinimumSystemVersion", str(plist)],
+                              capture_output=True, text=True).stdout.strip() or "0"
+    as_tuple = lambda v: tuple(int(x) for x in v.split("."))
+    too_new, missing_arch = [], []
+    for f in app.rglob("*"):
+        if not f.is_file() or f.is_symlink() or not (f.suffix in (".so", ".dylib") or f.stat().st_mode & 0o111):
+            continue
+        archs = subprocess.run(["lipo", "-archs", str(f)], capture_output=True, text=True)
+        if archs.returncode:
+            continue  # not a Mach-O file
+        if not REQUIRED_ARCHS <= set(archs.stdout.split()):
+            missing_arch.append(f"{f.name} ({archs.stdout.strip()})")
+        load = subprocess.run(["otool", "-l", str(f)], capture_output=True, text=True).stdout
+        mins = re.findall(r"LC_BUILD_VERSION[\s\S]*?minos (\S+)", load) + \
+            re.findall(r"LC_VERSION_MIN_MACOSX[\s\S]*?version (\S+)", load)
+        for m in mins:
+            if as_tuple(m) > as_tuple(declared):
+                too_new.append(f"{f.name} needs macOS {m}")
+    if too_new or missing_arch:
+        fail(f"bundle does not run on what Info.plist promises (macOS {declared}, {sorted(REQUIRED_ARCHS)}):\n  - "
+             + "\n  - ".join(sorted(set(too_new))[:15] + missing_arch[:15]))
+    return f"macOS ≥ {declared}, {'+'.join(sorted(REQUIRED_ARCHS))}"
+
+
 def manual_cases() -> list[tuple[str, str, str]]:
     rows = [ln for ln in CASES.read_text().splitlines() if ln.startswith("| M-")]
     return [tuple(c.strip() for c in ln.strip("|").split("|")[:3]) for ln in rows]
@@ -85,6 +116,10 @@ def rc() -> None:
     subprocess.run([*KEEP_AWAKE, str(ROOT / "packaging" / "build.sh")], cwd=ROOT, check=True)
     shutil.move(ROOT / "dist" / f"ThuChiGiaDinh-{VERSION}.dmg", RC_DMG)
 
+    step("Bundle compatibility (CPU architectures, minimum macOS)")
+    compat = check_bundle(APP)
+    print(f"    {compat}")
+
     step("Smoke test of the packaged app")
     packaged = pytest("packaged", ["tests/test_packaged.py"], env={**os.environ, "APP_PATH": str(APP)})
 
@@ -104,6 +139,7 @@ def rc() -> None:
 | --- | --- |
 | Unit + integration + OCR | {unit} |
 | End-to-end UX (WebKit) | {e2e} |
+| Bundle compatibility | {compat} |
 | Packaged app smoke test | {packaged} |
 
 Reports: `qa/reports/{VERSION}/`
