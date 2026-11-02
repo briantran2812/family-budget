@@ -119,3 +119,15 @@ def test_screenshot_history_flags_payments_already_in_app(api, monkeypatch):
     cands = {c["amount"]: c for c in r[0]["candidates"]}
     assert cands[86_000]["duplicate"] and not cands[86_000]["selected"]
     assert cands[80_000]["selected"] and "duplicate" not in cands[80_000]
+
+
+
+def test_salary_from_a_bank_screenshot_already_entered_by_hand_is_unticked(api, monkeypatch):
+    import sys
+    import types
+    from test_parsers import BANK_HISTORY
+    monkeypatch.setitem(sys.modules, "ocr", types.SimpleNamespace(ocr_rows=lambda path: BANK_HISTORY))
+    api.post("/api/transactions", json={"date": "2026-10-21", "amount": 71_022_400, "kind": "income", "description": "Lương"})
+    cands = {c["amount"]: c for c in api.post("/api/screenshot", data={"files": (io.BytesIO(b"x"), "b.png")}).get_json()[0]["candidates"]}
+    assert cands[71_022_400]["duplicate"] and not cands[71_022_400]["selected"]
+    assert cands[1_133_746]["selected"]

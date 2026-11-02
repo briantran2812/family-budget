@@ -137,7 +137,7 @@ def test_bank_app_history_style():
     got = parsers.parse_history(rows)
     assert [(c["date"], c["amount"], c["description"], c["kind"], c["selected"]) for c in got] == [
         ("2026-11-02", 250_000, "Chuyển tiền cho TRAN THI B", "expense", True),
-        ("2026-11-01", 15_000_000, "Nhận tiền từ CONG TY X", "income", False)]   # money in: offered, not ticked
+        ("2026-11-01", 15_000_000, "Nhận tiền từ CONG TY X", "income", True)]    # money in: income, ticked
 
 
 def test_single_receipt_is_not_a_history_screen():
@@ -208,3 +208,34 @@ def test_money_received_receipt_is_income():
 def test_bank_title_beats_momo_mentioned_in_the_description():
     rows = ["Vietcombank", "Chuyển khoản thành công", "Số tiền: 200.000 VND", "Nội dung: nap tien vi MoMo"]
     assert parsers.detect_source(rows) == "Vietcombank"
+
+
+
+BANK_HISTORY = [  # OCR rows of a real bank-app history screen (names changed): a bare date closes each entry
+    "3:00 A", "Tài khoản thanh toán", "Hôm qua",
+    "• Tra lai tai khoan thanh toan + 1,647", "Interest amount for account in 10/2026", "31/10/2026",
+    "® Rut tien tai ATM - 20,000,000", "RUT TIEN TAI ATM SO THE 489044....1215...", "24/10/2026",
+    "• Rut tien tai ATM - 20,000,000", "RUT TIEN TAI ATM SO THE 489044...1215...", "23/10/2026",
+    "• Tiền chuyển vào + 71,022,400", "(B/O CONG TY TNHH ABC...", "21/10/2026",
+    "• Tiền chuyển vào + 1,133,746", "(B/O BAO HIEM XYZ...", "13/10/2026",
+    "• Tiền chuyển vào + 797,831", "(B/O BAO HIEM XYZ...",       # its date is under the bottom edge
+    "Tải sao kê",
+]
+
+
+def test_bank_history_with_bare_dates():
+    report = {}
+    got = parsers.parse_history(BANK_HISTORY, report=report)
+    assert [(c["date"], c["amount"], c["kind"], c["selected"]) for c in got] == [
+        ("2026-10-31", 1_647, "income", False),           # interest: a few thousand đồng, not ticked
+        ("2026-10-24", 20_000_000, "expense", False),     # ATM: moving money to cash, not spending
+        ("2026-10-23", 20_000_000, "expense", False),
+        ("2026-10-21", 71_022_400, "income", True),
+        ("2026-10-13", 1_133_746, "income", True)]
+    assert got[1]["description"].startswith("Rut tien tai ATM") and "hint" in got[1]
+    assert got[3]["description"] == "Tiền chuyển vào (B/O CONG TY TNHH ABC..."
+    assert report["cut_off"] == 1
+
+
+def test_a_receipt_with_one_date_line_is_still_a_receipt():
+    assert parsers.parse_history(["Chuyển khoản thành công", "Số tiền: 200.000 VND", "02/11/2026"]) is None

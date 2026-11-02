@@ -1189,7 +1189,8 @@ async function uploadShots(files) {
       if (lost) notes.push(`⚠️ ${esc(r.file)}: ${lost} giao dịch không đọc được hoặc bị cắt ở mép ảnh — xem ảnh và nhập tay nếu cần.`);
     });
     if (cands.some(c => c.date_guessed)) notes.push('⚠️ Ảnh không ghi ngày nên app tạm điền hôm nay (ô ngày tô vàng) — sửa nếu không đúng.');
-    if (cands.some(c => c.kind === 'income')) notes.push('Khoản <b>tiền vào</b> được ghi là Thu; khoản tiền vào trên màn hình lịch sử để bỏ chọn sẵn.');
+    if (cands.some(c => c.kind === 'income')) notes.push('Khoản <b>tiền vào</b> được ghi là <b>Thu</b>. Khoản đã có trong app được bỏ chọn sẵn để không nhập trùng.');
+    if (!$('#ocrPay').value) notes.push('Ảnh không ghi tên ngân hàng hay ví — chọn ô <b>Trả bằng</b> để thống kê theo cách trả.');
     $('#ocrNotes').innerHTML = notes.map(n => `<div class="ocr-note">${n}</div>`).join('');
     $('#ocrRows').innerHTML = cands.length ? cands.map(c => `
       <div class="ocr-row"><input type="checkbox" class="sel" ${c.selected ? 'checked' : ''}>
@@ -1198,7 +1199,8 @@ async function uploadShots(files) {
         <input class="field desc" value="${esc(c.description)}" placeholder="Mô tả">
         <select class="field cat">${opts(c.category_id, c.kind === 'income' ? 'income' : 'expense')}</select>
         <input class="field amt num" value="${nf.format(c.amount)}" style="text-align:right">
-        ${c.duplicate ? '<div class="muted dup-note">↑ Đã có khoản cùng số tiền, cùng ngày trong app — bỏ chọn để không nhập trùng</div>' : ''}</div>`).join('')
+        ${c.duplicate ? '<div class="muted dup-note">↑ Đã có khoản cùng số tiền, cùng ngày trong app — bỏ chọn để không nhập trùng</div>' : ''}
+        ${c.hint ? `<div class="muted dup-note">↑ ${esc(c.hint)}</div>` : ''}</div>`).join('')
       : res.length && res.every(r => r.error) ? `<div class="result err">${esc(res[0].error)}</div>`
       : '<div class="empty">Không thấy số tiền nào trong ảnh. Xem chữ đọc được bên dưới rồi nhập tay.</div>';
     $$('#ocrRows .kind').forEach(k => k.onchange = () => { $('.cat', k.parentElement).innerHTML = opts(null, k.value); });

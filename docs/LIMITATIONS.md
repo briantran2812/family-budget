@@ -54,7 +54,8 @@ xử lý hiện có, nếu có.
 | **Không dùng AI:** chữ do Vision của macOS đọc ngay trên máy (không cần mạng), số tiền, ngày, nơi trả lấy bằng quy tắc cố định. App không tự thêm thông tin, nhưng OCR có thể **đọc nhầm** chữ số (ví dụ "2.802.271đ" thành "2.802.2710") | Có thể sai số tiền | Ảnh gốc hiện ngay cạnh kết quả, phần chữ đọc được mở sẵn; không lưu gì khi chưa bấm Lưu |
 | Màn hình lịch sử: giao dịch bị cắt ở mép ảnh, hoặc dòng đọc không ra số tiền, sẽ bị bỏ qua | Thiếu giao dịch | App báo "N giao dịch không đọc được hoặc bị cắt"; chụp tiếp phần còn lại |
 | Ảnh không có dòng "Tổng": app đưa ra mọi số tiền và chọn sẵn số lớn nhất (trừ dòng khách đưa, tiền thừa, giảm giá) | Có thể chọn nhầm | Kiểm tra dòng được chọn trước khi lưu |
-| Tiền vào ("+", "Nhận tiền") được ghi là **Thu**; trên màn hình lịch sử thì để bỏ chọn sẵn | | Đổi Chi/Thu ở từng dòng trong màn hình duyệt |
+| Tiền vào ("+", "Nhận tiền") được ghi là **Thu** và chọn sẵn (trừ tiền lãi); khoản đã có trong app (cùng số tiền, lệch ≤ 1 ngày) được bỏ chọn. **Rút tiền ATM** không chọn sẵn vì chỉ là chuyển sang tiền mặt | Hai khoản thu khác nhau nhưng trùng số tiền trong 1 ngày sẽ bị bỏ chọn nhầm | Đổi Chi/Thu và tick lại ở từng dòng trong màn hình duyệt |
+| Màn hình lịch sử app ngân hàng thường **không ghi tên ngân hàng** | Ô Trả bằng để trống | App nhắc chọn; chọn một lần cho cả ảnh |
 | Mỗi ảnh là một lần nhập thủ công | Không phù hợp để nhập hàng trăm giao dịch | Xem phần ngân hàng bên dưới: tính năng nhập sao kê sẽ giải quyết việc này |
 
 ## Ngân hàng

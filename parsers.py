@@ -213,12 +213,16 @@ ROW_TOTAL_LABELS = ["thanh tien", "tong so tien", "tong thanh toan", "tong tien"
 DESC_LABELS = ["noi dung", "loi nhan", "dien giai", "loai dich vu", "dich vu", "mo ta", "content", "description"]
 
 
-# Transaction-history screens (MoMo "Giao dịch gần đây", bank apps): "<text> -80.000đ", "<more text>", "14:11 - 01/11".
-HIST_TIME = re.compile(r"^\s*(\d{1,2}):(\d{2})\s*[-–]\s*(\d{1,2})/(\d{1,2})(?:/(\d{4}))?\s*$")
+# Transaction-history screens: "<text> -80.000đ", "<more text>", then a line that closes the entry — "14:11 - 01/11"
+# in MoMo, a bare "24/10/2026" in bank apps.
+HIST_TIME = re.compile(r"^\s*(?:(\d{1,2}):(\d{2})\s*[-–]\s*)?(\d{1,2})/(\d{1,2})(?:/(\d{4}))?\s*$")
 HIST_MONTH = re.compile(r"^\s*th[aá]ng\s+(\d{1,2})\s*/\s*(\d{4})\s*$", re.I)
 HIST_AMOUNT = re.compile(r"([+\-−–])\s?(?:(\d{1,3}(?:[.,]\d{3}){1,3})\s?(?:đ|d|₫|vnd)?|(\d{4,10})\s?(?:đ|d|₫|vnd))\s*$", re.I)
 HIST_BALANCE = re.compile(r"s[ốo]\s*d[ưu][^:]*:\s*[\d.,]+\s*\S?", re.I)  # "Số dư Túi: 2.471.829đ" — a balance, not a charge
 HIST_PREFIX = re.compile(r"^thanh\s+to[aá]n\s+(?:cho\s+)?", re.I)
+HIST_BULLET = re.compile(r"^[^\wÀ-ỹ(]+")  # "• ", and "® " where OCR misread the bullet
+TRANSFER_OUT = ("rut tien", "atm")             # cash out of the account, not spending
+INTEREST = ("tra lai", "tien lai", "lai tien gui", "interest", "tui than tai")
 
 
 def parse_history(rows: list[str], today: date | None = None, report: dict | None = None) -> list[dict] | None:
@@ -258,10 +262,16 @@ def parse_history(rows: list[str], today: date | None = None, report: dict | Non
     for e in entries:
         if not e["date"] or e["amount"] < 1000:
             continue  # interest of a few hundred đồng is not worth a row
-        desc = HIST_PREFIX.sub("", " ".join(t for t in e["text"] if t)).strip()
-        money_in = e["sign"] == "+"  # offered unticked as income: a refund or a salary is not an expense
-        out.append({"date": e["date"], "amount": e["amount"], "description": desc, "selected": not money_in,
-                    "kind": "income" if money_in else "expense"})
+        desc = HIST_PREFIX.sub("", HIST_BULLET.sub("", " ".join(t for t in e["text"] if t))).strip()
+        money_in = e["sign"] == "+"  # income; one already in the app is unticked by the duplicate check in /api/screenshot
+        cash_out = not money_in and any(w in normalize(desc) for w in TRANSFER_OUT)
+        interest = money_in and any(w in normalize(desc) for w in INTEREST)
+        entry = {"date": e["date"], "amount": e["amount"], "description": desc,
+                 "selected": not (cash_out or interest), "kind": "income" if money_in else "expense"}
+        if cash_out:
+            entry["hint"] = ("Rút tiền mặt chỉ là chuyển tiền sang ví, chưa phải khoản chi — chỉ chọn nếu bạn không "
+                             "ghi riêng các khoản tiêu bằng tiền mặt")
+        out.append(entry)
     if report is not None:
         small = sum(1 for e in entries if e["amount"] < 1000)
         report["unreadable"] = max(0, times - len(entries))  # a time line with no amount above it
