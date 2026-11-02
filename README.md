@@ -81,6 +81,7 @@ Shopee và TikTok thỉnh thoảng đổi mẫu email. Email nào không lấy �
 | `parsers.py` | Đọc số tiền, mã đơn, tên sản phẩm từ email và từ chữ OCR |
 | `gmail_sync.py` | Đọc Gmail qua IMAP, hỗ trợ nhiều tài khoản |
 | `ocr.py` | OCR bằng Vision framework của macOS |
+| `alerts.py` | Cảnh báo hạng mục chạm 80% ngân sách tháng, thông báo macOS một lần mỗi mức |
 | `static/index.html` | Toàn bộ giao diện |
 | `demo_data.py` | Tạo dữ liệu mẫu |
 | `packaging/` | Icon, script build, hướng dẫn cài đặt đi kèm file `.dmg` |

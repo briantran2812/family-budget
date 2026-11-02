@@ -11,7 +11,7 @@
   --text: #151826; --text-2: #575d72; --muted: #8d93a8;
   --accent: #5b4ff5; --accent-soft: #eeecff; --accent-ink: #ffffff;
   --bar: #5b4ff5; --bar-soft: #cfcafc;
-  --good: #11875a; --good-soft: #e3f6ec; --bad: #d03b3b; --bad-soft: #fdeaea; --warn-soft: #fff4d6;
+  --good: #11875a; --good-soft: #e3f6ec; --bad: #d03b3b; --bad-soft: #fdeaea; --warn: #9a5b00; --warn-soft: #fff4d6;
   --hero: linear-gradient(130deg, #5b4ff5 0%, #8b5cf6 52%, #e0559c 100%);
   --shadow: 0 1px 2px rgba(20, 24, 40, .04), 0 6px 20px rgba(20, 24, 40, .06);
   --radius: 18px;
@@ -23,7 +23,7 @@
     --text: #eef0f6; --text-2: #b6bacb; --muted: #7d8296;
     --accent: #8a80ff; --accent-soft: #2a2650; --accent-ink: #ffffff;
     --bar: #8a80ff; --bar-soft: #3b3672;
-    --good: #3fcf8e; --good-soft: #163527; --bad: #f07272; --bad-soft: #3b1d1f; --warn-soft: #3a3215;
+    --good: #3fcf8e; --good-soft: #163527; --bad: #f07272; --bad-soft: #3b1d1f; --warn: #f0b84a; --warn-soft: #3a3215;
     --hero: linear-gradient(130deg, #4338ca 0%, #7c3aed 52%, #be185d 100%);
     --shadow: 0 1px 2px rgba(0, 0, 0, .3), 0 6px 20px rgba(0, 0, 0, .25);
   }
@@ -107,7 +107,7 @@ label.lbl { display: block; font-size: 13px; color: var(--text-2); font-weight: 
 .pill { display: inline-flex; align-items: center; gap: 4px; font-size: 11.5px; font-weight: 600; padding: 2px 8px;
   border-radius: 999px; background: var(--surface-2); color: var(--text-2); white-space: nowrap; }
 .pill.shopee { background: #ffe7dc; color: #b23c0c; } .pill.momo { background: #fde4f1; color: #9c0b5b; } .pill.tiktok { background: #e3ecfb; color: #1f3f73; }
-.pill.bad { background: var(--bad-soft); color: var(--bad); } .pill.good { background: var(--good-soft); color: var(--good); }
+.pill.bad { background: var(--bad-soft); color: var(--bad); } .pill.warn { background: var(--warn-soft); color: var(--warn); } .pill.good { background: var(--good-soft); color: var(--good); }
 @media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) .pill.shopee { background: #4a2414; color: #f6b195; }
   :root:not([data-theme="light"]) .pill.tiktok { background: #18294a; color: #a9c6f0; } }
 .up { color: var(--bad); } .down { color: var(--good); }
@@ -150,6 +150,13 @@ details.recsec { margin-top: 16px; } details.recsec > summary { cursor: pointer;
 .ring svg { transform: rotate(-90deg); }
 .ring .c { position: absolute; inset: 0; display: grid; place-content: center; text-align: center; }
 .ring .c b { font-size: 26px; font-weight: 800; } .ring .c small { font-size: 11px; opacity: .85; line-height: 1.2; max-width: 90px; }
+.alerts { display: grid; gap: 8px; margin-top: 16px; }
+.alert { display: flex; align-items: center; gap: 10px; width: 100%; padding: 11px 14px; border: 1px solid transparent;
+  border-radius: 14px; background: var(--warn-soft); color: var(--text); cursor: pointer; text-align: left; font-size: 14px; }
+.alert b { color: var(--warn); } .alert.over { background: var(--bad-soft); } .alert.over b { color: var(--bad); }
+.alert:hover { border-color: var(--warn); } .alert.over:hover { border-color: var(--bad); }
+.alert .txt { flex: 1; min-width: 0; overflow-wrap: anywhere; }
+.alert .go { color: var(--muted); font-size: 18px; }
 .minis { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 14px; margin: 16px 0; }
 .mini { display: flex; align-items: center; gap: 12px; }
 .mini .k { color: var(--text-2); font-size: 13px; } .mini .v { font-size: 18px; font-weight: 700; }
@@ -355,6 +362,7 @@ ol.howto li { margin: 5px 0; }
           </div>
           <div class="ring" id="ring"></div>
         </div>
+        <div class="alerts" id="budgetAlerts" hidden></div>
         <div class="minis">
           <div class="card mini link src-mini" data-src-link="shopee"><span class="ico">🛍️</span><div><div class="k">Shopee</div><div class="v num">0 ₫</div></div><span class="go">›</span></div>
           <div class="card mini link src-mini" data-src-link="tiktok"><span class="ico">🎵</span><div><div class="k">TikTok Shop</div><div class="v num">0 ₫</div></div><span class="go">›</span></div>
@@ -664,6 +672,7 @@ async function loadCats() {
   $('#fCat').value = state.cat;
 }
 const catById = id => state.cats.find(c => c.id === id);
+function openCat(id) { state.cat = id; $('#fCat').value = state.cat; renderTx(); showTab('tx'); }
 
 // ---------------------------------------------------------------- overview
 function ringSvg(p, size) {
@@ -717,11 +726,24 @@ async function loadSummary() {
         <button class="btn" data-goto="import">📸 Thêm ảnh chụp</button>
         <button class="btn" data-action="add">✍️ Nhập tay</button></div></div>`;
 
+  // Whole percent rounded down, so 99,9% never reads as a full 100%.
+  const used = a => Math.floor(a.amount * 100 / a.budget) + '%';
+  const alertOf = Object.fromEntries(s.alerts.map(a => [a.category_id, a]));
+  $('#budgetAlerts').hidden = !s.alerts.length;
+  $('#budgetAlerts').innerHTML = s.alerts.map(a => `<button class="alert ${a.level}" data-cat="${a.category_id}">
+      <span>${a.level === 'over' ? '🔴' : '⚠️'}</span><span class="txt"><b>${a.icon} ${esc(a.name)}</b> ${a.level === 'over'
+        ? `đã vượt ngân sách tháng ${short(a.amount - a.budget)} (${short(a.amount)} / ${short(a.budget)})`
+        : `đã dùng ${used(a)} ngân sách tháng (${short(a.amount)} / ${short(a.budget)}) — còn ${short(a.budget - a.amount)}`}</span>
+      <span class="go">›</span></button>`).join('');
+  $$('#budgetAlerts .alert').forEach(r => r.onclick = () => openCat(r.dataset.cat));
+
   const max = Math.max(...s.categories.map(c => c.pct), 1);
   $('#cats').innerHTML = s.categories.length ? s.categories.map(c => {
     let budget = '';
-    if (c.budget) budget = c.amount > c.budget
+    const a = alertOf[c.id];
+    if (c.budget) budget = a?.level === 'over'
       ? `<span class="pill bad">⚠ Vượt ngân sách ${short(c.amount - c.budget)}</span>`
+      : a ? `<span class="pill warn">Đã dùng ${used(a)} ngân sách · còn ${short(c.budget - c.amount)}</span>`
       : `<span>Ngân sách ${short(c.budget)} · còn ${short(c.budget - c.amount)}</span>`;
     const d = deltaText(c.amount, c.prev);
     return `<div class="cat" data-cat="${c.id ?? ''}">
@@ -732,9 +754,7 @@ async function loadSummary() {
         <div class="cat-meta"><span><b style="color:var(--text)">${pct1(c.pct)}</b> · ${c.count} giao dịch${d ? ' · ' + d : ''}</span>${budget}</div>
       </div></div>`;
   }).join('') : '<div class="empty">Chưa có khoản chi nào trong tháng này.</div>';
-  $$('#cats .cat').forEach(r => r.onclick = () => {
-    state.cat = r.dataset.cat; $('#fCat').value = state.cat; renderTx(); showTab('tx');
-  });
+  $$('#cats .cat').forEach(r => r.onclick = () => openCat(r.dataset.cat));
 
   $('#payCard').hidden = !s.by_pay.length;
   const pmax = Math.max(...s.by_pay.map(p => p.amount), 1);

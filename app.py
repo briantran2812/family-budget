@@ -15,6 +15,7 @@ from pathlib import Path
 
 from flask import Flask, Response, abort, jsonify, request, send_from_directory
 
+import alerts
 import db
 import gmail_sync
 import parsers
@@ -302,6 +303,7 @@ def summary():
                             f"FROM transactions WHERE {ok} AND date >= ? AND date < ?", (s, e)).fetchone()
             trend.append({"month": m, "expense": row[0], "income": row[1]})
             m = prev_month(m)
+        budget_alerts = alerts.budget_alerts(c, month)
     expense = totals.get("expense", 0)
     return jsonify(
         month=month, expense=expense, income=totals.get("income", 0), count=count, by_source=by_source,
@@ -310,7 +312,7 @@ def summary():
                      "amount": r["amount"], "count": r["n"],
                      "pct": (r["amount"] / expense * 100) if expense else 0,
                      "prev": prev.get(r["id"], 0)} for r in by_cat],
-        recent=[dict(r) for r in recent], trend=list(reversed(trend)))
+        alerts=budget_alerts, recent=[dict(r) for r in recent], trend=list(reversed(trend)))
 
 
 # ---------------------------------------------------------------- import: Gmail & screenshots
@@ -447,6 +449,20 @@ def push_after_write(resp):
         with conn() as c:
             if phone_inbox.push_enabled(c):
                 schedule_push()
+    return resp
+
+
+_alert_lock = threading.Lock()  # two writes finishing together must not both send the same notification
+
+
+@app.after_request
+def alert_after_write(resp):
+    if app.config["DESKTOP"] and request.method != "GET" and resp.status_code < 400 and request.path.startswith(WRITES):
+        try:
+            with _alert_lock, conn() as c:
+                alerts.notify_crossings(c)
+        except Exception as e:  # noqa: BLE001 — a notification must never fail the write it follows
+            print(f"budget alert failed: {e}", file=sys.stderr)
     return resp
 
 

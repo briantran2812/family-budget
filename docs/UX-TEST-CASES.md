@@ -60,6 +60,7 @@ Có hai loại test case:
 | UX-40 | Nút ↻ Đồng bộ ở trang đầu | Ẩn khi chưa kết nối gì; bấm thì báo có gì mới hoặc "không có gì mới" |
 | UX-41 | Tỷ lệ thu nhập đã chi | Dưới 10% hiện một chữ số lẻ (0,5%), không làm tròn thành 0% |
 | UX-42 | Có gì mới | Hiện một lần sau khi cập nhật phiên bản; mở lại được từ thanh bên và Cài đặt; nút Xem → mở đúng tab; người dùng mới thấy màn chào thay vì Có gì mới |
+| UX-43 | Cảnh báo ngân sách | Dưới 80% thì không có cảnh báo; từ 80% hiện "đã dùng 85% ngân sách tháng … — còn 300k", vượt thì "đã vượt ngân sách tháng 250k" (nặng nhất lên trước); hạng mục 80–100% có nhãn "Đã dùng …%"; bấm cảnh báo mở danh sách đã lọc theo hạng mục; không tràn ngang ở 390px |
 
 Bản đóng gói còn được kiểm tra tự động bằng `tests/test_packaged.py`: cửa sổ tải được giao diện,
 Keychain hoạt động, OCR chạy bên trong bundle, và kết nối TLS tới Gmail thành công.
@@ -97,6 +98,7 @@ hàng.
 | M-23 | P1 | Lan tự cài Phím tắt | Gửi Lan file Phím tắt qua AirDrop và mã kết nối; không hướng dẫn thêm | Lan tự thêm được Phím tắt và ghi được một khoản |
 | M-24 | P1 | Bản sao trên sheet thật | Cập nhật Code.gs (Deploy → New version) → Cài đặt → Đẩy ngay → mở sheet trên iPhone | Tab Giao dịch có đủ giao dịch của tháng, đúng ngày và số tiền; tab Tổng hợp có Tổng chi, hạng mục và cách trả khớp với Tổng quan trong app |
 | M-25 | P2 | Ảnh lịch sử app ngân hàng | Chụp màn hình lịch sử giao dịch của app ngân hàng hay dùng → dán vào app | Đọc đúng từng khoản chi; ô Trả bằng là tên ngân hàng; khoản tiền vào bị bỏ qua |
+| M-26 | P2 | Thông báo ngân sách trên Mac thật | Đặt ngân sách 1tr cho một hạng mục → thêm khoản 800k tháng này → thêm 50k → thêm 200k. Thêm một khoản 2tr vào tháng trước | Thông báo "… đã dùng 80% ngân sách tháng" hiện đúng một lần sau khoản 800k (không hiện lại sau khoản 50k); thông báo "đã vượt" hiện một lần sau khoản 200k; khoản tháng trước không gây thông báo. Nếu macOS hỏi quyền thông báo thì ghi lại tên app trong câu hỏi |
 
 ## Mức độ lỗi
 

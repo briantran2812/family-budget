@@ -598,7 +598,7 @@ def test_ux42_whats_new_once_per_version_and_on_demand(page):
         db.set_setting(c, "seen_version", "1.3.0")   # someone updating from an older version
     reload(page)
     expect(page.get_by_text("Có gì mới trong 1.4.0")).to_be_visible()
-    expect(page.locator("#wnCur .wn-item")).to_have_count(6)
+    expect(page.locator("#wnCur .wn-item")).to_have_count(7)
     page.get_by_role("button", name="Đã hiểu").click()
     reload(page)
     page.wait_for_timeout(300)
@@ -617,3 +617,40 @@ def test_ux42b_new_user_gets_welcome_not_whats_new(page):
     reload(page)
     page.wait_for_timeout(300)
     expect(page.locator(".modal")).to_have_count(0)
+
+
+def test_ux43_budget_alert_banner_pill_and_click_through(onboarded, page):
+    d = page.evaluate("todayISO()")
+    with db.connect() as c:
+        c.execute("UPDATE categories SET budget = 2000000 WHERE name = 'Ăn uống & đi chợ'")
+    add_tx(d, 1_580_000, "Đi chợ Bách Hoá Xanh")  # 79%: no alert yet
+    reload(page)
+    expect(page.locator("#cats .cat", has_text="Ăn uống")).to_contain_text("Ngân sách 2 tr · còn 420k")
+    expect(page.locator("#budgetAlerts")).to_be_hidden()
+    add_tx(d, 120_000, "Trà sữa")
+    with db.connect() as c:
+        c.execute("UPDATE categories SET budget = 1000000 WHERE name = 'Mỹ phẩm & làm đẹp'")
+    add_tx(d, 1_250_000, "Son kem lì Romand")
+    reload(page)
+    rows = page.locator("#budgetAlerts .alert")
+    expect(rows).to_have_count(2)
+    expect(rows.first).to_have_class("alert over")  # the worst one first
+    expect(rows.first).to_contain_text("Mỹ phẩm & làm đẹp đã vượt ngân sách tháng 250k (1,3 tr / 1 tr)")
+    expect(rows.nth(1)).to_contain_text("Ăn uống & đi chợ đã dùng 85% ngân sách tháng (1,7 tr / 2 tr) — còn 300k")
+    expect(page.locator("#cats .cat", has_text="Ăn uống").locator(".pill.warn")).to_have_text(
+        "Đã dùng 85% ngân sách · còn 300k")
+    expect(page.locator("#cats .cat", has_text="Mỹ phẩm").locator(".pill.bad")).to_have_text("⚠ Vượt ngân sách 250k")
+    rows.nth(1).click()
+    expect(page.locator("#tx")).to_be_visible()
+    expect(page.locator("#txList .txrow")).to_have_count(2)
+    expect(page.locator("#txList")).to_contain_text("Trà sữa")
+
+
+def test_ux43b_budget_alerts_fit_a_phone(onboarded, open_page):
+    with db.connect() as c:
+        c.execute("UPDATE categories SET budget = 1000000 WHERE name IN ('Ăn uống & đi chợ', 'Mỹ phẩm & làm đẹp')")
+    add_tx("2026-10-05", 850_000, "Đi chợ Bách Hoá Xanh")
+    add_tx("2026-10-05", 1_250_000, "Son kem lì Romand")
+    page = open_page(viewport={"width": 390, "height": 844})
+    expect(page.locator("#budgetAlerts .alert")).to_have_count(2)
+    assert page.evaluate("document.documentElement.scrollWidth") <= 390

@@ -19,6 +19,9 @@ cho người dùng: `docs/RELEASE-NOTES-1.4.0.md`.
   "Trả bằng" ở màn hình duyệt; khoản đã có trong app được bỏ chọn sẵn.
 - Trên iPhone chọn **hạng mục** như form nhập tay (✨ Tự động để app tự phân loại); chọn Lương hoặc Thu nhập khác thì ghi thành khoản thu.
 - Mã kết nối nằm trong Keychain. Đổi mã bằng hàm `doiMa`; mã cũ ngừng hoạt động ngay.
+- **Cảnh báo ngân sách:** hạng mục chi tới 80% ngân sách tháng hiện cảnh báo ở đầu trang Tổng quan (bấm vào mở danh
+  sách giao dịch của hạng mục) và nhãn "Đã dùng …%" trong "Chi theo hạng mục". Mac hiện thông báo hệ thống một lần
+  khi chạm 80% và một lần khi vượt 100%, mỗi hạng mục mỗi tháng; chỉ cho tháng hiện tại. Code: `alerts.py`.
 - **Đồng bộ:** nút ↻ Đồng bộ ở trang đầu; tự lấy khoản mới lúc mở app, mỗi 5 phút và khi quay lại cửa sổ app.
 - **Sửa lỗi tìm ra khi thử trên iPhone thật:** mô tả, cách trả và người nhập bị trống (URL Encode); tiền mặt hiện biểu
   tượng thẻ; ảnh lịch sử MoMo bị đọc thành số dư; quy ước "tính theo nghìn" gây nhầm (7000 thành 7.000 ₫); tỷ lệ thu

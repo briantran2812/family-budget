@@ -75,6 +75,15 @@ xử lý hiện có, nếu có.
 | **Không tự cập nhật** | Người dùng phải nhận và cài file `.dmg` mới bằng tay | Gửi bản mới qua Zalo; cài đè lên bản cũ thì dữ liệu vẫn giữ |
 | Sau khi cập nhật, macOS có thể **hỏi quyền truy cập Keychain** | Vì chữ ký ad-hoc thay đổi theo mỗi lần build | Chọn "Always Allow" |
 
+## Cảnh báo ngân sách
+
+| Giới hạn | Ảnh hưởng | Cách xử lý |
+| --- | --- | --- |
+| Thông báo trên Mac chỉ hiện **khi app đang mở**, ngay sau lần thêm, sửa hoặc đồng bộ làm hạng mục chạm 80% hoặc vượt 100% | Khoản ghi trên iPhone lúc app tắt chỉ gây thông báo ở lần đồng bộ sau khi mở app | Cảnh báo vẫn nằm ở đầu trang Tổng quan mỗi lần mở app |
+| Thông báo hiện dưới tên **Script Editor** (gửi bằng `osascript`); nếu đã tắt thông báo của Script Editor thì không thấy gì | Bỏ lỡ thông báo | System Settings → Notifications → Script Editor → bật Allow Notifications |
+| Mỗi mức chỉ báo **một lần mỗi tháng**: tăng ngân sách hay xoá bớt khoản chi rồi lại chạm mức thì không báo lại | | Cảnh báo ở Tổng quan luôn theo số liệu hiện tại |
+| **iPhone chưa nhận cảnh báo** | Ghi khoản chi trên iPhone không biết hạng mục đã gần hết ngân sách | Xem Tổng quan trên Mac; tab Tổng hợp của Google Sheet có số chi theo hạng mục |
+
 ## Khác
 
 | Giới hạn | Ảnh hưởng |
