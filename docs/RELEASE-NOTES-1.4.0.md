@@ -37,6 +37,14 @@ lỗi S1 (chỉ chạy trên macOS 26). Bản này gồm cả các tính năng c
 - Hai ô nguồn ở Tổng quan là hai nguồn chi nhiều nhất trong tháng, ví dụ iPhone hay Nhập tay, thay vì luôn là
   Shopee/TikTok.
 
+### ⚠️ Cảnh báo ngân sách
+
+- Hạng mục có đặt ngân sách mà đã dùng từ **80%** trở lên thì hiện cảnh báo ở đầu Tổng quan, ví dụ "⚠️ Ăn uống & đi
+  chợ đã dùng 85% ngân sách tháng (1,7 tr / 2 tr) — còn 300k". Vượt quá 100% thì hiện 🔴. Bấm vào cảnh báo để xem
+  các khoản của hạng mục đó.
+- macOS hiện **thông báo** khi một hạng mục vừa chạm 80% và khi vượt 100%. Mỗi mốc chỉ báo một lần trong tháng, và
+  chỉ báo khi app đang mở.
+
 ### 📸 Ảnh chụp thông minh hơn
 
 - Đọc **màn hình lịch sử giao dịch** của MoMo: mỗi khoản chi thành một dòng; bỏ qua tiền lời, số dư và dòng bị cắt ở
@@ -81,6 +89,7 @@ lỗi S1 (chỉ chạy trên macOS 26). Bản này gồm cả các tính năng c
 | Hạng mục mới thêm trong app không tự có trên iPhone | Sửa bước Danh sách trong Phím tắt |
 | Hai Mac cùng bật bản sao thì khoản từ iPhone hiện hai lần trong tab Giao dịch | Chỉ bật trên một Mac |
 | Bộ đọc ảnh lịch sử mới thử với MoMo; app ngân hàng chưa thử ảnh thật | Gửi ảnh mẫu để chỉnh |
+| Cảnh báo ngân sách chỉ hiện trên Mac, iPhone chưa nhận được | Xem bản sau (Telegram) |
 | "Phở", "bún", "cơm", "tiền chợ"… chưa tự vào Ăn uống | Chọn hạng mục trên iPhone, hoặc thêm từ khoá trong Cài đặt |
 
 Danh sách đầy đủ: `docs/LIMITATIONS.md`.
@@ -110,6 +119,7 @@ giúp sửa nhanh nhất.
 | Đọc Gmail bằng Apps Script (1.5.0) | Không cần App Password; vẫn đọc khi Mac tắt; gom được Gmail của vợ |
 | Sửa S1: chạy được trên Mac cũ | Bắt buộc trước khi cài cho máy của vợ |
 | Từ khoá cho món ăn và chi tiêu hằng ngày; đưa từ khoá mới tới máy đã cài | Giảm số khoản rơi vào "Khác" |
+| Bot Telegram: nhập, báo cáo, cảnh báo ngân sách trên điện thoại | Phím tắt iOS không tự gửi thông báo được; dùng được cả Android |
 | Tự ghi khi chạm Apple Pay (iOS 17 trở lên) | Thẻ Visa trong Wallet: không phải gõ gì |
 | Hỏi ngày trên iPhone (Hôm nay / Hôm qua / Chọn ngày) | Chỉ làm nếu feedback cần |
 | Một agent độc lập rà lại trước khi phát hành | Lần này 7 lỗi chỉ lộ ra khi thử trên máy thật |
