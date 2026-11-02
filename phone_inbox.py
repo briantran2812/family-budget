@@ -34,18 +34,30 @@ def _get(code: str, action: str) -> dict:
     ctx = ssl.create_default_context(cafile=certifi.where())  # see gmail_sync._login
     try:
         with urllib.request.urlopen(url, timeout=30, context=ctx) as r:  # follows Google's 302 to googleusercontent
-            body = r.read().decode()
+            body, final = r.read().decode(errors="replace"), r.geturl()
+    except urllib.error.HTTPError as e:  # Google answers some script errors with 4xx/5xx and an HTML page
+        body, final = e.read().decode(errors="replace"), e.geturl()
     except (urllib.error.URLError, TimeoutError, OSError) as e:
         raise InboxError(f"Không kết nối được tới Google — kiểm tra mạng ({e}).") from e
     try:
         data = json.loads(body)
-    except ValueError as e:
-        # A login page instead of JSON means the deployment is not "Who has access: Anyone".
-        raise InboxError("Google không trả về dữ liệu. Kiểm tra bản Deploy: Execute as \"Me\", "
-                         "Who has access \"Anyone\".") from e
+    except ValueError:
+        raise InboxError(_explain_html(body, final)) from None
     if not data.get("ok"):
         raise InboxError(f"Apps Script báo lỗi: {data.get('error', 'không rõ')}. Lấy lại mã kết nối bằng layMaKetNoi.")
     return data
+
+
+def _explain_html(body: str, final_url: str) -> str:
+    """Google sent a web page instead of JSON; say which setup step it points to."""
+    if "accounts.google.com" in final_url or "ServiceLogin" in body:
+        return ("Google đòi đăng nhập: bản Deploy chưa mở cho mọi người. Deploy → Manage deployments → ✏️ → "
+                "Who has access: Anyone → Deploy.")
+    if "Script function not found: doGet" in body:
+        return ("Bản Deploy không có code (đã Deploy trước khi dán Code.gs, hoặc chưa lưu). Dán Code.gs, ⌘S, rồi "
+                "Deploy → Manage deployments → ✏️ → Version: New version → Deploy.")
+    text = re.sub(r"\s+", " ", re.sub(r"<[^>]+>", " ", re.sub(r"(?s)<(script|style).*?</\1>", " ", body))).strip()
+    return f"Google không trả về dữ liệu mà trả về trang: “{text[:200]}”"
 
 
 def connect(conn: sqlite3.Connection, code: str) -> str:

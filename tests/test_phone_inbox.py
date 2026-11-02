@@ -132,3 +132,13 @@ def test_workspace_and_multi_account_urls_are_accepted():
     for url in ("https://script.google.com/a/macros/example.com/s/AKfy_x-1/exec",
                 "https://script.google.com/macros/u/1/s/AKfy_x-1/exec"):
         assert phone_inbox.CODE_RE.match(url + k), url
+
+
+@pytest.mark.parametrize("body, url, hint", [
+    ("<html>Sign in</html>", "https://accounts.google.com/v3/signin/identifier?continue=x", "đòi đăng nhập"),
+    ("<html><body><div>Script function not found: doGet</div></body></html>", "https://script.google.com/x", "New version"),
+    ("<html><style>p{}</style><body><p>TypeError: Cannot read properties of null</p></body></html>",
+     "https://script.google.com/x", "TypeError: Cannot read properties of null"),
+])
+def test_html_reply_is_explained(body, url, hint):
+    assert hint in phone_inbox._explain_html(body, url)
