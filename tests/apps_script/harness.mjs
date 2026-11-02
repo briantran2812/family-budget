@@ -99,7 +99,7 @@ const tests = {
   },
   add_appends_row_and_replies_in_text() {
     const {ctx, sheet, secret} = load();
-    const r = ctx.doGet({parameter: {a: 'add', k: secret, so: '45', d: ' Phở bò ', t: 'Tiền mặt', n: 'iPhone của Lan'}});
+    const r = ctx.doGet({parameter: {a: 'add', k: secret, so: '45000', d: ' Phở bò ', t: 'Tiền mặt', n: 'iPhone của Lan'}});
     assert.equal(r.body, '✓ Đã ghi 45.000 ₫ · Phở bò');
     assert.equal(r.mime, 'text');
     const row = sheet.rows[1];
@@ -178,15 +178,15 @@ Object.assign(tests, {
 });
 
 Object.assign(tests, {
-  shortcut_amounts_are_thousands() {
+  shortcut_amounts_are_exact() {
     const {ctx, sheet, secret} = load();
-    for (const [so, want] of [['45', 45000], ['7000', 7000000], ['7.000', 7000000], ['1tr5', 1500000], ['45k', 45000]]) {
+    for (const [so, want] of [['45000', 45000], ['7000000', 7000000], ['7.000.000', 7000000], ['1tr5', 1500000], ['45k', 45000]]) {
       const r = ctx.doGet({parameter: {a: 'add', k: secret, so, d: 'x'}});
       assert.match(r.body, /^✓/, so);
       assert.equal(sheet.rows.at(-1)[2], want, so);
     }
-    const big = ctx.doGet({parameter: {a: 'add', k: secret, so: '1500000', d: 'typed in đồng by mistake'}});
-    assert.match(big.body, /quá lớn/);
+    assert.match(ctx.doGet({parameter: {a: 'add', k: secret, so: '45', d: 'x'}}).body, /quá nhỏ — gõ đủ các số 0/);
+    assert.match(ctx.doGet({parameter: {a: 'add', k: secret, so: '70000000000', d: 'x'}}).body, /quá lớn/);
     assert.equal(sheet.rows.length, 6);
   },
 });

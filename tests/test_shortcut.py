@@ -39,3 +39,13 @@ def test_url_carries_every_field():
     url = send["WFWorkflowActionParameters"]["WFURL"]["Value"]
     assert url["string"].replace(make_shortcut.OBJ, "{}") == "{}&a=add&so={}&d={}&t={}&n={}"
     assert len(url["attachmentsByRange"]) == 5
+
+
+
+def test_description_prompt_repeats_the_formatted_amount():
+    actions = make_shortcut.build()["WFWorkflowActions"]
+    fmt = next(a for a in actions if a["WFWorkflowActionIdentifier"] == "is.workflow.actions.format.number")
+    ask = [a for a in actions if a["WFWorkflowActionIdentifier"] == "is.workflow.actions.ask"][1]
+    prompt = ask["WFWorkflowActionParameters"]["WFAskActionPrompt"]["Value"]
+    assert prompt["string"] == make_shortcut.OBJ + " ₫ — chi cho gì?"
+    assert prompt["attachmentsByRange"]["{0, 1}"]["OutputUUID"] == fmt["WFWorkflowActionParameters"]["UUID"]

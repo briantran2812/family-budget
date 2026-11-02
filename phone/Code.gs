@@ -73,8 +73,9 @@ function doGet(e) {
 
 function add_(p) {
   var amount = parseShortcutAmount(p.so);
-  if (!(amount > 0)) return text_('✗ Số tiền "' + (p.so || '') + '" chưa đúng. Nhập theo nghìn đồng: 45 = 45.000 ₫, 7000 = 7.000.000 ₫.');
-  if (amount >= 1e9) return text_('✗ ' + vnd_(amount) + ' quá lớn. Nhập theo nghìn đồng: 45 = 45.000 ₫, 7000 = 7.000.000 ₫.');
+  if (!(amount > 0)) return text_('✗ Số tiền "' + (p.so || '') + '" chưa đúng. Gõ đủ số, ví dụ 45000.');
+  if (amount < 1000) return text_('✗ ' + vnd_(amount) + ' quá nhỏ — gõ đủ các số 0, ví dụ 45000 cho 45.000 ₫.');
+  if (amount >= 1e10) return text_('✗ ' + vnd_(amount) + ' quá lớn — kiểm tra lại số 0.');
   var desc = String(p.d || '').trim().slice(0, 300);
   var lock = LockService.getScriptLock();
   lock.waitLock(10000);
@@ -185,12 +186,12 @@ function replaceRows_(ss, name, headers, deviceCol, device, rows, sortCol, forma
 
 // ---------------------------------------------------------------- parsing (shared with the tests)
 
-/** From the Shortcut's number pad: always thousands (45 → 45.000, 7000 → 7.000.000); "45k", "1tr5" still work. */
+/** From the Shortcut's number pad: the amount as typed, in đồng ("7000000", or "7.000.000" if the phone groups digits). */
 function parseShortcutAmount(raw) {
   var s = String(raw === undefined || raw === null ? '' : raw).replace(/\s+/g, '');
-  if (/^\d{1,3}([.,]\d{3})+$/.test(s)) s = s.replace(/[.,]/g, '');  // the phone may group digits: "7.000"
-  if (/^\d+$/.test(s)) return parseInt(s, 10) * 1000;
-  return parseAmount(raw);
+  if (/^\d{1,3}([.,]\d{3})+$/.test(s)) s = s.replace(/[.,]/g, '');
+  if (/^\d+$/.test(s)) return parseInt(s, 10);
+  return parseAmount(raw);  // "45k", "1tr5" if typed as text
 }
 
 /** "45" → 45000 (under 1000 means thousands), "45k", "1,5tr", "1tr5", "1.500.000" → VND. NaN if unreadable. */

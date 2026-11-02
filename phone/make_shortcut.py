@@ -42,9 +42,13 @@ def action(identifier: str, name: str, **params) -> dict:
 
 def build() -> dict:
     code = action("is.workflow.actions.gettext", "Text", WFTextActionText="")
-    amount = action("is.workflow.actions.ask", "Provided Input", WFAskActionPrompt="Bao nhiêu? (45 = 45.000 ₫)",
+    amount = action("is.workflow.actions.ask", "Provided Input", WFAskActionPrompt="Bao nhiêu tiền? (gõ đủ số, ví dụ 45000)",
                     WFInputType="Number", WFAskActionAllowsDecimalNumbers=False)
-    desc = action("is.workflow.actions.ask", "Provided Input", WFAskActionPrompt="Chi cho gì?", WFInputType="Text")
+    # The number pad shows no thousands separators, so the next prompt repeats the amount formatted: a missing 0 shows.
+    shown = action("is.workflow.actions.format.number", "Formatted Number", WFNumberFormatDecimalPlaces=0,
+                   WFNumber=tokens(amount))
+    desc = action("is.workflow.actions.ask", "Provided Input", WFAskActionPrompt=tokens(shown, " ₫ — chi cho gì?"),
+                  WFInputType="Text")
     accounts = action("is.workflow.actions.list", "List", WFItems=ACCOUNTS)
     account = action("is.workflow.actions.choosefromlist", "Chosen Item", WFInput=attachment(accounts),
                      WFChooseFromListActionPrompt="Trả bằng?")
@@ -58,7 +62,7 @@ def build() -> dict:
                   WFURL=tokens(code, "&a=add&so=", amount, "&d=", desc_q, "&t=", account_q, "&n=", device_q))
     notify = action("is.workflow.actions.notification", "Notification", WFNotificationActionTitle="Thu Chi Gia Đình",
                     WFNotificationActionBody=tokens(send))
-    steps = [code, amount, desc, accounts, account, device, desc_q, account_q, device_q, send, notify]
+    steps = [code, amount, shown, desc, accounts, account, device, desc_q, account_q, device_q, send, notify]
     return {
         "WFWorkflowActions": [{"WFWorkflowActionIdentifier": a["id"], "WFWorkflowActionParameters": a["params"]}
                               for a in steps],

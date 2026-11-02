@@ -6,7 +6,7 @@
   gửi tới Apps Script trong tài khoản Google của người dùng. Script ghi một dòng vào sheet "Hộp thư đến". App trên Mac
   tự lấy các dòng mới mỗi lần mở (tab Nhập liệu → Từ iPhone), tự phân loại, không nhập trùng, và gộp với khoản đã
   thêm từ sao kê nếu có. Dòng gõ thẳng vào sheet bằng app Google Sheets (dùng được khi mất sóng) cũng được lấy về.
-- Số tiền gõ dưới 1000 được hiểu là nghìn đồng (45 = 45.000 ₫); nhận cả cách viết 45k, 1tr5, 1,5tr, 1.500.000.
+- Trên iPhone gõ đúng số tiền (45000); câu hỏi kế tiếp hiện lại số đã định dạng ("45.000 ₫ — chi cho gì?") để thấy ngay khi thiếu số 0. Dưới 1.000 ₫ bị từ chối. Dòng gõ tay trong sheet vẫn nhận 45k, 1tr5, 1,5tr, 1.500.000.
 - **Bản sao trên Google Sheet:** app Mac ghi mọi giao dịch vào tab "Giao dịch" và số tổng theo tháng (theo hạng mục,
   theo cách trả) vào tab "Tổng hợp", vài giây sau mỗi thay đổi. Mỗi Mac ghi đè phần của mình (cột Máy). Sheet chỉ để
   xem; app trên Mac vẫn là dữ liệu gốc.
