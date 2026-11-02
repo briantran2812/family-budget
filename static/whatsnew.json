@@ -5,43 +5,134 @@
       "version": "1.4.0",
       "title": "Ghi chi tiêu ngay trên iPhone",
       "items": [
-        {"icon": "📱", "title": "Ghi chi tiêu trên iPhone",
-         "text": "Phím tắt \"Ghi chi tiêu\" hỏi số tiền, mô tả, hạng mục và cách trả — khoảng 10 giây, không cần mở Mac. Chạm 2 lần vào lưng iPhone để mở nhanh.",
-         "goto": "import", "focus": "#phoneCard"},
-        {"icon": "🔄", "title": "Tự đồng bộ",
-         "text": "App tự lấy khoản mới khi mở, mỗi 5 phút và khi bạn quay lại cửa sổ. Bấm ↻ Đồng bộ ở trang đầu để lấy ngay.",
-         "goto": "overview", "focus": "#syncAllBtn"},
-        {"icon": "💳", "title": "Chi theo cách trả",
-         "text": "Biết tháng này chi bao nhiêu bằng tiền mặt, thẻ, chuyển khoản hay ví. Lọc giao dịch theo cách trả.",
-         "goto": "overview", "focus": "#payCard"},
-        {"icon": "⚠️", "title": "Cảnh báo ngân sách",
-         "text": "Hạng mục nào chi tới 80% ngân sách tháng thì trang đầu báo ngay; Mac hiện thông báo một lần khi chạm 80% và một lần khi vượt.",
-         "goto": "overview", "focus": "#budgetAlerts"},
-        {"icon": "📸", "title": "Đọc ảnh lịch sử MoMo",
-         "text": "Chụp màn hình \"Giao dịch gần đây\" của MoMo: mỗi khoản chi thành một dòng, tự điền \"Trả bằng\", khoản đã có được bỏ chọn sẵn.",
-         "goto": "import", "focus": "#drop"},
-        {"icon": "📊", "title": "Bản sao trên Google Sheet",
-         "text": "Mọi giao dịch và số tổng theo tháng được ghi vào Google Sheet của bạn để xem trên điện thoại.",
-         "goto": "settings", "focus": "#phoneSettings"},
-        {"icon": "🧾", "title": "Đối chiếu sao kê thẻ",
-         "text": "Nhập sao kê Visa hoặc tài khoản ngân hàng (Excel, CSV, PDF) để biết khoản nào đã ghi, khoản nào còn thiếu.",
-         "goto": "recon", "focus": "#stmtForm"}
+        {
+          "icon": "📱",
+          "title": "Ghi chi tiêu trên iPhone",
+          "text": "Phím tắt \"Ghi chi tiêu\" hỏi số tiền, mô tả, hạng mục và cách trả — khoảng 10 giây, không cần mở Mac. Chạm 2 lần vào lưng iPhone để mở nhanh.",
+          "goto": "import",
+          "focus": "#phoneCard"
+        },
+        {
+          "icon": "🔄",
+          "title": "Tự đồng bộ",
+          "text": "App tự lấy khoản mới khi mở, mỗi 5 phút và khi bạn quay lại cửa sổ. Bấm ↻ Đồng bộ ở trang đầu để lấy ngay.",
+          "goto": "overview",
+          "focus": "#syncAllBtn"
+        },
+        {
+          "icon": "💳",
+          "title": "Chi theo cách trả",
+          "text": "Biết tháng này chi bao nhiêu bằng tiền mặt, thẻ, chuyển khoản hay ví. Lọc giao dịch theo cách trả.",
+          "goto": "overview",
+          "focus": "#payCard"
+        },
+        {
+          "icon": "⚠️",
+          "title": "Cảnh báo ngân sách",
+          "text": "Hạng mục nào chi tới 80% ngân sách tháng thì trang đầu báo ngay; Mac hiện thông báo một lần khi chạm 80% và một lần khi vượt.",
+          "goto": "overview",
+          "focus": "#budgetAlerts"
+        },
+        {
+          "icon": "📸",
+          "title": "Đọc ảnh lịch sử MoMo",
+          "text": "Chụp màn hình \"Giao dịch gần đây\" của MoMo: mỗi khoản chi thành một dòng, tự điền \"Trả bằng\", khoản đã có được bỏ chọn sẵn.",
+          "goto": "import",
+          "focus": "#drop"
+        },
+        {
+          "icon": "📊",
+          "title": "Bản sao trên Google Sheet",
+          "text": "Mọi giao dịch và số tổng theo tháng được ghi vào Google Sheet của bạn để xem trên điện thoại.",
+          "goto": "settings",
+          "focus": "#phoneSettings"
+        },
+        {
+          "icon": "🧾",
+          "title": "Đối chiếu sao kê thẻ",
+          "text": "Nhập sao kê Visa hoặc tài khoản ngân hàng (Excel, CSV, PDF) để biết khoản nào đã ghi, khoản nào còn thiếu.",
+          "goto": "recon",
+          "focus": "#stmtForm"
+        },
+        {
+          "icon": "🔔",
+          "title": "Chuông thông báo",
+          "text": "Cảnh báo ngân sách, khoản mới từ iPhone và Gmail, phiên bản mới — bấm chuông ở trên cùng để xem.",
+          "goto": "overview",
+          "focus": "#bellBtn"
+        },
+        {
+          "icon": "🌗",
+          "title": "Giao diện Sáng / Tối",
+          "text": "Chọn nền sáng hoặc tối trong Cài đặt, không phụ thuộc chế độ của máy.",
+          "goto": "settings",
+          "focus": "#themeSeg"
+        }
       ],
       "notes": [
         "Ngày của khoản ghi trên iPhone là lúc gửi — ghi bù thì sửa ngày trong app.",
         "Google Sheet chỉ để xem; muốn sửa thì sửa trong app.",
         "Hạng mục mới thêm trong app chưa tự có trên iPhone."
+      ],
+      "date": "02/11/2026",
+      "status": "bản dùng thử"
+    },
+    {
+      "version": "1.3.0",
+      "date": "31/10/2026",
+      "status": "gộp vào 1.4.0, không phát hành riêng",
+      "title": "Đối chiếu sao kê",
+      "items": [
+        {
+          "icon": "🧾",
+          "title": "Đối chiếu sao kê thẻ",
+          "text": "So sao kê Visa hoặc tài khoản ngân hàng với khoản đã ghi: khớp, còn thiếu, gần khớp.",
+          "goto": "recon"
+        },
+        {
+          "icon": "💳",
+          "title": "Trường \"Trả bằng\"",
+          "text": "Ghi khoản chi trả bằng thẻ nào; lần sau tự điền thẻ đã dùng.",
+          "goto": "tx"
+        },
+        {
+          "icon": "🛍️",
+          "title": "Ô Shopee/TikTok bấm được",
+          "text": "Mở danh sách giao dịch đã lọc theo nguồn.",
+          "goto": "overview"
+        }
       ]
     },
     {
       "version": "1.2.0",
-      "title": "Những gì app đã có",
+      "title": "Bản đầu tiên",
       "items": [
-        {"icon": "✉️", "title": "Gmail", "text": "Tự đọc email đơn hàng Shopee, TikTok và biên lai MoMo; đơn huỷ tự bỏ ra.", "goto": "import"},
-        {"icon": "✍️", "title": "Nhập tay", "text": "Học phí, điện nước, đi chợ, lương… những khoản không qua Shopee/TikTok.", "goto": "import"},
-        {"icon": "🗂️", "title": "Hạng mục và ngân sách", "text": "Tự phân loại theo từ khoá; đặt ngân sách tháng và được báo khi vượt.", "goto": "settings"},
-        {"icon": "⬇️", "title": "Xuất CSV", "text": "Mở bằng Excel hoặc Numbers.", "goto": "settings"}
-      ]
+        {
+          "icon": "✉️",
+          "title": "Gmail",
+          "text": "Tự đọc email đơn hàng Shopee, TikTok và biên lai MoMo; đơn huỷ tự bỏ ra.",
+          "goto": "import"
+        },
+        {
+          "icon": "✍️",
+          "title": "Nhập tay",
+          "text": "Học phí, điện nước, đi chợ, lương… những khoản không qua Shopee/TikTok.",
+          "goto": "import"
+        },
+        {
+          "icon": "🗂️",
+          "title": "Hạng mục và ngân sách",
+          "text": "Tự phân loại theo từ khoá; đặt ngân sách tháng và được báo khi vượt.",
+          "goto": "settings"
+        },
+        {
+          "icon": "⬇️",
+          "title": "Xuất CSV",
+          "text": "Mở bằng Excel hoặc Numbers.",
+          "goto": "settings"
+        }
+      ],
+      "date": "31/10/2026"
     }
   ]
 }

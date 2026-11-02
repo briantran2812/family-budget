@@ -22,6 +22,8 @@ cho người dùng: `docs/RELEASE-NOTES-1.4.0.md`.
 - **Cảnh báo ngân sách:** hạng mục chi tới 80% ngân sách tháng hiện cảnh báo ở đầu trang Tổng quan (bấm vào mở danh
   sách giao dịch của hạng mục) và nhãn "Đã dùng …%" trong "Chi theo hạng mục". Mac hiện thông báo hệ thống một lần
   khi chạm 80% và một lần khi vượt 100%, mỗi hạng mục mỗi tháng; chỉ cho tháng hiện tại. Code: `alerts.py`.
+- **🔔 Chuông thông báo:** cảnh báo ngân sách, khoản mới từ iPhone, đơn mới từ Gmail, phiên bản mới, lỗi ghi lên Google Sheet; số chưa đọc trên chuông, bấm để mở đúng chỗ. **📜 Nhật ký thay đổi** liệt kê mọi phiên bản.
+- **Giao diện Sáng / Tối / Theo máy** (Cài đặt → Giao diện), không phụ thuộc chế độ của macOS.
 - **Đồng bộ:** nút ↻ Đồng bộ ở trang đầu; tự lấy khoản mới lúc mở app, mỗi 5 phút và khi quay lại cửa sổ app.
 - **Sửa lỗi tìm ra khi thử trên iPhone thật:** mô tả, cách trả và người nhập bị trống (URL Encode); tiền mặt hiện biểu
   tượng thẻ; ảnh lịch sử MoMo bị đọc thành số dư; quy ước "tính theo nghìn" gây nhầm (7000 thành 7.000 ₫); tỷ lệ thu

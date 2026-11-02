@@ -65,6 +65,17 @@ CREATE TABLE IF NOT EXISTS settings (
     key   TEXT PRIMARY KEY,
     value TEXT
 );
+CREATE TABLE IF NOT EXISTS notifications (
+    id          INTEGER PRIMARY KEY,
+    created_at  TEXT NOT NULL DEFAULT (datetime('now', 'localtime')),
+    kind        TEXT NOT NULL,                   -- budget | phone | gmail | version | error
+    icon        TEXT NOT NULL DEFAULT '🔔',
+    title       TEXT NOT NULL,
+    body        TEXT NOT NULL DEFAULT '',
+    link        TEXT,                            -- JSON: {tab, cat, src, whatsnew}
+    dedupe      TEXT UNIQUE,
+    read_at     TEXT
+);
 """
 
 DEFAULT_CATEGORIES = [

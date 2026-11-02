@@ -28,6 +28,16 @@
     --shadow: 0 1px 2px rgba(0, 0, 0, .3), 0 6px 20px rgba(0, 0, 0, .25);
   }
 }
+:root[data-theme="dark"] {  /* chosen in Cài đặt → Giao diện, whatever macOS is set to */
+  color-scheme: dark;
+  --bg: #0f1017; --surface: #181a24; --surface-2: #222532; --border: #2c2f3d;
+  --text: #eef0f6; --text-2: #b6bacb; --muted: #7d8296;
+  --accent: #8a80ff; --accent-soft: #2a2650; --accent-ink: #ffffff;
+  --bar: #8a80ff; --bar-soft: #3b3672;
+  --good: #3fcf8e; --good-soft: #163527; --bad: #f07272; --bad-soft: #3b1d1f; --warn: #f0b84a; --warn-soft: #3a3215;
+  --hero: linear-gradient(130deg, #4338ca 0%, #7c3aed 52%, #be185d 100%);
+  --shadow: 0 1px 2px rgba(0, 0, 0, .3), 0 6px 20px rgba(0, 0, 0, .25);
+}
 * { box-sizing: border-box; }
 html, body { margin: 0; height: 100%; }
 body { background: var(--bg); color: var(--text); -webkit-font-smoothing: antialiased;
@@ -66,6 +76,23 @@ nav button.on { background: var(--accent-soft); color: var(--accent); font-weigh
 .hello { font-size: 22px; font-weight: 700; letter-spacing: -.01em; }
 .hello-sub { color: var(--text-2); font-size: 14px; }
 .topbar .grow { flex: 1; }
+.bell { position: relative; }
+.bell-btn { position: relative; width: 42px; padding: 0; justify-content: center; font-size: 17px; }
+.bell-badge { position: absolute; top: -4px; right: -4px; min-width: 18px; height: 18px; padding: 0 5px; border-radius: 999px;
+  background: var(--bad); color: #fff; font-size: 11px; font-weight: 700; line-height: 18px; text-align: center; }
+.bell-panel { position: absolute; right: 0; top: calc(100% + 8px); width: min(380px, calc(100vw - 32px)); z-index: 30;
+  background: var(--surface); border: 1px solid var(--border); border-radius: 16px; box-shadow: var(--shadow); overflow: hidden; }
+.bell-head, .bell-foot { display: flex; align-items: center; justify-content: space-between; padding: 12px 14px; font-size: 13px; }
+.bell-head { border-bottom: 1px solid var(--border); } .bell-foot { border-top: 1px solid var(--border); }
+.bell-list { max-height: 360px; overflow-y: auto; }
+.bell-item { display: grid; grid-template-columns: 28px minmax(0, 1fr) 8px; gap: 10px; align-items: start; width: 100%;
+  padding: 11px 14px; border: 0; background: none; text-align: left; cursor: pointer; font-size: 13.5px; }
+.bell-item:hover { background: var(--surface-2); }
+.bell-item small { display: block; color: var(--muted); font-size: 12px; margin-top: 2px; }
+.bell-item .dot { width: 8px; height: 8px; border-radius: 50%; background: var(--accent); margin-top: 6px; }
+.bell-item.read .dot { visibility: hidden; } .bell-item.read { color: var(--text-2); }
+.seg-row { display: flex; gap: 6px; flex-wrap: wrap; }
+.cl-ver { margin-top: 18px; } .cl-ver h4 { margin: 0; font-size: 15px; } .cl-ver .muted { font-size: 12px; }
 .month { display: flex; align-items: center; gap: 2px; background: var(--surface); border: 1px solid var(--border);
   border-radius: 999px; padding: 3px; box-shadow: var(--shadow); }
 .month span { min-width: 120px; text-align: center; font-weight: 600; font-size: 14px; }
@@ -110,10 +137,13 @@ label.lbl { display: block; font-size: 13px; color: var(--text-2); font-weight: 
 .pill.bad { background: var(--bad-soft); color: var(--bad); } .pill.warn { background: var(--warn-soft); color: var(--warn); } .pill.good { background: var(--good-soft); color: var(--good); }
 @media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) .pill.shopee { background: #4a2414; color: #f6b195; }
   :root:not([data-theme="light"]) .pill.tiktok { background: #18294a; color: #a9c6f0; } }
+:root[data-theme="dark"] .pill.shopee { background: #4a2414; color: #f6b195; }
+:root[data-theme="dark"] .pill.tiktok { background: #18294a; color: #a9c6f0; }
 .up { color: var(--bad); } .down { color: var(--good); }
 a.btn, a .btn { color: var(--text); }
 .pill.statement { background: #e3f4ee; color: #0f6b4c; }
 @media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) .pill.statement { background: #12352a; color: #8fd9bb; } }
+:root[data-theme="dark"] .pill.statement { background: #12352a; color: #8fd9bb; }
 .mini.link { cursor: pointer; transition: transform .12s, box-shadow .12s; }
 .mini.link:hover { transform: translateY(-1px); box-shadow: 0 8px 24px rgba(20, 24, 40, .1); }
 .mini .go { margin-left: auto; color: var(--muted); font-size: 18px; }
@@ -343,6 +373,14 @@ ol.howto li { margin: 5px 0; }
         <button id="nextM" aria-label="Tháng sau">›</button>
         <button id="todayBtn" hidden>Tháng này</button>
       </div>
+      <div class="bell">
+        <button class="btn bell-btn" id="bellBtn" title="Thông báo" aria-label="Thông báo">🔔<span class="bell-badge" id="bellBadge" hidden></span></button>
+        <div class="bell-panel" id="bellPanel" hidden>
+          <div class="bell-head"><b>Thông báo</b><button class="link" id="bellReadAll">Đánh dấu đã đọc hết</button></div>
+          <div class="bell-list" id="bellList"></div>
+          <div class="bell-foot"><button class="link" id="bellChangelog">📜 Nhật ký thay đổi</button><span class="muted" id="bellVer"></span></div>
+        </div>
+      </div>
       <button class="btn" id="syncAllBtn" hidden title="Lấy khoản mới từ iPhone và Gmail">↻ <span>Đồng bộ</span></button>
       <button class="btn primary" id="addBtn">＋ <span>Thêm khoản</span></button>
     </header>
@@ -520,7 +558,16 @@ ol.howto li { margin: 5px 0; }
           </form>
         </div>
         <div class="card">
-          <div class="card-head"><h2>Về ứng dụng</h2><button class="btn sm" type="button" id="aboutWn">✨ Có gì mới</button></div>
+          <h2>Giao diện</h2>
+          <p class="hint">Chọn nền sáng hoặc tối cho app trên máy này.</p>
+          <div class="seg-row" id="themeSeg">
+            <button class="seg" data-theme-pick="light" type="button">☀️ Sáng</button>
+            <button class="seg" data-theme-pick="dark" type="button">🌙 Tối</button>
+            <button class="seg" data-theme-pick="system" type="button">💻 Theo máy</button>
+          </div>
+        </div>
+        <div class="card">
+          <div class="card-head"><h2>Về ứng dụng</h2><span class="row-form" style="gap:6px"><button class="btn sm" type="button" id="aboutWn">✨ Có gì mới</button><button class="btn sm" type="button" id="aboutLog">📜 Nhật ký thay đổi</button></span></div>
           <p class="hint" style="margin:0">Thu Chi Gia Đình phiên bản <b id="aboutVer"></b> — xem tính năng hiện có và cách dùng.</p>
         </div>
         <div class="card">
@@ -542,6 +589,7 @@ ol.howto li { margin: 5px 0; }
 <div id="tip"></div>
 
 <script>
+try { const t = localStorage.getItem('theme'); if (t === 'light' || t === 'dark') document.documentElement.dataset.theme = t; } catch {}
 const $ = (s, el = document) => el.querySelector(s);
 const $$ = (s, el = document) => [...el.querySelectorAll(s)];
 const nf = new Intl.NumberFormat('vi-VN');
@@ -653,7 +701,7 @@ $('#todayBtn').onclick = () => setMonth(thisMonth());
 $('#addBtn').onclick = () => txModal();
 
 async function refresh() {
-  await Promise.all([loadSummary(), loadTx(), $('#recon').hidden ? null : loadStatements()]);
+  await Promise.all([loadSummary(), loadTx(), loadBell(), $('#recon').hidden ? null : loadStatements()]);
 }
 async function loadInfo() {
   state.info = await api('/api/info');
@@ -665,6 +713,7 @@ async function loadInfo() {
   $('#quitBtn').hidden = state.info.desktop;
   $('#revealBtn').hidden = !state.info.desktop;
   renderSyncBtn();
+  applyTheme(state.info.theme);
 }
 async function loadCats() {
   state.cats = await api('/api/categories');
@@ -1402,6 +1451,73 @@ $('#catForm').onsubmit = async e => {
 };
 $('#revealBtn').onclick = () => api('/api/reveal-data', {method: 'POST'});
 $('#aboutWn').onclick = () => whatsNew();
+$('#aboutLog').onclick = () => changelog();
+
+// ---------------------------------------------------------------- theme (Cài đặt → Giao diện)
+function applyTheme(t) {
+  if (t === 'light' || t === 'dark') document.documentElement.dataset.theme = t;
+  else delete document.documentElement.dataset.theme;
+  try { localStorage.setItem('theme', t || 'system'); } catch {}  // applied before first paint next time
+  $$('#themeSeg .seg').forEach(b => b.classList.toggle('on', b.dataset.themePick === (t || 'system')));
+}
+$('#themeSeg').onclick = async e => {
+  const b = e.target.closest('[data-theme-pick]'); if (!b) return;
+  applyTheme(b.dataset.themePick);
+  await api('/api/profile', {method: 'POST', body: {theme: b.dataset.themePick}}).catch(() => {});
+  state.info.theme = b.dataset.themePick; refresh();  // charts read colours when drawn
+};
+
+// ---------------------------------------------------------------- bell
+const ago = s => {
+  const mins = Math.max(0, Math.round((Date.now() - Date.parse(s.replace(' ', 'T'))) / 60000));
+  return mins < 1 ? 'vừa xong' : mins < 60 ? `${mins} phút trước` : mins < 1440 ? `${Math.round(mins / 60)} giờ trước`
+    : `${s.slice(8, 10)}/${s.slice(5, 7)}`;
+};
+let bellItems = [];
+async function loadBell() {
+  let r;
+  try { r = await api('/api/notifications'); } catch { return; }
+  bellItems = r.items;
+  $('#bellBadge').hidden = !r.unread;
+  $('#bellBadge').textContent = r.unread > 9 ? '9+' : r.unread;
+  $('#bellList').innerHTML = r.items.length ? r.items.map((n, i) => `
+    <button class="bell-item ${n.read_at ? 'read' : ''}" data-i="${i}"><span>${n.icon}</span>
+      <span>${esc(n.title)}${n.body ? `<small>${esc(n.body)}</small>` : ''}<small>${ago(n.created_at)}</small></span><span class="dot"></span></button>`).join('')
+    : '<div class="empty" style="padding:24px">Chưa có thông báo nào.</div>';
+  $('#bellVer').textContent = 'Phiên bản ' + (state.info.version || '');
+}
+function closeBell() { $('#bellPanel').hidden = true; }
+$('#bellBtn').onclick = e => { e.stopPropagation(); $('#bellPanel').hidden = !$('#bellPanel').hidden; if (!$('#bellPanel').hidden) loadBell(); };
+document.addEventListener('click', e => { if (!e.target.closest('.bell')) closeBell(); });
+document.addEventListener('keydown', e => { if (e.key === 'Escape') closeBell(); });
+$('#bellReadAll').onclick = async () => { await api('/api/notifications/read', {method: 'POST', body: {}}); loadBell(); };
+$('#bellChangelog').onclick = () => { closeBell(); changelog(); };
+$('#bellList').onclick = async e => {
+  const b = e.target.closest('.bell-item'); if (!b) return;
+  const n = bellItems[+b.dataset.i], link = n.link || {};
+  closeBell();
+  await api('/api/notifications/read', {method: 'POST', body: {id: n.id}}).catch(() => {});
+  loadBell();
+  if (link.whatsnew) return whatsNew();
+  if (link.cat) return openCat(String(link.cat));
+  if (link.src) {
+    state.src = link.src; state.cat = ''; $('#fCat').value = ''; state.pay = ''; $('#fPay').value = '';
+    $$('#fSrc .seg').forEach(x => x.classList.toggle('on', x.dataset.src === state.src)); renderTx();
+  }
+  if (link.tab) showTab(link.tab);
+};
+
+// ---------------------------------------------------------------- changelog: every version in static/whatsnew.json
+async function changelog() {
+  let wn;
+  try { wn = await (await fetch('/static/whatsnew.json')).json(); } catch { return toast('Không mở được nhật ký thay đổi', true); }
+  modal(`<h3>📜 Nhật ký thay đổi</h3><p class="lead">Mỗi phiên bản có gì mới.</p>
+    ${wn.versions.map(v => `<div class="cl-ver"><h4>${esc(v.version)} — ${esc(v.title)}</h4>
+      <div class="muted">${esc(v.date || '')}${v.status ? ' · ' + esc(v.status) : ''}</div>
+      <div class="wn-list">${v.items.map(it => `<div class="wn-item" style="grid-template-columns:40px minmax(0,1fr)"><span class="ico">${it.icon}</span>
+        <div><b>${esc(it.title)}</b><span>${esc(it.text)}</span></div></div>`).join('')}</div></div>`).join('')}
+    <div class="modal-foot"><button class="btn primary" data-close>Đóng</button></div>`, {wide: true});
+}
 $('#budgetHint').onclick = () => { showTab('settings'); $('#catSettings').scrollIntoView({behavior: 'smooth', block: 'start'}); };
 $('#quitBtn').onclick = async () => {
   if (!await confirmBox('Tắt ứng dụng?', 'Mở lại bằng "Thu Chi Gia Dinh.app".', 'Tắt', true)) return;

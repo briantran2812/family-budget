@@ -18,6 +18,7 @@ from flask import Flask, Response, abort, jsonify, request, send_from_directory
 import alerts
 import db
 import gmail_sync
+import notifications
 import parsers
 import phone_inbox
 import reconcile
@@ -69,6 +70,7 @@ def info():
                        user_name=db.get_setting(c, "user_name"),
                        onboarded=db.get_setting(c, "onboarded") == "1",
                        seen_version=db.get_setting(c, "seen_version"),
+                       theme=db.get_setting(c, "theme", "system"),
                        gmail_accounts=gmail_sync.accounts(c),
                        gmail_query=db.get_setting(c, "gmail_query", gmail_sync.DEFAULT_QUERY),
                        gmail_last_sync=db.get_setting(c, "gmail_last_sync"),
@@ -81,11 +83,27 @@ def info():
                        device_name=phone_inbox.device_name(c))
 
 
+@app.get("/api/notifications")
+def list_notifications():
+    with conn() as c:
+        if db.get_setting(c, "onboarded") == "1":  # announce each version once; new users get the welcome instead
+            notifications.add(c, "version", "✨", f"Phiên bản {VERSION}: xem có gì mới", link={"whatsnew": True},
+                              dedupe=f"version:{VERSION}")
+        return jsonify(notifications.listing(c))
+
+
+@app.post("/api/notifications/read")
+def read_notifications():
+    with conn() as c:
+        notifications.mark_read(c, (request.get_json(silent=True) or {}).get("id"))
+    return jsonify(ok=True)
+
+
 @app.post("/api/profile")
 def profile():
     data = request.get_json()
     with conn() as c:
-        for key in ("user_name", "onboarded", "gmail_query", "phone_push", "device_name", "seen_version"):
+        for key in ("user_name", "onboarded", "gmail_query", "phone_push", "device_name", "seen_version", "theme"):
             if key in data:
                 db.set_setting(c, key, str(data[key]).strip())
     return jsonify(ok=True)
@@ -339,7 +357,10 @@ def gmail_remove():
 def gmail_sync_route():
     try:
         with conn() as c:
-            return jsonify(gmail_sync.sync(c))
+            r = gmail_sync.sync(c)
+            if r.get("imported"):
+                notifications.add(c, "gmail", "✉️", f"{r['imported']} đơn mới từ Gmail", link={"tab": "tx"})
+            return jsonify(r)
     except gmail_sync.SyncError as e:
         return jsonify(error=str(e)), 400
 
@@ -402,7 +423,11 @@ def phone_script():
 def phone_sync():
     try:
         with conn() as c:
-            return jsonify(phone_inbox.sync(c))
+            r = phone_inbox.sync(c)
+            if r["imported"]:
+                notifications.add(c, "phone", "📱", f"Đã lấy {r['imported']} khoản mới từ iPhone",
+                                  link={"tab": "tx", "src": "phone"})
+            return jsonify(r)
     except phone_inbox.InboxError as e:
         return jsonify(error=str(e)), 400
 
@@ -457,10 +482,10 @@ _alert_lock = threading.Lock()  # two writes finishing together must not both se
 
 @app.after_request
 def alert_after_write(resp):
-    if app.config["DESKTOP"] and request.method != "GET" and resp.status_code < 400 and request.path.startswith(WRITES):
+    if request.method != "GET" and resp.status_code < 400 and request.path.startswith(WRITES):
         try:
             with _alert_lock, conn() as c:
-                alerts.notify_crossings(c)
+                alerts.notify_crossings(c, desktop=app.config["DESKTOP"])
         except Exception as e:  # noqa: BLE001 — a notification must never fail the write it follows
             print(f"budget alert failed: {e}", file=sys.stderr)
     return resp

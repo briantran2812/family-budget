@@ -45,6 +45,16 @@ lỗi S1 (chỉ chạy trên macOS 26). Bản này gồm cả các tính năng c
 - macOS hiện **thông báo** khi một hạng mục vừa chạm 80% và khi vượt 100%. Mỗi mốc chỉ báo một lần trong tháng, và
   chỉ báo khi app đang mở.
 
+### 🔔 Chuông thông báo và nhật ký thay đổi
+
+- Chuông ở trên cùng có số thông báo chưa đọc. Có các loại: cảnh báo ngân sách, khoản mới từ iPhone, đơn mới từ
+  Gmail, phiên bản mới, lỗi ghi lên Google Sheet. Bấm vào một thông báo để mở đúng chỗ.
+- **📜 Nhật ký thay đổi** liệt kê mọi phiên bản. Mở từ chân danh sách thông báo hoặc Cài đặt → Về ứng dụng.
+
+### 🌗 Giao diện Sáng / Tối
+
+- Cài đặt → Giao diện: ☀️ Sáng, 🌙 Tối hoặc 💻 Theo máy. Nền sáng vẫn giữ nguyên khi macOS đang để chế độ Tối.
+
 ### 📸 Ảnh chụp thông minh hơn
 
 - Đọc **màn hình lịch sử giao dịch** của MoMo: mỗi khoản chi thành một dòng; bỏ qua tiền lời, số dư và dòng bị cắt ở

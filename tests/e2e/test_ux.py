@@ -598,7 +598,7 @@ def test_ux42_whats_new_once_per_version_and_on_demand(page):
         db.set_setting(c, "seen_version", "1.3.0")   # someone updating from an older version
     reload(page)
     expect(page.get_by_text("Có gì mới trong 1.4.0")).to_be_visible()
-    expect(page.locator("#wnCur .wn-item")).to_have_count(7)
+    expect(page.locator("#wnCur .wn-item")).to_have_count(9)
     page.get_by_role("button", name="Đã hiểu").click()
     reload(page)
     page.wait_for_timeout(300)
@@ -668,3 +668,50 @@ def test_ux44_budget_hint_when_no_budget_is_set(onboarded, page):
     page.locator("nav button[data-tab=overview]").click()
     expect(page.locator("#budgetHint")).to_be_hidden()
     expect(page.locator("#budgetAlerts")).to_contain_text("Học phí đã dùng 87% ngân sách tháng")
+
+
+def test_ux45_bell_lists_notifications_and_opens_them(onboarded, page):
+    with db.connect() as c:
+        cid = c.execute("SELECT id FROM categories WHERE name = 'Học phí'").fetchone()[0]
+        c.execute("UPDATE categories SET budget = 8000000 WHERE id = ?", (cid,))
+    page.locator("#addBtn").click()
+    page.locator("#mAmt").fill("7.000.000")
+    page.locator("#mDesc").fill("Học phí tháng 11")
+    from datetime import date
+    page.locator("#mDate").fill(date.today().isoformat())  # alerts follow the server's month; the page clock is frozen
+    page.locator("#mSave").click()
+    expect(page.locator("#bellBadge")).to_have_text("2")              # the version announcement + the budget alert
+    page.locator("#bellBtn").click()
+    items = page.locator("#bellList .bell-item")
+    expect(items.first).to_contain_text("Học phí đã dùng 87% ngân sách tháng")
+    expect(items.nth(1)).to_contain_text("Phiên bản 1.4.0")
+    items.first.click()
+    expect(page.locator("#tx")).to_be_visible()
+    expect(page.locator("#fCat option:checked")).to_contain_text("Học phí")
+    expect(page.locator("#bellBadge")).to_have_text("1")
+    page.locator("#bellBtn").click()
+    page.locator("#bellReadAll").click()
+    expect(page.locator("#bellBadge")).to_be_hidden()
+    page.locator("#bellChangelog").click()
+    expect(page.locator(".modal h3")).to_have_text("📜 Nhật ký thay đổi")
+    expect(page.locator(".cl-ver")).to_have_count(3)
+    expect(page.locator(".cl-ver").nth(1)).to_contain_text("1.3.0 — Đối chiếu sao kê")
+
+
+def test_ux46_theme_choice_overrides_macos_and_survives_reload(onboarded, open_page):
+    page = open_page(color_scheme="dark")
+    bg = lambda: page.evaluate("getComputedStyle(document.body).backgroundColor")
+    dark = bg()
+    page.locator("nav button[data-tab=settings]").click()
+    page.locator("[data-theme-pick=light]").click()
+    expect(page.locator("[data-theme-pick=light]")).to_have_class("seg on")
+    assert bg() != dark and bg() == "rgb(244, 245, 251)"
+    reload(page)
+    assert bg() == "rgb(244, 245, 251)"                               # remembered
+    page.locator("nav button[data-tab=settings]").click()
+    page.locator("[data-theme-pick=system]").click()
+    assert bg() == dark
+    light_mac = open_page(color_scheme="light")                       # forcing dark on a light Mac works too
+    light_mac.locator("nav button[data-tab=settings]").click()
+    light_mac.locator("[data-theme-pick=dark]").click()
+    assert light_mac.evaluate("getComputedStyle(document.body).backgroundColor") == "rgb(15, 16, 23)"

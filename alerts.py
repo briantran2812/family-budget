@@ -5,6 +5,7 @@ from datetime import date
 from decimal import ROUND_HALF_UP, Decimal
 
 import db
+import notifications
 
 TITLE = "Thu Chi Gia Đình"
 
@@ -53,7 +54,7 @@ def notify(body: str) -> None:
         print(f"notification failed: {e}", file=sys.stderr)
 
 
-def notify_crossings(conn, today: date | None = None) -> list[str]:
+def notify_crossings(conn, today: date | None = None, desktop: bool = False) -> list[str]:
     """Notify once per category, threshold and month; only the current month, so importing old statements stays quiet.
 
     A key stays set when the budget is raised or spending drops back, so re-crossing in the same month is silent.
@@ -67,7 +68,10 @@ def notify_crossings(conn, today: date | None = None) -> list[str]:
             continue
         for k in new:  # jumping straight past 100% sends only the "over" message
             db.set_setting(conn, k, "1")
-        conn.commit()
         sent.append(message(a))
-        notify(sent[-1])
+        notifications.add(conn, "budget", "🔴" if a["level"] == "over" else "⚠️", sent[-1],
+                          link={"tab": "tx", "cat": a["category_id"]}, dedupe=new[-1])
+        if desktop:  # the bell always; a macOS banner only from the app window
+            notify(sent[-1])
+    conn.commit()
     return sent

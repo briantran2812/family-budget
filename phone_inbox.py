@@ -221,6 +221,10 @@ def push(conn: sqlite3.Connection) -> dict:
         r = _post(code(conn), mirror_payload(conn))
     except InboxError as e:
         db.set_setting(conn, "phone_push_error", str(e))
+        import notifications
+        notifications.add(conn, "error", "⚠️", "Không ghi được bản sao lên Google Sheet", str(e),
+                          link={"tab": "settings"}, dedupe=f"push-error:{datetime.now():%Y-%m-%d}")
+        conn.commit()  # the caller's transaction is rolled back by the exception
         raise
     db.set_setting(conn, "phone_push_error", "")
     db.set_setting(conn, "phone_last_push", datetime.now().strftime("%Y-%m-%d %H:%M"))

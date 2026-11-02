@@ -66,43 +66,43 @@ def test_messages():
 def test_crossing_80_then_100_notifies_once_each(conn, sent):
     cid = cat_id(conn, "Học phí", 1_000_000)
     spend(conn, cid, 700_000)
-    assert alerts.notify_crossings(conn, TODAY) == []
+    assert alerts.notify_crossings(conn, TODAY, desktop=True) == []
     spend(conn, cid, 150_000)
-    alerts.notify_crossings(conn, TODAY)
-    alerts.notify_crossings(conn, TODAY)
+    alerts.notify_crossings(conn, TODAY, desktop=True)
+    alerts.notify_crossings(conn, TODAY, desktop=True)
     assert len(sent) == 1 and "đã dùng 85%" in sent[0]
     spend(conn, cid, 100_000)                                   # 95%: still the same threshold
-    assert alerts.notify_crossings(conn, TODAY) == []
+    assert alerts.notify_crossings(conn, TODAY, desktop=True) == []
     spend(conn, cid, 100_000)
-    alerts.notify_crossings(conn, TODAY)
-    alerts.notify_crossings(conn, TODAY)
+    alerts.notify_crossings(conn, TODAY, desktop=True)
+    alerts.notify_crossings(conn, TODAY, desktop=True)
     assert len(sent) == 2 and "vượt ngân sách tháng 50k" in sent[1]
 
 
 def test_jumping_past_100_sends_one_over_message(conn, sent):
     spend(conn, cat_id(conn, "Học phí", 1_000_000), 1_500_000)
-    alerts.notify_crossings(conn, TODAY)
+    alerts.notify_crossings(conn, TODAY, desktop=True)
     assert len(sent) == 1 and "vượt" in sent[0]
 
 
 def test_raising_the_budget_then_crossing_again_stays_quiet(conn, sent):
     cid = cat_id(conn, "Học phí", 1_000_000)
     spend(conn, cid, 900_000)
-    alerts.notify_crossings(conn, TODAY)
+    alerts.notify_crossings(conn, TODAY, desktop=True)
     conn.execute("UPDATE categories SET budget = 2000000 WHERE id = ?", (cid,))
-    alerts.notify_crossings(conn, TODAY)
+    alerts.notify_crossings(conn, TODAY, desktop=True)
     spend(conn, cid, 800_000)                                   # 85% of the new budget
-    alerts.notify_crossings(conn, TODAY)
+    alerts.notify_crossings(conn, TODAY, desktop=True)
     assert len(sent) == 1
     alerts.notify_crossings(conn, date(2026, 12, 1))            # a new month starts fresh
     spend(conn, cid, 1_700_000, day="2026-12-02")
-    alerts.notify_crossings(conn, date(2026, 12, 2))
+    alerts.notify_crossings(conn, date(2026, 12, 2), desktop=True)
     assert len(sent) == 2
 
 
 def test_past_month_spending_does_not_notify(conn, sent):
     spend(conn, cat_id(conn, "Học phí", 1_000_000), 5_000_000, day="2026-10-05")
-    assert alerts.notify_crossings(conn, TODAY) == []
+    assert alerts.notify_crossings(conn, TODAY, desktop=True) == []
     assert not conn.execute("SELECT 1 FROM settings WHERE key LIKE 'alert:%'").fetchone()
 
 
@@ -146,13 +146,14 @@ def test_writes_notify_only_in_the_window_and_only_for_this_month(api, sent, mon
     month = date.today().strftime("%Y-%m")
     budget(api, "Học phí", 1_000_000)
     api.post("/api/transactions", json={"date": f"{month}-01", "amount": 900_000, "description": "Học phí"})
-    assert sent == []                                            # browser mode / tests: no notifications
+    assert sent == []                                            # browser mode / tests: no macOS banner…
+    bell = api.get("/api/notifications").json
+    assert bell["unread"] == 1 and "90%" in bell["items"][0]["title"]   # …but the bell has it
+    assert bell["items"][0]["link"]["tab"] == "tx"
     from app import app
     monkeypatch.setitem(app.config, "DESKTOP", True)
     api.post("/api/transactions", json={"date": "2020-01-15", "amount": 5_000_000, "description": "Học phí"})
-    assert len(sent) == 1 and "90%" in sent[0]                   # the first write in the window catches up
-    api.post("/api/transactions", json={"date": "2020-01-16", "amount": 5_000_000, "description": "Học phí"})
-    assert len(sent) == 1
+    assert sent == []                                            # already announced this month
     with db.connect() as c:
         assert not c.execute("SELECT 1 FROM settings WHERE key LIKE 'alert:2020-%'").fetchone()
 
@@ -164,8 +165,19 @@ def test_budget_change_notifies_and_a_failure_does_not_break_the_write(api, desk
     budget(api, "Học phí", 800_000)                              # lowering the budget is a crossing too
     assert len(desktop) == 1 and "vượt" in desktop[0]
 
-    def boom(conn):
+    def boom(*a, **k):
         raise RuntimeError("disk full")
     monkeypatch.setattr(alerts, "notify_crossings", boom)
     r = api.post("/api/transactions", json={"date": f"{month}-02", "amount": 1, "description": "x"})
     assert r.status_code == 200
+
+
+def test_crossing_also_lands_in_the_bell_once(conn, sent):
+    import notifications
+    cid = cat_id(conn, "Học phí", 1_000_000)
+    spend(conn, cid, 850_000)
+    alerts.notify_crossings(conn, TODAY)
+    alerts.notify_crossings(conn, TODAY)
+    bell = notifications.listing(conn)
+    assert sent == [] and bell["unread"] == 1
+    assert bell["items"][0]["icon"] == "⚠️" and bell["items"][0]["link"] == {"tab": "tx", "cat": cid}
