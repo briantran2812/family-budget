@@ -42,8 +42,8 @@
         },
         {
           "icon": "📸",
-          "title": "Đọc ảnh lịch sử MoMo",
-          "text": "Chụp màn hình \"Giao dịch gần đây\" của MoMo: mỗi khoản chi thành một dòng, tự điền \"Trả bằng\", khoản đã có được bỏ chọn sẵn.",
+          "title": "Đọc ảnh lịch sử MoMo và ngân hàng",
+          "text": "Chụp màn hình lịch sử giao dịch của MoMo hoặc app ngân hàng: mỗi khoản thành một dòng, tick chọn dòng cần lưu, khoản đã có được bỏ chọn sẵn.",
           "goto": "import",
           "focus": "#drop"
         },

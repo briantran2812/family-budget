@@ -30,6 +30,8 @@ cho người dùng: `docs/RELEASE-NOTES-1.4.0.md`.
 - **🔔 Chuông thông báo:** cảnh báo ngân sách, ống heo, khoản mới từ iPhone, đơn mới từ Gmail, phiên bản mới, lỗi ghi lên Google Sheet; số chưa đọc trên chuông, bấm để mở đúng chỗ. **📜 Nhật ký thay đổi** liệt kê mọi phiên bản.
 - **Giao diện Sáng / Tối / Theo máy** (Cài đặt → Giao diện), không phụ thuộc chế độ của macOS.
 - **Đồng bộ:** nút ↻ Đồng bộ ở trang đầu; tự lấy khoản mới lúc mở app, mỗi 5 phút và khi quay lại cửa sổ app.
+- **Ảnh lịch sử app ngân hàng** (dòng ngày đứng riêng, số tiền không có ký hiệu đ): đọc được; tiền vào chọn sẵn là Thu, rút ATM và tiền lãi không chọn sẵn. Màn hình duyệt có "Chọn tất cả", dòng đếm, nút "Lưu n dòng", dòng không chọn mờ đi, bấm ảnh để xem to.
+- **Từ khoá phân loại mới** (phở bò, bún bò, bánh mì, cơm tấm, lẩu, KFC, Phúc Long, taxi, đổ xăng…; khoản thu từ công ty vào Lương) và máy đã cài tự nhận từ khoá mới ở lần mở sau, không ghi đè lựa chọn của người dùng.
 - **Sửa lỗi tìm ra khi audit độc lập phần đọc ảnh** (xác nhận không dùng AI, không bịa dữ liệu): số điện thoại không còn bị hiểu là số tiền; báo khi có giao dịch bị bỏ qua; ngày đoán được tô vàng, bỏ ngày trong tương lai, nhận dd/mm/yy; không chọn sẵn dòng "Khách đưa"; tiền vào ghi là Thu và đổi được Chi/Thu; tên ngân hàng trên tiêu đề thắng chữ "MoMo" trong nội dung; ảnh gốc hiện cạnh kết quả.
 - **Sửa lỗi tìm ra khi thử trên iPhone thật:** mô tả, cách trả và người nhập bị trống (URL Encode); tiền mặt hiện biểu
   tượng thẻ; ảnh lịch sử MoMo bị đọc thành số dư; quy ước "tính theo nghìn" gây nhầm (7000 thành 7.000 ₫); tỷ lệ thu

@@ -249,7 +249,7 @@ def test_category_picked_on_the_phone_wins_over_keywords(conn, fake_sheet):
     phone_inbox.sync(conn)
     got = dict(conn.execute("SELECT t.order_id, c.name FROM transactions t LEFT JOIN categories c ON c.id = t.category_id"))
     assert got["e1"] == "Mẹ & bé"
-    assert got["e2"] == "Khác"                # not a category name: falls back to keywords
+    assert got["e2"] == "Ăn uống & đi chợ"    # not a category name: falls back to keywords ("pho bo")
     assert got["e3"] == "Ăn uống & đi chợ"
 
 
