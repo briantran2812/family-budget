@@ -193,8 +193,9 @@ details.recsec { margin-top: 16px; } details.recsec > summary { cursor: pointer;
 .grid3.two { grid-template-columns: repeat(2, minmax(0, 1fr)); }
 .code-box { display: flex; gap: 8px; margin-top: 8px; }
 .code-box input { font-family: ui-monospace, Menlo, monospace; font-size: 12px; }
-.steps { margin: 8px 0 14px; padding-left: 20px; color: var(--text-2); font-size: 14px; }
-.steps li { margin-bottom: 6px; }
+.howto { margin: 8px 0 14px; padding-left: 22px; color: var(--text-2); font-size: 14px; line-height: 1.55; }
+.howto li { margin-bottom: 8px; }
+.howto b { color: var(--text); }
 .feature .big-ico { width: 52px; height: 52px; border-radius: 16px; display: grid; place-items: center; font-size: 26px;
   background: var(--accent-soft); margin-bottom: 14px; }
 .feature p { color: var(--text-2); font-size: 14px; margin: 4px 0 16px; }
@@ -1138,14 +1139,15 @@ async function phoneSync(quiet = false) {
 $('#phoneSyncBtn').onclick = () => busy($('#phoneSyncBtn'), () => phoneSync().catch(() => {}));
 function phoneWizard() {
   const m = modal(`<h3>Kết nối iPhone qua Google Sheet</h3>
-    <p class="lead">Làm một lần trên máy tính, khoảng 5 phút. Chi tiết có ảnh trong hướng dẫn kèm app.</p>
-    <ol class="steps">
-      <li>Mở <b>sheets.new</b> (tạo Google Sheet mới), đặt tên ví dụ "Thu Chi Gia Đình".</li>
-      <li>Menu <b>Tiện ích mở rộng → Apps Script</b>, xoá hết rồi dán nội dung file <code>Code.gs</code>
-        <button class="link" id="pwCopyScript" type="button">(sao chép Code.gs)</button>, bấm 💾 Lưu.</li>
-      <li>Chọn hàm <b>caiDat</b> → <b>Chạy</b> → cho phép quyền truy cập.</li>
-      <li><b>Triển khai → Bản triển khai mới → Ứng dụng web</b> (Deploy → New deployment → Web app): thực thi với tư cách <b>Tôi</b> (Me), người có quyền truy cập <b>Bất kỳ ai</b> (Anyone) → Triển khai.</li>
-      <li>Chọn hàm <b>layMaKetNoi</b> → <b>Chạy</b>, sao chép dòng mã kết nối trong Nhật ký thực thi và dán vào đây:</li>
+    <p class="lead">Làm một lần trên máy tính, khoảng 5 phút. Tên menu ghi theo giao diện tiếng Anh của Google.</p>
+    <ol class="howto">
+      <li>Mở <b>sheets.new</b> → menu <b>Extensions → Apps Script</b>.</li>
+      <li>Xoá hết chữ có sẵn, dán Code.gs <button class="link" id="pwCopyScript" type="button">(bấm để sao chép)</button>, nhấn <b>⌘S</b>.</li>
+      <li>Chọn <b>caiDat</b> → <b>▶ Run</b> → <b>Review permissions</b> → <b>Allow</b>.
+        Nếu thấy "Google hasn't verified this app": <b>Advanced → Go to … (unsafe)</b>.</li>
+      <li><b>Deploy → New deployment</b> → ⚙️ <b>Web app</b> → Who has access: <b>Anyone</b> → <b>Deploy</b>.</li>
+      <li>Chọn <b>layMaKetNoi</b> → <b>▶ Run</b> → sao chép dòng <code>https://script.google.com/macros/s/…/exec?k=…</code>
+        trong <b>Execution log</b> phía dưới và dán vào đây:</li>
     </ol>
     <input class="field" id="pwCode" placeholder="https://script.google.com/macros/s/…/exec?k=…" autofocus>
     <div id="pwMsg"></div>

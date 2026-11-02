@@ -17,7 +17,8 @@ import rules
 
 KEYRING_SERVICE = "family-budget-phone"
 KEYRING_USER = "connection"
-CODE_RE = re.compile(r"^https://script\.google\.com/macros/s/[\w-]+/exec\?k=[0-9a-f]{16,64}$")
+# Google Workspace accounts get /a/macros/<domain>/s/…; a signed-in browser may add /u/<n>/.
+CODE_RE = re.compile(r"^https://script\.google\.com/(?:a/)?macros/(?:[\w.-]+/)?(?:u/\d+/)?s/[\w-]+/exec\?k=[0-9a-f]{16,64}$")
 
 
 class InboxError(Exception):
@@ -50,6 +51,11 @@ def _get(code: str, action: str) -> dict:
 def connect(conn: sqlite3.Connection, code: str) -> str:
     """Check the code against the live script, then keep it. Returns the Sheet's URL."""
     code = code.strip()
+    if "/home/projects/" in code or code.rstrip("/").endswith("/edit"):
+        raise InboxError("Đây là địa chỉ trang soạn code, chưa phải mã kết nối. Trong Apps Script chọn hàm layMaKetNoi "
+                         "→ ▶ Run, rồi sao chép dòng https://script.google.com/macros/s/…/exec?k=… trong Execution log.")
+    if code.endswith("/exec"):
+        raise InboxError("Thiếu phần ?k=… ở cuối. Chạy layMaKetNoi và sao chép cả dòng trong Execution log.")
     if not CODE_RE.match(code):
         raise InboxError("Mã kết nối có dạng https://script.google.com/macros/s/…/exec?k=… — "
                          "chạy layMaKetNoi trong Apps Script rồi sao chép cả dòng.")

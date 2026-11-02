@@ -116,3 +116,19 @@ def test_real_http_follows_google_redirect(monkeypatch):
     finally:
         srv.shutdown()
     assert data["query"] == "/echo?k=abc&a=list"
+
+
+@pytest.mark.parametrize("pasted, hint", [
+    ("https://script.google.com/u/1/home/projects/1eAol2W03mg3Q0unkJ5OD7Er5k97TcVTJw/edit", "trang soạn code"),
+    ("https://script.google.com/macros/s/AKfyc-test_1/exec", "Thiếu phần"),
+])
+def test_connect_explains_common_paste_mistakes(conn, fake_sheet, pasted, hint):
+    with pytest.raises(phone_inbox.InboxError, match=hint):
+        phone_inbox.connect(conn, pasted)
+
+
+def test_workspace_and_multi_account_urls_are_accepted():
+    k = "?k=0123456789abcdef01234567"
+    for url in ("https://script.google.com/a/macros/example.com/s/AKfy_x-1/exec",
+                "https://script.google.com/macros/u/1/s/AKfy_x-1/exec"):
+        assert phone_inbox.CODE_RE.match(url + k), url
