@@ -344,15 +344,21 @@ ol.howto li { margin: 5px 0; }
           <div class="ring" id="ring"></div>
         </div>
         <div class="minis">
-          <div class="card mini link" data-src-link="shopee" title="Xem các đơn Shopee"><span class="ico">🛍️</span><div><div class="k">Shopee</div><div class="v num" id="mShopee">0 ₫</div></div><span class="go">›</span></div>
-          <div class="card mini link" data-src-link="tiktok" title="Xem các đơn TikTok"><span class="ico">🎵</span><div><div class="k">TikTok Shop</div><div class="v num" id="mTiktok">0 ₫</div></div><span class="go">›</span></div>
+          <div class="card mini link src-mini" data-src-link="shopee"><span class="ico">🛍️</span><div><div class="k">Shopee</div><div class="v num">0 ₫</div></div><span class="go">›</span></div>
+          <div class="card mini link src-mini" data-src-link="tiktok"><span class="ico">🎵</span><div><div class="k">TikTok Shop</div><div class="v num">0 ₫</div></div><span class="go">›</span></div>
           <div class="card mini link" data-src-link="" title="Xem tất cả giao dịch"><span class="ico">🧾</span><div><div class="k">Số giao dịch</div><div class="v num" id="mCount">0</div></div><span class="go">›</span></div>
         </div>
         <div id="welcomeEmpty"></div>
         <div class="cols">
-          <div class="card">
-            <div class="card-head"><h2>Chi theo hạng mục</h2><span class="muted" style="font-size:12px">% trên tổng chi</span></div>
-            <div class="cats" id="cats"></div>
+          <div>
+            <div class="card">
+              <div class="card-head"><h2>Chi theo hạng mục</h2><span class="muted" style="font-size:12px">% trên tổng chi</span></div>
+              <div class="cats" id="cats"></div>
+            </div>
+            <div class="card" id="payCard" hidden>
+              <div class="card-head"><h2>Chi theo cách trả</h2><span class="muted" style="font-size:12px">tiền mặt, thẻ, chuyển khoản, ví</span></div>
+              <div class="cats" id="pays"></div>
+            </div>
           </div>
           <div>
             <div class="card">
@@ -373,6 +379,7 @@ ol.howto li { margin: 5px 0; }
           <div class="toolbar">
             <div class="search"><input class="field" id="fText" placeholder="Tìm theo mô tả…"></div>
             <select class="field" id="fCat"></select>
+            <select class="field" id="fPay"></select>
           </div>
           <div class="segs" id="fSrc">
             <button class="seg on" data-src="">Tất cả</button><button class="seg" data-src="shopee">Shopee</button>
@@ -513,6 +520,7 @@ const short = n => n >= 1e9 ? (n / 1e9).toFixed(1).replace('.', ',').replace(',0
   : n >= 1e6 ? (n / 1e6).toFixed(1).replace('.', ',').replace(',0', '') + ' tr' : n >= 1e3 ? Math.round(n / 1e3) + 'k' : String(n || 0);
 const pct1 = x => x.toFixed(1).replace('.', ',') + '%';
 const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({'&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;'}[c]));
+const SRC_ICON = {shopee: '🛍️', tiktok: '🎵', momo: '👛', manual: '✍️', phone: '📱', screenshot: '📸', statement: '🏦', email: '✉️'};
 const SRC = {shopee: 'Shopee', tiktok: 'TikTok', momo: 'MoMo', manual: 'Nhập tay', phone: 'iPhone', screenshot: 'Ảnh chụp', statement: 'Sao kê', email: 'Email'};
 const DOW = ['Chủ nhật', 'Thứ Hai', 'Thứ Ba', 'Thứ Tư', 'Thứ Năm', 'Thứ Sáu', 'Thứ Bảy'];
 const pad = n => String(n).padStart(2, '0');
@@ -574,7 +582,7 @@ async function busy(btn, fn) {
 }
 
 // ---------------------------------------------------------------- state & navigation
-const state = {month: thisMonth(), cats: [], tx: [], info: {}, src: '', cat: ''};
+const state = {month: thisMonth(), cats: [], tx: [], info: {}, src: '', cat: '', pay: ''};
 
 function showTab(name) {
   $$('nav button').forEach(b => b.classList.toggle('on', b.dataset.tab === name));
@@ -603,7 +611,7 @@ function setMonth(m) {
 function shiftMonth(d) { const [y, m] = state.month.split('-').map(Number); const x = new Date(y, m - 1 + d, 1);
   setMonth(`${x.getFullYear()}-${pad(x.getMonth() + 1)}`); }
 $$('[data-src-link]').forEach(el => el.onclick = () => {
-  state.src = el.dataset.srcLink; state.cat = ''; $('#fCat').value = ''; $('#fText').value = '';
+  state.src = el.dataset.srcLink; state.cat = ''; $('#fCat').value = ''; state.pay = ''; $('#fPay').value = ''; $('#fText').value = '';
   $$('#fSrc .seg').forEach(x => x.classList.toggle('on', x.dataset.src === state.src));
   renderTx(); showTab('tx');
 });
@@ -658,8 +666,16 @@ async function loadSummary() {
   $('#ring').innerHTML = ringSvg(s.income ? s.expense / s.income : 0, narrow ? 104 : 132) + (s.income
     ? `<div class="c"><b>${Math.round(s.expense / s.income * 100)}%</b><small>thu nhập đã chi</small></div>`
     : `<div class="c"><b>–</b><small>thêm thu nhập để xem tỷ lệ</small></div>`);
-  $('#mShopee').textContent = fmt(s.by_source.shopee);
-  $('#mTiktok').textContent = fmt(s.by_source.tiktok);
+  // The two biggest sources this month (iPhone, Shopee…); Shopee/TikTok fill in when there are fewer.
+  const top = Object.entries(s.by_source).filter(([k, v]) => v > 0).sort((a, b) => b[1] - a[1]).map(([k]) => k);
+  const srcs = [...new Set([...top, 'shopee', 'tiktok'])].slice(0, 2);
+  $$('.src-mini').forEach((el, i) => {
+    const k = srcs[i];
+    el.dataset.srcLink = k; el.title = `Xem các khoản từ ${SRC[k] || k}`;
+    $('.ico', el).textContent = SRC_ICON[k] || '🧾';
+    $('.k', el).textContent = k === 'tiktok' ? 'TikTok Shop' : (SRC[k] || k);
+    $('.v', el).textContent = fmt(s.by_source[k]);
+  });
   $('#mCount').textContent = nf.format(s.count);
   $('#helloSub').textContent = s.expense
     ? `${monthName(s.month)}: đã chi ${short(s.expense)}${s.categories[0] ? `, nhiều nhất cho ${s.categories[0].name.toLowerCase()}` : ''}.`
@@ -694,6 +710,19 @@ async function loadSummary() {
     state.cat = r.dataset.cat; $('#fCat').value = state.cat; renderTx(); showTab('tx');
   });
 
+  $('#payCard').hidden = !s.by_pay.length;
+  const pmax = Math.max(...s.by_pay.map(p => p.amount), 1);
+  $('#pays').innerHTML = s.by_pay.map(p => `<div class="cat" data-pay="${esc(p.name ?? '-')}">
+      <span class="ico">${p.name ? payIcon(p.name) : '❔'}</span>
+      <div class="cat-body">
+        <div class="cat-top"><span class="cat-name">${p.name ? esc(p.name) : 'Chưa ghi cách trả'}</span><span class="cat-amt num">${fmt(p.amount)}</span></div>
+        <div class="bar"><i style="width:${p.amount / pmax * 100}%"></i></div>
+        <div class="cat-meta"><span><b style="color:var(--text)">${pct1(s.expense ? p.amount / s.expense * 100 : 0)}</b> · ${p.count} giao dịch</span></div>
+      </div></div>`).join('');
+  $$('#pays .cat').forEach(r => r.onclick = () => {
+    state.pay = r.dataset.pay; renderPayFilter(); renderTx(); showTab('tx');
+  });
+
   const tmax = Math.max(...s.trend.map(t => t.expense), 1);
   $('#trend').innerHTML = s.trend.map(t => `
     <div class="col ${t.month === s.month ? 'cur' : ''}" data-m="${t.month}" data-e="${t.expense}" data-i="${t.income}">
@@ -712,9 +741,26 @@ function tip(e, html) {
 }
 
 // ---------------------------------------------------------------- transactions
+const unaccent = s => String(s || '').normalize('NFD').replace(/[̀-ͯ]/g, '').replace(/đ/g, 'd').replace(/Đ/g, 'D').toLowerCase();
+// Icon by how it was paid: the label is free text ("Tiền mặt", "Visa Techcombank", "Ví MoMo"…).
+function payIcon(name) {
+  const n = unaccent(name);
+  if (/\b(tien mat|cash)\b/.test(n)) return '💵';
+  if (/\b(momo|vi|zalopay|shopeepay|vnpay|viettel ?money)\b/.test(n)) return '👛';
+  if (/\b(chuyen khoan|ck|transfer|bank)\b/.test(n)) return '🏦';
+  return '💳';
+}
+function renderPayFilter() {
+  const names = [...new Set(state.tx.map(t => t.pay_account).filter(Boolean))].sort((a, b) => a.localeCompare(b, 'vi'));
+  if (state.pay && state.pay !== '-' && !names.includes(state.pay)) names.push(state.pay);
+  $('#fPay').innerHTML = '<option value="">Mọi cách trả</option>'
+    + names.map(n => `<option value="${esc(n)}">${payIcon(n)} ${esc(n)}</option>`).join('')
+    + '<option value="-">❔ Chưa ghi cách trả</option>';
+  $('#fPay').value = state.pay;
+}
 function txRow(t) {
   const sub = [`<span class="pill ${t.source}">${SRC[t.source] || t.source}</span>`, esc(t.category || 'Chưa phân loại')];
-  if (t.pay_account) sub.push('💳 ' + esc(t.pay_account));
+  if (t.pay_account) sub.push(payIcon(t.pay_account) + ' ' + esc(t.pay_account));
   if (t.status === 'cancelled') sub.push('<span class="pill bad">Không tính</span>');
   const d = t.date;
   return `<button class="txrow ${t.status === 'cancelled' ? 'cancelled' : ''}" data-id="${t.id}">
@@ -723,10 +769,11 @@ function txRow(t) {
       <span class="tx-sub">${sub.join(' · ')} · ${d.slice(8)}/${d.slice(5, 7)}</span></span>
     <span class="tx-amt num ${t.kind === 'income' ? 'inc' : ''}">${t.kind === 'income' ? '+' : '−'}${fmt(t.amount)}</span></button>`;
 }
-async function loadTx() { state.tx = await api('/api/transactions?month=' + state.month); renderTx(); }
+async function loadTx() { state.tx = await api('/api/transactions?month=' + state.month); renderPayFilter(); renderTx(); }
 function renderTx() {
   const q = $('#fText').value.trim().toLowerCase();
   const rows = state.tx.filter(t => (!state.cat || String(t.category_id ?? '') === state.cat) && (!state.src || t.source === state.src)
+    && (!state.pay || (state.pay === '-' ? !t.pay_account : t.pay_account === state.pay))
     && (!q || t.description.toLowerCase().includes(q)));
   const spend = rows.filter(t => t.status === 'ok' && t.kind === 'expense').reduce((a, t) => a + t.amount, 0);
   $('#txSum').textContent = `${monthName(state.month)} · ${rows.length} giao dịch · chi ${fmt(spend)}`;
@@ -742,6 +789,7 @@ function renderTx() {
 }
 $('#fText').oninput = renderTx;
 $('#fCat').onchange = () => { state.cat = $('#fCat').value; renderTx(); };
+$('#fPay').onchange = () => { state.pay = $('#fPay').value; renderTx(); };
 $('#fSrc').onclick = e => {
   const b = e.target.closest('.seg'); if (!b) return;
   state.src = b.dataset.src; $$('#fSrc .seg').forEach(x => x.classList.toggle('on', x === b)); renderTx();

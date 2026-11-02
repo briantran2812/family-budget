@@ -282,6 +282,10 @@ def summary():
         by_source = dict(c.execute(
             f"SELECT source, SUM(amount) FROM transactions WHERE {ok} AND kind = 'expense' "
             f"AND date >= ? AND date < ? GROUP BY source", (start, end)).fetchall())
+        by_pay = c.execute(
+            f"SELECT pay_account AS name, SUM(amount) AS amount, COUNT(*) AS count FROM transactions "
+            f"WHERE {ok} AND kind = 'expense' AND date >= ? AND date < ? GROUP BY pay_account ORDER BY amount DESC",
+            (start, end)).fetchall()
         recent = c.execute(TX_SELECT + "WHERE t.date >= ? AND t.date < ? ORDER BY t.date DESC, t.id DESC LIMIT 6",
                            (start, end)).fetchall()
         trend = []
@@ -296,6 +300,7 @@ def summary():
     expense = totals.get("expense", 0)
     return jsonify(
         month=month, expense=expense, income=totals.get("income", 0), count=count, by_source=by_source,
+        by_pay=[dict(r) for r in by_pay],
         categories=[{"id": r["id"], "name": r["name"], "icon": r["icon"], "budget": r["budget"],
                      "amount": r["amount"], "count": r["n"],
                      "pct": (r["amount"] / expense * 100) if expense else 0,

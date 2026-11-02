@@ -79,7 +79,7 @@ def test_ux03_wizard_connect_then_sync(onboarded, page, fake_gmail):
     expect(page.locator("#syncResult")).to_contain_text("Đã nhập 1 đơn mới")
     expect(page.locator("#acctList")).to_contain_text("lan@gmail.com")
     page.locator("nav button[data-tab=overview]").click()
-    expect(page.locator("#mShopee")).to_have_text("465.000 ₫")
+    expect(page.locator(".src-mini[data-src-link=shopee] .v")).to_have_text("465.000 ₫")
 
 
 # ---------------------------------------------------------------- add / edit / delete
@@ -493,3 +493,52 @@ def test_ux36_iphone_settings_copy_code_and_disconnect(onboarded, page, fake_she
     page.locator("#phoneOff").click()
     page.locator("#okBtn").click()
     expect(page.locator("#phoneSet")).to_contain_text("Kết nối Google Sheet")
+
+
+def test_ux37_pay_method_icon_and_filter(onboarded, page):
+    d = page.evaluate("todayISO()")
+    with db.connect() as c:
+        for amount, desc, pay in [(45_000, "Ăn uống", "Tiền mặt"), (250_000, "Cà phê", "Visa Techcombank"),
+                                  (120_000, "Tiền điện", "Chuyển khoản"), (60_000, "Trà sữa", "Ví MoMo"),
+                                  (30_000, "Gửi xe", None)]:
+            c.execute("INSERT INTO transactions(date, amount, description, pay_account) VALUES (?, ?, ?, ?)",
+                      (d, amount, desc, pay))
+    reload(page)
+    page.locator("nav button[data-tab=tx]").click()
+    row = lambda text: page.locator("#txList .txrow", has_text=text)
+    expect(row("Ăn uống")).to_contain_text("💵 Tiền mặt")
+    expect(row("Cà phê")).to_contain_text("💳 Visa Techcombank")
+    expect(row("Tiền điện")).to_contain_text("🏦 Chuyển khoản")
+    expect(row("Trà sữa")).to_contain_text("👛 Ví MoMo")
+    page.select_option("#fPay", "Tiền mặt")
+    expect(page.locator("#txList .txrow")).to_have_count(1)
+    expect(page.locator("#txSum")).to_contain_text("chi 45.000")
+    page.select_option("#fPay", "-")
+    expect(page.locator("#txList .txrow")).to_have_count(1)
+    expect(page.locator("#txList")).to_contain_text("Gửi xe")
+    page.select_option("#fPay", "")
+    expect(page.locator("#txList .txrow")).to_have_count(5)
+
+
+def test_ux38_overview_by_pay_method_and_top_sources(onboarded, page):
+    d = page.evaluate("todayISO()")
+    with db.connect() as c:
+        for amount, desc, pay, src in [(45_000, "Ăn uống", "Tiền mặt", "phone"), (30_000, "Gửi xe", "Tiền mặt", "phone"),
+                                       (250_000, "Cà phê", "Visa Techcombank", "manual"), (60_000, "Son", None, "shopee")]:
+            c.execute("INSERT INTO transactions(date, amount, description, pay_account, source) VALUES (?, ?, ?, ?, ?)",
+                      (d, amount, desc, pay, src))
+    reload(page)
+    pays = page.locator("#pays .cat")
+    expect(pays).to_have_count(3)
+    expect(pays.nth(0)).to_contain_text("💳")
+    expect(page.locator("#pays")).to_contain_text("💵")
+    expect(page.locator("#pays")).to_contain_text("Chưa ghi cách trả")
+    cash = page.locator("#pays .cat", has_text="Tiền mặt")
+    expect(cash).to_contain_text("75.000")
+    minis = page.locator(".src-mini")
+    expect(minis.nth(0)).to_contain_text("Nhập tay")   # biggest source first, not always Shopee/TikTok
+    expect(minis.nth(1)).to_contain_text("iPhone")
+    cash.click()
+    expect(page.locator("#tx")).to_be_visible()
+    expect(page.locator("#fPay")).to_have_value("Tiền mặt")
+    expect(page.locator("#txList .txrow")).to_have_count(2)

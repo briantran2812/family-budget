@@ -54,6 +54,8 @@ Có hai loại test case:
 | UX-34 | Kết nối iPhone | Mã sai thì báo ngay trong cửa sổ; mã đúng thì kết nối, tự lấy khoản chi về và lọc được theo nguồn "iPhone" |
 | UX-35 | Mở app khi đã kết nối iPhone | Tự lấy khoản mới, báo bằng thông báo nhỏ; bấm Đồng bộ khi không có gì mới thì vẫn báo kết quả |
 | UX-36 | Cài đặt → iPhone | Sao chép được mã cho iPhone; Ngắt kết nối có hỏi lại |
+| UX-37 | Cách trả | Biểu tượng theo cách trả (💵 tiền mặt, 💳 thẻ, 🏦 chuyển khoản, 👛 ví); lọc được theo cách trả và theo "Chưa ghi cách trả" |
+| UX-38 | Tổng quan: cách trả và nguồn | Thẻ "Chi theo cách trả" có số tiền và % từng cách trả, bấm vào mở danh sách đã lọc; hai ô nguồn là hai nguồn chi nhiều nhất trong tháng |
 
 Bản đóng gói còn được kiểm tra tự động bằng `tests/test_packaged.py`: cửa sổ tải được giao diện,
 Keychain hoạt động, OCR chạy bên trong bundle, và kết nối TLS tới Gmail thành công.
