@@ -59,7 +59,7 @@ lỗi S1 (chỉ chạy trên macOS 26). Bản này gồm cả các tính năng c
 
 - Cuối mỗi tháng, phần **còn lại** (thu nhập − chi) được bỏ vào ống heo. App ghi vào ngày cuối tháng hoặc lần đầu mở
   app sau đó, và báo trên chuông: "🐷 Tháng 10/2026: bỏ ống heo 12,5 tr".
-- Thẻ **Ống heo** ở Tổng quan: tổng đã để dành, **3 tháng** và **6 tháng gần nhất**, và "nếu giữ nhịp này, 12 tháng
+- Mục **🐷 Ống heo** trong menu bên trái (chỉ cần xem mỗi tháng một lần): tổng đã để dành, **3 tháng** và **6 tháng gần nhất**, và "nếu giữ nhịp này, 12 tháng
   nuôi được bao nhiêu". Bấm vào để xem từng tháng; tháng chi vượt thu hiện màu đỏ.
 - Thêm khoản của tháng cũ sau khi đã ghi (ví dụ nhập sao kê tháng trước) thì hiện "Số liệu tháng này đã đổi" và nút
   **Cập nhật**.

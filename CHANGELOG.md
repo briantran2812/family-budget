@@ -23,7 +23,7 @@ cho người dùng: `docs/RELEASE-NOTES-1.4.0.md`.
   sách giao dịch của hạng mục) và nhãn "Đã dùng …%" trong "Chi theo hạng mục". Mac hiện thông báo hệ thống một lần
   khi chạm 80% và một lần khi vượt 100%, mỗi hạng mục mỗi tháng; chỉ cho tháng hiện tại. Code: `alerts.py`.
 - **🐷 Ống heo (yêu cầu của người dùng):** cuối mỗi tháng (từ ngày cuối tháng, hoặc lần mở app đầu tiên sau đó) app
-  ghi phần còn lại (thu nhập − chi) của tháng vào ống heo và báo trên chuông. Thẻ "Ống heo" ở Tổng quan có tổng, 3 và
+  ghi phần còn lại (thu nhập − chi) của tháng vào ống heo và báo trên chuông. Mục **Ống heo** trong menu có tổng, 3 và
   6 tháng gần nhất, và ước tính 12 tháng; bấm vào xem từng tháng. Số đã ghi là ảnh chụp: khoản thêm muộn hiện "Số liệu
   tháng này đã đổi … Cập nhật". Tháng chưa có khoản thu nào thì chưa ghi. Tab "Tổng hợp" trên Google Sheet có dòng
   "Bỏ ống heo". Code: `piggy.py`.

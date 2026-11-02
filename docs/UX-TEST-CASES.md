@@ -64,7 +64,8 @@ Có hai loại test case:
 | UX-44 | Chưa đặt ngân sách | Thẻ hạng mục có lối tắt "Đặt ngân sách…" tới Cài đặt; đặt xong thì lối tắt ẩn và cảnh báo hiện ở Tổng quan |
 | UX-45 | Chuông thông báo | Số chưa đọc trên chuông; cảnh báo ngân sách và phiên bản mới có trong danh sách; bấm mở đúng chỗ và đánh dấu đã đọc; mở được Nhật ký thay đổi với mọi phiên bản |
 | UX-46 | Giao diện Sáng / Tối / Theo máy | Chọn Sáng khi macOS để Tối (và ngược lại) thì đổi ngay, giữ sau khi mở lại |
-| UX-47 | Ống heo | Chưa có tháng nào (hoặc chưa có khoản thu) thì thẻ giải thích "Cuối tháng này app sẽ bỏ phần còn lại vào ống heo"; có 6 tháng (một tháng âm) thì thẻ đúng tổng, 3 và 6 tháng gần nhất, ước tính 12 tháng; bấm mở danh sách từng tháng, tháng âm màu đỏ; thêm khoản muộn thì hiện "đã đổi … Cập nhật", bấm thì số mới được ghi; mỗi tháng có một thông báo trên chuông, bấm mở ống heo; không tràn ngang ở 390px |
+| UX-47 | Ống heo | Là mục riêng trong menu, không nằm ở Tổng quan; chưa có tháng nào thì giải thích "Cuối tháng này app sẽ bỏ phần còn lại vào đây"; có 6 tháng (một tháng âm) thì đúng tổng, 3 và 6 tháng gần nhất, ước tính 12 tháng, tháng âm màu đỏ; thêm khoản muộn thì hiện "đã đổi … Cập nhật"; mỗi tháng có một thông báo trên chuông, bấm mở mục Ống heo; không tràn ngang ở 390px |
+| UX-48 | Thanh trên cùng ở cửa sổ vừa | Tháng, chuông, Đồng bộ, Thêm khoản luôn nằm trên một dòng (lời chào co lại trước) |
 
 Bản đóng gói còn được kiểm tra tự động bằng `tests/test_packaged.py`: cửa sổ tải được giao diện,
 Keychain hoạt động, OCR chạy bên trong bundle, và kết nối TLS tới Gmail thành công.
@@ -104,7 +105,7 @@ hàng.
 | M-25 | P2 | Ảnh lịch sử app ngân hàng | Chụp màn hình lịch sử giao dịch của app ngân hàng hay dùng → dán vào app | Đọc đúng từng khoản chi; ô Trả bằng là tên ngân hàng; khoản tiền vào bị bỏ qua |
 | M-26 | P2 | Thông báo ngân sách trên Mac thật | Đặt ngân sách 1tr cho một hạng mục → thêm khoản 800k tháng này → thêm 50k → thêm 200k. Thêm một khoản 2tr vào tháng trước | Thông báo "… đã dùng 80% ngân sách tháng" hiện đúng một lần sau khoản 800k (không hiện lại sau khoản 50k); thông báo "đã vượt" hiện một lần sau khoản 200k; khoản tháng trước không gây thông báo. Nếu macOS hỏi quyền thông báo thì ghi lại tên app trong câu hỏi |
 | M-27 | P2 | Vợ chọn giao diện Sáng | Trên máy để chế độ Tối, Lan vào Cài đặt → Giao diện → Sáng, tắt rồi mở lại app | App mở bằng nền sáng, không nháy tối lúc mở |
-| M-28 | P2 | Ống heo vào cuối tháng thật | Ghi lương và vài khoản chi trong tháng → mở app vào ngày cuối tháng (hoặc đầu tháng sau) | Chuông có "🐷 Tháng …: bỏ ống heo …" đúng bằng "Còn lại" của tháng đó; thẻ Ống heo ở Tổng quan cộng thêm tháng này; mở lại app không có thông báo thứ hai |
+| M-28 | P2 | Ống heo vào cuối tháng thật | Ghi lương và vài khoản chi trong tháng → mở app vào ngày cuối tháng (hoặc đầu tháng sau) | Chuông có "🐷 Tháng …: bỏ ống heo …" đúng bằng "Còn lại" của tháng đó; mục Ống heo cộng thêm tháng này; mở lại app không có thông báo thứ hai |
 
 ## Mức độ lỗi
 

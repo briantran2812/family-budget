@@ -37,8 +37,8 @@
           "icon": "🐷",
           "title": "Ống heo",
           "text": "Cuối mỗi tháng, phần còn lại (thu nhập − chi) tự bỏ vào ống heo. Xem 3 tháng, 6 tháng gần nhất để dành được bao nhiêu.",
-          "goto": "overview",
-          "focus": "#piggyCard"
+          "goto": "piggy",
+          "focus": "#piggyPage"
         },
         {
           "icon": "📸",

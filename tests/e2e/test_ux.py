@@ -726,48 +726,55 @@ def piggy_months():
         add_tx(f"2026-{m}-15", expense, "Học phí")
 
 
-def test_ux47_piggy_bank_card_modal_and_bell(onboarded, page):
+def test_ux47_piggy_bank_tab_and_bell(onboarded, page):
     add_tx("2026-10-20", 500_000, "Đi chợ Bách Hoá Xanh")              # no income yet: nothing goes in
     reload(page)
-    expect(page.locator("#pgEmpty")).to_contain_text("Cuối tháng này app sẽ bỏ phần còn lại")
+    expect(page.locator("#overview")).not_to_contain_text("Ống heo")   # once a month: its own tab, not Tổng quan
+    page.locator("nav button[data-tab=piggy]").click()
+    expect(page.locator("#pgBody")).to_contain_text("Ống heo chưa có gì")
     piggy_months()
-    reload(page)
-    expect(page.locator("#pgTotal")).to_have_text("33.000.000 ₫")
-    expect(page.locator("#pgLast3")).to_have_text("24.000.000 ₫")
-    expect(page.locator("#pgLast6")).to_have_text("33.000.000 ₫")
-    expect(page.locator("#pgPace")).to_have_text("Nếu giữ nhịp này, 12 tháng nuôi được ~66 tr")
-    page.locator("#piggyCard").click()
-    rows = page.locator(".modal .pg-row")
+    page.locator("nav button[data-tab=overview]").click()
+    page.locator("nav button[data-tab=piggy]").click()
+    tiles = page.locator("#pgBody .pg-tile")
+    expect(tiles.nth(0)).to_contain_text("33.000.000 ₫")
+    expect(tiles.nth(1)).to_contain_text("24.000.000 ₫")
+    expect(tiles.nth(2)).to_contain_text("33.000.000 ₫")
+    expect(page.locator("#pgBody")).to_contain_text("Nếu giữ nhịp này, 12 tháng nuôi được ~66 tr")
+    rows = page.locator("#pgBody .pg-row")
     expect(rows).to_have_count(6)
     expect(rows.first).to_contain_text("Tháng 10, 2026")
     expect(rows.first).to_contain_text("+12.500.000 ₫")
     expect(rows.first).to_contain_text("Thu 30 tr · Chi 17,5 tr")
-    expect(page.locator(".modal .pg-row[data-m='2026-06'] .cat-amt")).to_have_text("−2.000.000 ₫")
-    expect(page.locator(".modal .pg-row[data-m='2026-06'] .cat-amt")).to_have_class("cat-amt num pg-neg")
-    expect(page.locator(".modal .pg-changed")).to_have_count(0)
-    page.keyboard.press("Escape")
+    expect(page.locator("#pgBody .pg-row[data-m='2026-06'] .cat-amt")).to_have_text("−2.000.000 ₫")
+    expect(page.locator("#pgBody .pg-row[data-m='2026-06'] .cat-amt")).to_have_class("cat-amt num pg-neg")
+    expect(page.locator("#pgBody .pg-changed")).to_have_count(0)
 
     add_tx("2026-10-28", 600_000, "Visa Techcombank")                  # a late card charge for October
-    page.locator("#piggyCard").click()
-    expect(page.locator(".modal .pg-changed")).to_have_text("Số liệu tháng này đã đổi: 12,5 tr → 11,9 tr · Cập nhật")
-    page.locator(".modal .pg-changed").get_by_role("button", name="Cập nhật").click()
-    expect(page.locator(".modal .pg-changed")).to_have_count(0)
+    page.locator("nav button[data-tab=overview]").click()
+    page.locator("nav button[data-tab=piggy]").click()
+    expect(page.locator("#pgBody .pg-changed")).to_have_text("Số liệu tháng này đã đổi: 12,5 tr → 11,9 tr · Cập nhật")
+    page.locator("#pgBody .pg-changed").get_by_role("button", name="Cập nhật").click()
+    expect(page.locator("#pgBody .pg-changed")).to_have_count(0)
     expect(rows.first).to_contain_text("+11.900.000 ₫")
-    expect(page.locator("#pgTotal")).to_have_text("32.400.000 ₫")
-    page.keyboard.press("Escape")
+    expect(tiles.nth(0)).to_contain_text("32.400.000 ₫")
 
+    page.locator("nav button[data-tab=overview]").click()
     page.locator("#bellBtn").click()                                   # each month went in with a bell item
     item = page.locator("#bellList .bell-item", has_text="Tháng 10/2026: bỏ ống heo 12,5 tr")
     expect(page.locator("#bellList .bell-item", has_text="Tháng 6/2026 chi vượt thu 2 tr — ống heo vơi đi")).to_have_count(1)
     item.click()
-    expect(page.locator(".modal h3")).to_have_text("🐷 Ống heo")
+    expect(page.locator("#piggy")).to_be_visible()
 
 
 def test_ux47b_piggy_bank_fits_a_phone(onboarded, open_page):
     piggy_months()
     page = open_page(viewport={"width": 390, "height": 844})
-    expect(page.locator("#pgTotal")).to_have_text("33.500.000 ₫")
+    page.locator("nav button[data-tab=piggy]").click()
+    expect(page.locator("#pgBody .pg-row")).to_have_count(6)
     assert page.evaluate("document.documentElement.scrollWidth") <= 390
-    page.locator("#piggyCard").click()
-    expect(page.locator(".modal .pg-row")).to_have_count(6)
-    assert page.evaluate("document.documentElement.scrollWidth") <= 390
+
+
+def test_ux48_top_bar_buttons_stay_on_one_line(onboarded, open_page):
+    page = open_page(viewport={"width": 1028, "height": 800})
+    tops = page.evaluate("[...document.querySelectorAll('.topbar .month, #bellBtn, #addBtn')].map(e => Math.round(e.getBoundingClientRect().top))")
+    assert max(tops) - min(tops) < 12, tops
