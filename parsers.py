@@ -210,7 +210,6 @@ def parse_history(rows: list[str], today: date | None = None) -> list[dict] | No
     if sum(bool(HIST_TIME.match(r)) for r in rows) < 2:
         return None
     today = today or date.today()
-    wallet = "Ví MoMo" if any(re.search(r"t[uú]i th[aầ]n t[aà]i|momo|s[ốo] d[ưu] t[uú]i", normalize(r)) for r in rows) else None
     year, entries, cur = today.year, [], None
     for raw in rows:
         if m := HIST_MONTH.match(raw):
@@ -239,12 +238,59 @@ def parse_history(rows: list[str], today: date | None = None) -> list[dict] | No
         if e["sign"] == "+" or not e["date"] or e["amount"] < 1000:
             continue  # money in (interest, refunds) is not an expense; an entry cut off at the edge has no date
         desc = HIST_PREFIX.sub("", " ".join(t for t in e["text"] if t)).strip()
-        out.append({"date": e["date"], "amount": e["amount"], "description": desc, "selected": True,
-                    **({"pay_account": wallet} if wallet else {})})
+        out.append({"date": e["date"], "amount": e["amount"], "description": desc, "selected": True})
     return out
 
 
+# Where the money came from, read off the screenshot. Order matters: a labelled "Nguồn tiền" line beats app cues,
+# and app cues beat a bank name, because "(Techcombank)" after a payee is the receiver's bank, not yours.
+SOURCE_LABELS = ("nguon tien", "tai khoan nguon", "tu tai khoan", "the nguon", "thanh toan bang", "phuong thuc thanh toan")
+WALLETS = [("Ví MoMo", r"\bmomo\b|tui than tai|so du tui"), ("Ví ZaloPay", r"\bzalo ?pay\b"),
+           ("Ví ShopeePay", r"\bshopee ?pay\b"), ("Ví VNPay", r"\bvnpay\b"), ("Viettel Money", r"\bviettel ?money\b")]
+BANKS = [("Vietcombank", r"\bvietcombank\b|\bvcb\b"), ("Techcombank", r"\btechcombank\b|\btcb\b"),
+         ("MB Bank", r"\bmb ?bank\b"), ("ACB", r"\bacb\b"), ("BIDV", r"\bbidv\b"), ("VietinBank", r"\bvietinbank\b"),
+         ("VPBank", r"\bvpbank\b"), ("TPBank", r"\btpbank\b"), ("Sacombank", r"\bsacombank\b"), ("HDBank", r"\bhdbank\b"),
+         ("VIB", r"\bvib\b"), ("Agribank", r"\bagribank\b"), ("SHB", r"\bshb\b"), ("MSB", r"\bmsb\b"),
+         ("OCB", r"\bocb\b"), ("SeABank", r"\bseabank\b"), ("Timo", r"\btimo\b"), ("Cake", r"\bcake\b")]
+
+
+def _named(text: str) -> str | None:
+    n = normalize(text)
+    if re.search(r"\btien mat\b|\bcash\b", n):
+        return "Tiền mặt"
+    for name, rx in WALLETS + BANKS:
+        if re.search(rx, n):
+            return name
+    return None
+
+
+def detect_source(rows: list[str]) -> str | None:
+    for i, row in enumerate(rows):
+        n = normalize(row)
+        if any(n.startswith(lbl) for lbl in SOURCE_LABELS):
+            value = row.split(":", 1)[1] if ":" in row else (rows[i + 1] if i + 1 < len(rows) else "")
+            if found := _named(value) or _named(row):
+                return found
+    text = normalize(" ".join(rows))
+    for name, rx in WALLETS:
+        if re.search(rx, text):
+            return name
+    for row in rows[:3]:  # a bank app puts its name alone in the title bar; a payee line is longer
+        n = normalize(row)
+        if "(" in row or len(n.split()) > 3:
+            continue
+        for name, rx in BANKS:
+            if re.search(rx, n):
+                return name
+    return None
+
+
 def parse_ocr_rows(rows: list[str]) -> list[dict]:
+    source = detect_source(rows)
+    return [{**c, "pay_account": c.get("pay_account") or source} if source else c for c in _parse_ocr_rows(rows)]
+
+
+def _parse_ocr_rows(rows: list[str]) -> list[dict]:
     """Candidates from one screenshot. Each has a `selected` guess the user confirms in the app."""
     history = parse_history(rows)
     if history is not None:

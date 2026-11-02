@@ -128,7 +128,7 @@ def test_history_without_month_header_rolls_back_a_year():
     rows = ["Thanh toán Grab -45.000đ", "08:10 - 30/12", "Thanh toán Circle K -25.000đ", "21:40 - 28/12"]
     got = parsers.parse_history(rows, today=date(2027, 1, 3))
     assert [c["date"] for c in got] == ["2026-12-30", "2026-12-28"]
-    assert "pay_account" not in got[0]  # nothing says MoMo
+    assert parsers.detect_source(rows) is None  # nothing says which wallet or bank
 
 
 def test_bank_app_history_style():
@@ -141,3 +141,17 @@ def test_bank_app_history_style():
 
 def test_single_receipt_is_not_a_history_screen():
     assert parsers.parse_history(["Thanh toán thành công", "-6.500.000đ", "14:32 - 10/10/2026"]) is None
+
+
+
+@pytest.mark.parametrize("rows, want", [
+    (MOMO_HISTORY, "Ví MoMo"),  # its payee "(Techcombank)" is the receiver's bank, not the source
+    (["Ví MoMo", "Giao dịch thành công", "-1.107.000đ", "Nguồn tiền Ví MoMo"], "Ví MoMo"),
+    (["Techcombank", "Chuyển khoản thành công", "250.000 VND", "Người nhận TRAN B"], "Techcombank"),
+    (["Chuyển tiền thành công", "Tài khoản nguồn: 1903****123 - Vietcombank", "Người nhận NGUYEN C (ACB)"], "Vietcombank"),
+    (["Giao dịch thành công", "Thanh toán bằng: ZaloPay", "-45.000đ"], "Ví ZaloPay"),
+    (["Đơn mua", "Kem chống nắng", "Thành tiền: ₫465.000"], None),
+    (["Chuyển tiền cho LE D (Techcombank) -50.000đ", "10:00 - 01/11", "Thanh toán X -20.000đ", "11:00 - 01/11"], None),
+])
+def test_detect_source(rows, want):
+    assert parsers.detect_source(rows) == want

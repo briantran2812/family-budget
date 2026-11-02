@@ -209,11 +209,13 @@ def test_ux13_screenshot_review_and_save(onboarded, page, tmp_path):
     expect(row.locator(".amt")).to_have_value("1.107.000", timeout=15000)
     expect(row.locator(".desc")).to_have_value("Tiền điện EVN HCMC kỳ tháng 10")
     expect(row.locator(".cat option:checked")).to_contain_text("Điện nước")
+    expect(page.locator("#ocrPay")).to_have_value("Ví MoMo")  # read off the receipt's "Nguồn tiền"
     row.locator(".amt").fill("1.110.000")  # the user corrects the amount before saving
     page.locator("#ocrSave").click()
     expect(toast(page)).to_have_text("Đã lưu 1 giao dịch")
     page.locator("nav button[data-tab=overview]").click()
     expect(page.locator("#cats .cat", has_text="Điện nước")).to_contain_text("1.110.000 ₫")
+    expect(page.locator("#pays .cat", has_text="Ví MoMo")).to_contain_text("1.110.000 ₫")
 
 
 def test_ux14_budget_warning(onboarded, page):

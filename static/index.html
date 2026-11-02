@@ -435,6 +435,11 @@ ol.howto li { margin: 5px 0; }
         </div>
         <div class="card" id="ocrCard" hidden style="margin-top:16px">
           <div class="card-head"><h2>Kết quả đọc ảnh</h2><span class="muted" style="font-size:12px">Kiểm tra, sửa nếu cần, rồi Lưu</span></div>
+          <div class="row-form" style="margin-bottom:12px;align-items:center">
+            <label class="lbl" for="ocrPay" style="margin:0">Trả bằng</label>
+            <input class="field" id="ocrPay" list="accountList" placeholder="Ví MoMo, Visa…, Tiền mặt" style="max-width:240px">
+            <span class="muted" id="ocrPayHint" style="font-size:12px"></span>
+          </div>
           <div id="ocrRows"></div>
           <div id="ocrRaw" style="margin-top:10px"></div>
           <div class="modal-foot"><button class="btn" id="ocrCancel">Bỏ</button><button class="btn primary" id="ocrSave">Lưu các dòng đã chọn</button></div>
@@ -992,10 +997,15 @@ async function uploadShots(files) {
   try {
     const res = await api('/api/screenshot', {method: 'POST', body: fd});
     const cands = res.flatMap(r => r.candidates);
+    const found = [...new Set(cands.map(c => c.pay_account).filter(Boolean))];
+    $('#ocrPay').value = found.length === 1 ? found[0] : '';
+    $('#ocrPayHint').textContent = found.length === 1 ? '✓ Tự nhận ra từ ảnh — sửa nếu sai'
+      : found.length > 1 ? `Ảnh có nhiều nguồn (${found.join(', ')}) — chọn một, hoặc lưu từng ảnh riêng`
+      : 'Không nhận ra từ ảnh — chọn để thống kê theo cách trả';
     const opts = sel => state.cats.filter(c => c.kind === 'expense')
       .map(c => `<option value="${c.id}" ${c.id === sel ? 'selected' : ''}>${c.icon} ${esc(c.name)}</option>`).join('');
     $('#ocrRows').innerHTML = cands.length ? cands.map(c => `
-      <div class="ocr-row" data-pay="${esc(c.pay_account || '')}"><input type="checkbox" class="sel" ${c.selected ? 'checked' : ''}>
+      <div class="ocr-row"><input type="checkbox" class="sel" ${c.selected ? 'checked' : ''}>
         <input class="field d" type="date" value="${c.date}">
         <input class="field desc" value="${esc(c.description)}" placeholder="Mô tả">
         <select class="field cat">${opts(c.category_id)}</select>
@@ -1013,7 +1023,7 @@ $('#ocrCancel').onclick = () => { $('#ocrCard').hidden = true; };
 $('#ocrSave').onclick = async () => {
   const items = $$('#ocrRows .ocr-row').filter(r => $('.sel', r).checked).map(r => ({
     date: $('.d', r).value, description: $('.desc', r).value, category_id: +$('.cat', r).value,
-    amount: parseAmount($('.amt', r).value), kind: 'expense', source: 'screenshot', pay_account: r.dataset.pay}));
+    amount: parseAmount($('.amt', r).value), kind: 'expense', source: 'screenshot', pay_account: $('#ocrPay').value}));
   if (!items.length) return toast('Chưa chọn dòng nào', true);
   if (items.some(i => !(i.amount > 0))) return toast('Có dòng số tiền chưa hợp lệ', true);
   await api('/api/transactions', {method: 'POST', body: items});
