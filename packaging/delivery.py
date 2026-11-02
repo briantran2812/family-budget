@@ -4,7 +4,7 @@
   .venv/bin/python packaging/delivery.py --final          # uses release/ (after `release.py final`)
   .venv/bin/python packaging/delivery.py --final --no-pdf # skip the guide PDF (needs Chrome + Playwright WebKit)
 
-Contents: guide PDF, one installer per chip, install notes, the signed production Shortcut + CAI-DAT-IPHONE.txt,
+Contents: a README to read first, guide PDF, one installer per chip, install notes, the signed production Shortcut + CAI-DAT-IPHONE.txt,
 and Code.gs. Only the build whose SHA-256 is in the signed QA sheet is packaged. See docs/DEPLOY.md D.
 """
 import hashlib
@@ -42,6 +42,40 @@ Phím tắt gửi khoản chi vào Google Sheet "Thu Chi — PRODUCTION"; app tr
    hoặc giữ phím tắt trong app Phím tắt → Chia sẻ → Thêm vào MH chính.
 
 Gõ đủ số tiền, ví dụ 45000 (câu hỏi sau hiện lại 45.000 ₫ để kiểm tra).
+"""
+
+
+README_TXT = """ĐỌC TRƯỚC — THU CHI GIA ĐÌNH {label}
+
+App ghi chép thu chi của gia đình trên máy Mac: biết mỗi tháng tiền đi đâu (học phí, điện nước, đi chợ,
+Shopee, TikTok…), cảnh báo khi sắp hết ngân sách, và "ống heo" để xem mỗi tháng để dành được bao nhiêu.
+Không cần tài khoản, không quảng cáo, không dùng AI. Dữ liệu nằm trên máy này.
+
+TRONG THƯ MỤC NÀY
+  1. Hướng dẫn sử dụng.pdf        — có hình, đọc khi cần
+  2. File cài đặt (.dmg)          — có 2 file, CHỈ DÙNG 1 file đúng loại máy (xem bước 1 bên dưới)
+  3. Hướng dẫn cài đặt.txt        — các bước cài chi tiết
+  4. iPhone/                      — phím tắt "Ghi chi tiêu" để ghi khoản chi ngay trên điện thoại
+  5. Cho người cài đặt/           — dành cho chồng, không cần mở
+
+CÀI ĐẶT (khoảng 5 phút)
+  1. Bấm biểu tượng  ở góc trên bên trái → About This Mac:
+       • Dòng "Chip" ghi Apple M1, M2, M3…  → mở file có chữ "chip Apple"
+       • Dòng "Processor" ghi Intel          → mở file có chữ "chip Intel"
+     Máy cần macOS 11 (Big Sur) trở lên.
+  2. Kéo biểu tượng "Thu Chi Gia Dinh" vào thư mục Applications.
+  3. Mở app. Lần đầu máy chặn vì app không tải từ App Store: vào Cài đặt hệ thống → Quyền riêng tư & Bảo mật
+     → "Vẫn mở" (Open Anyway). Chi tiết trong file số 3.
+  4. Nhập tên. Muốn nền sáng: Cài đặt → Giao diện → ☀️ Sáng.
+  5. Kết nối điện thoại: Nhập dữ liệu → Từ iPhone → Kết nối Google Sheet, dán "mã kết nối" chồng gửi riêng.
+     Rồi làm theo 4. iPhone/CAI-DAT-IPHONE.txt.
+
+DÙNG HẰNG NGÀY
+  • Trên iPhone: chạm 2 lần vào lưng máy (hoặc bấm phím tắt "Ghi chi tiêu") → gõ số tiền → mô tả → hạng mục
+    → cách trả. Khoảng 10 giây.
+  • Trên Mac: mở app khi muốn xem. App tự lấy các khoản từ iPhone về; bấm 🔔 để xem thông báo, 🐷 Ống heo ở
+    menu bên trái để xem để dành được bao nhiêu.
+  • Gặp chỗ khó dùng hay sai: chụp màn hình gửi chồng.
 """
 
 
@@ -94,6 +128,7 @@ def main() -> None:
     for arch, dmg in dmgs.items():
         shutil.copy2(dmg, out / f"2. File cài đặt - {CHIP_LABEL[arch]} - Thu Chi Gia Đình {label}.dmg")
     shutil.copy2(ROOT / "packaging" / "HUONG-DAN.txt", out / "3. Hướng dẫn cài đặt.txt")
+    (out / "0. ĐỌC TRƯỚC - README.txt").write_text(README_TXT.format(label=label))
     iphone = out / "4. iPhone"
     iphone.mkdir()
     shutil.copy2(shortcut, iphone / shortcut.name)
