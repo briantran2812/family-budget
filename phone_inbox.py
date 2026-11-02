@@ -30,10 +30,19 @@ def connected(conn: sqlite3.Connection) -> bool:
 
 
 def _get(code: str, action: str) -> dict:
-    url = f"{code}&{urllib.parse.urlencode({'a': action})}"
+    return _request(f"{code}&{urllib.parse.urlencode({'a': action})}")
+
+
+def _post(code: str, payload: dict) -> dict:
+    # Apps Script runs doPost, then answers 302; urllib follows it as a GET without the body, which is what Google expects.
+    return _request(code, json.dumps(payload, ensure_ascii=False).encode())
+
+
+def _request(url: str, data: bytes | None = None) -> dict:
     ctx = ssl.create_default_context(cafile=certifi.where())  # see gmail_sync._login
+    req = urllib.request.Request(url, data=data, headers={"Content-Type": "application/json"} if data else {})
     try:
-        with urllib.request.urlopen(url, timeout=30, context=ctx) as r:  # follows Google's 302 to googleusercontent
+        with urllib.request.urlopen(req, timeout=60, context=ctx) as r:  # follows Google's 302 to googleusercontent
             body, final = r.read().decode(errors="replace"), r.geturl()
     except urllib.error.HTTPError as e:  # Google answers some script errors with 4xx/5xx and an HTML page
         body, final = e.read().decode(errors="replace"), e.geturl()
@@ -53,6 +62,9 @@ def _explain_html(body: str, final_url: str) -> str:
     if "accounts.google.com" in final_url or "ServiceLogin" in body:
         return ("Google đòi đăng nhập: bản Deploy chưa mở cho mọi người. Deploy → Manage deployments → ✏️ → "
                 "Who has access: Anyone → Deploy.")
+    if "Script function not found: doPost" in body:
+        return ("Code.gs trên Google là bản cũ, chưa nhận được bản sao từ Mac. Dán Code.gs mới, ⌘S, rồi "
+                "Deploy → Manage deployments → ✏️ → Version: New version → Deploy.")
     if "Script function not found: doGet" in body:
         return ("Bản Deploy không có code (đã Deploy trước khi dán Code.gs, hoặc chưa lưu). Dán Code.gs, ⌘S, rồi "
                 "Deploy → Manage deployments → ✏️ → Version: New version → Deploy.")
@@ -136,3 +148,67 @@ def sync(conn: sqlite3.Connection) -> dict:
             bad_rows.append(row.get("row"))
     db.set_setting(conn, "phone_last_sync", datetime.now().strftime("%Y-%m-%d %H:%M"))
     return {"total": len(rows), **counts, "bad_rows": bad_rows[:20]}
+
+
+# ---------------------------------------------------------------- mirror to the Sheet (tabs "Giao dịch", "Tổng hợp")
+
+SRC_LABEL = {"shopee": "Shopee", "tiktok": "TikTok", "momo": "MoMo", "manual": "Nhập tay", "phone": "iPhone",
+             "screenshot": "Ảnh chụp", "statement": "Sao kê", "email": "Email"}
+
+
+def device_name(conn: sqlite3.Connection) -> str:
+    name = db.get_setting(conn, "device_name")
+    if name:
+        return name
+    import subprocess
+    try:
+        name = subprocess.run(["scutil", "--get", "ComputerName"], capture_output=True, text=True, timeout=5).stdout.strip()
+    except (OSError, subprocess.SubprocessError):
+        name = ""
+    import socket
+    return name or socket.gethostname()
+
+
+def push_enabled(conn: sqlite3.Connection) -> bool:
+    return connected(conn) and db.get_setting(conn, "phone_push", "1") == "1"
+
+
+def mirror_payload(conn: sqlite3.Connection) -> dict:
+    device = device_name(conn)
+    txs = conn.execute(
+        "SELECT t.id, t.date, t.kind, t.amount, t.description, c.name AS category, t.pay_account, t.source, t.status "
+        "FROM transactions t LEFT JOIN categories c ON c.id = t.category_id ORDER BY t.date DESC, t.id DESC").fetchall()
+    rows = [[t["date"], "Thu" if t["kind"] == "income" else "Chi", t["amount"], t["description"],
+             t["category"] or "Chưa phân loại", t["pay_account"] or "", SRC_LABEL.get(t["source"], t["source"]),
+             "Có" if t["status"] == "ok" else "Không", device, t["id"]] for t in txs]
+    summary = []
+    for (month,) in conn.execute("SELECT DISTINCT substr(date, 1, 7) FROM transactions WHERE status = 'ok' "
+                                 "ORDER BY 1 DESC LIMIT 24").fetchall():
+        def total(sql, *args):
+            return conn.execute(sql, (month, *args)).fetchall()
+        tot = dict(total("SELECT kind, SUM(amount) FROM transactions WHERE status = 'ok' AND substr(date, 1, 7) = ? "
+                         "GROUP BY kind"))
+        income, expense = tot.get("income", 0), tot.get("expense", 0)
+        pct = lambda v: round(v / expense, 4) if expense else ""
+        summary += [[device, month, "Tổng", "Thu nhập", income, ""], [device, month, "Tổng", "Tổng chi", expense, pct(expense)],
+                    [device, month, "Tổng", "Còn lại", income - expense, ""]]
+        for name, amount in total("SELECT COALESCE(c.name, 'Chưa phân loại'), SUM(t.amount) FROM transactions t "
+                                  "LEFT JOIN categories c ON c.id = t.category_id WHERE t.status = 'ok' AND t.kind = 'expense' "
+                                  "AND substr(t.date, 1, 7) = ? GROUP BY 1 ORDER BY 2 DESC"):
+            summary.append([device, month, "Hạng mục", name, amount, pct(amount)])
+        for name, amount in total("SELECT COALESCE(pay_account, 'Chưa ghi cách trả'), SUM(amount) FROM transactions "
+                                  "WHERE status = 'ok' AND kind = 'expense' AND substr(date, 1, 7) = ? GROUP BY 1 ORDER BY 2 DESC"):
+            summary.append([device, month, "Cách trả", name, amount, pct(amount)])
+    return {"a": "mirror", "device": device, "rows": rows, "summary": summary}
+
+
+def push(conn: sqlite3.Connection) -> dict:
+    """Replace this Mac's rows in the Sheet. The app stays the source of truth; edits made in the Sheet are overwritten."""
+    try:
+        r = _post(code(conn), mirror_payload(conn))
+    except InboxError as e:
+        db.set_setting(conn, "phone_push_error", str(e))
+        raise
+    db.set_setting(conn, "phone_push_error", "")
+    db.set_setting(conn, "phone_last_push", datetime.now().strftime("%Y-%m-%d %H:%M"))
+    return r

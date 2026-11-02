@@ -93,4 +93,15 @@ def fake_sheet(monkeypatch, fake_keyring):
             return {"ok": True, "sheet": "https://docs.google.com/spreadsheets/d/abc"}
         return {"ok": True, "rows": state["rows"]}
     monkeypatch.setattr(phone_inbox, "_get", fake_get)
+    state["pushes"] = []
+
+    def fake_post(code, payload):
+        if code != PHONE_CODE:
+            raise phone_inbox.InboxError("Apps Script báo lỗi: Mã kết nối sai.")
+        state["pushes"].append(payload)
+        return {"ok": True, "rows": len(payload["rows"]), "summary": len(payload["summary"])}
+    monkeypatch.setattr(phone_inbox, "_post", fake_post)
+    import app as app_module  # a real timer would fire after the test, against the real network
+    state["scheduled"] = []
+    monkeypatch.setattr(app_module, "schedule_push", lambda delay=None: state["scheduled"].append(delay))
     return state

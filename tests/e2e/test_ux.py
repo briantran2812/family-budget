@@ -544,3 +544,22 @@ def test_ux38_overview_by_pay_method_and_top_sources(onboarded, page):
     expect(page.locator("#tx")).to_be_visible()
     expect(page.locator("#fPay")).to_have_value("Tiền mặt")
     expect(page.locator("#txList .txrow")).to_have_count(2)
+
+
+
+def test_ux39_mirror_to_sheet_settings(onboarded, page, fake_sheet):
+    import phone_inbox
+    with db.connect() as c:
+        phone_inbox.connect(c, fake_sheet["code"])
+        db.set_setting(c, "device_name", "MacBook Lan")
+    add_tx(page.evaluate("todayISO()"), 45_000, "Phở")
+    reload(page)
+    page.locator("nav button[data-tab=settings]").click()
+    expect(page.locator("#devName")).to_have_value("MacBook Lan")
+    expect(page.locator("#pushStatus")).to_contain_text("Chưa đẩy lần nào")
+    page.locator("#pushNow").click()
+    expect(toast(page)).to_contain_text("Đã đẩy 1 giao dịch")
+    expect(page.locator("#pushStatus")).to_contain_text("Đã đẩy lên lúc")
+    assert fake_sheet["pushes"][-1]["device"] == "MacBook Lan"
+    page.locator("#pushOn").uncheck()
+    expect(page.locator("#pushNow")).to_be_disabled()

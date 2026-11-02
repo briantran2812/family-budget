@@ -72,14 +72,18 @@ def info():
                        gmail_last_sync=db.get_setting(c, "gmail_last_sync"),
                        phone_connected=phone_inbox.connected(c),
                        phone_sheet_url=db.get_setting(c, "phone_sheet_url"),
-                       phone_last_sync=db.get_setting(c, "phone_last_sync"))
+                       phone_last_sync=db.get_setting(c, "phone_last_sync"),
+                       phone_push=db.get_setting(c, "phone_push", "1") == "1",
+                       phone_last_push=db.get_setting(c, "phone_last_push"),
+                       phone_push_error=db.get_setting(c, "phone_push_error"),
+                       device_name=phone_inbox.device_name(c))
 
 
 @app.post("/api/profile")
 def profile():
     data = request.get_json()
     with conn() as c:
-        for key in ("user_name", "onboarded", "gmail_query"):
+        for key in ("user_name", "onboarded", "gmail_query", "phone_push", "device_name"):
             if key in data:
                 db.set_setting(c, key, str(data[key]).strip())
     return jsonify(ok=True)
@@ -398,6 +402,51 @@ def phone_sync():
             return jsonify(phone_inbox.sync(c))
     except phone_inbox.InboxError as e:
         return jsonify(error=str(e)), 400
+
+
+@app.post("/api/phone/push")
+def phone_push():
+    try:
+        with conn() as c:
+            return jsonify(phone_inbox.push(c))
+    except phone_inbox.InboxError as e:
+        return jsonify(error=str(e)), 400
+
+
+# Every change is mirrored to the Sheet a few seconds later, batched so a burst of edits makes one upload.
+PUSH_DELAY = 10
+WRITES = ("/api/transactions", "/api/categories", "/api/rules", "/api/gmail/sync", "/api/gmail/reparse",
+          "/api/statements", "/api/statement-lines", "/api/phone/sync")
+_push_timer: threading.Timer | None = None
+_push_lock = threading.Lock()
+
+
+def _push_now():
+    try:
+        with conn() as c:
+            if phone_inbox.push_enabled(c):
+                phone_inbox.push(c)
+    except Exception as e:  # noqa: BLE001 — a background upload must never take the app down; the error is shown in Cài đặt
+        print(f"push to Sheet failed: {e}", file=sys.stderr)
+
+
+def schedule_push(delay: float | None = None) -> None:
+    global _push_timer
+    with _push_lock:
+        if _push_timer:
+            _push_timer.cancel()
+        _push_timer = threading.Timer(PUSH_DELAY if delay is None else delay, _push_now)
+        _push_timer.daemon = True
+        _push_timer.start()
+
+
+@app.after_request
+def push_after_write(resp):
+    if request.method != "GET" and resp.status_code < 400 and request.path.startswith(WRITES):
+        with conn() as c:
+            if phone_inbox.push_enabled(c):
+                schedule_push()
+    return resp
 
 
 # ---------------------------------------------------------------- statements & reconciliation

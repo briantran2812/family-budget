@@ -112,6 +112,20 @@ Danh sách "Trả bằng" mặc định là Tiền mặt, Thẻ Visa, Chuyển k
 khi đối chiếu sao kê (ví dụ "Visa Techcombank"): mở app Phím tắt → giữ Ghi chi tiêu → **Sửa** → bước
 Danh sách → đổi tên.
 
+## Bản sao trên Google Sheet
+
+Ngoài tab Hộp thư đến, app Mac còn ghi hai tab vào cùng sheet:
+
+- **Giao dịch:** mọi giao dịch trong app, gồm Gmail, ảnh chụp, nhập tay, sao kê và iPhone.
+- **Tổng hợp:** mỗi tháng có Thu nhập, Tổng chi, Còn lại, chi theo hạng mục và theo cách trả. Dùng **Data → Create
+  a filter** để lọc theo tháng.
+
+App tự đẩy khoảng 10 giây sau mỗi thay đổi và mỗi lần mở app. Muốn tắt hoặc đổi tên máy: **Cài đặt → iPhone (Google
+Sheet) → Bản sao trên Google Sheet**. Sheet chỉ để xem; sửa thì sửa trong app.
+
+Tính năng này cần bản `Code.gs` mới (có `doPost`). Đã cài từ trước thì: dán `Code.gs` mới → ⌘S → **Deploy → Manage
+deployments → ✏️ → Version: New version → Deploy**. Địa chỉ và mã kết nối giữ nguyên.
+
 ## Sự cố thường gặp
 
 | Hiện tượng | Nguyên nhân và cách sửa |

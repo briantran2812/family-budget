@@ -7,6 +7,8 @@
  *   caiDat()       chạy một lần: tạo sheet và mã bí mật
  *   layMaKetNoi()  sau khi Deploy: in ra mã kết nối để dán vào app Mac và Phím tắt
  *   doiMa()        đổi mã bí mật (mã cũ ngừng hoạt động ngay)
+ *
+ * App Mac còn ghi bản sao giao dịch vào tab "Giao dịch" và số tổng theo tháng vào tab "Tổng hợp" (doPost).
  */
 
 var SHEET = 'Hộp thư đến';
@@ -119,6 +121,60 @@ function sheet_() {
 
 function newId_() {
   return Utilities.getUuid().slice(0, 8);
+}
+
+// ---------------------------------------------------------------- mirror from the Mac app
+
+var TX_SHEET = 'Giao dịch';
+var TX_HEADERS = ['Ngày', 'Loại', 'Số tiền', 'Mô tả', 'Hạng mục', 'Trả bằng', 'Nguồn', 'Tính vào tổng', 'Máy', 'Mã'];
+var SUM_SHEET = 'Tổng hợp';
+var SUM_HEADERS = ['Máy', 'Tháng', 'Nhóm', 'Tên', 'Số tiền', '% tổng chi'];
+
+/** Body {a: "mirror", device, rows, summary}: replaces that Mac's rows in both tabs, leaves other Macs' rows alone. */
+function doPost(e) {
+  var p = (e && e.parameter) || {};
+  if (!props.getProperty('SECRET') || p.k !== props.getProperty('SECRET')) return json_({ok: false, error: 'Mã kết nối sai'});
+  var body;
+  try {
+    body = JSON.parse(e.postData.contents);
+  } catch (err) {
+    return json_({ok: false, error: 'Dữ liệu gửi lên không đọc được'});
+  }
+  if (body.a !== 'mirror') return json_({ok: false, error: 'Thiếu tham số a'});
+  var device = String(body.device || '').trim();
+  if (!device) return json_({ok: false, error: 'Thiếu tên máy'});
+  var lock = LockService.getScriptLock();
+  lock.waitLock(20000);
+  try {
+    var ss = sheet_().getParent();
+    replaceRows_(ss, TX_SHEET, TX_HEADERS, 8, device, body.rows || [], 0, {A: 'dd/MM/yyyy', C: '#,##0'});
+    replaceRows_(ss, SUM_SHEET, SUM_HEADERS, 0, device, body.summary || [], 1, {B: '@', E: '#,##0', F: '0.0%'});
+  } finally {
+    lock.releaseLock();
+  }
+  return json_({ok: true, rows: (body.rows || []).length, summary: (body.summary || []).length});
+}
+
+function replaceRows_(ss, name, headers, deviceCol, device, rows, sortCol, formats) {
+  var sh = ss.getSheetByName(name) || ss.insertSheet(name);
+  if (sh.getLastRow() === 0) {
+    sh.appendRow(headers);
+    sh.setFrozenRows(1);
+    sh.getRange(1, 1, 1, headers.length).setFontWeight('bold');
+  }
+  for (var col in formats) sh.getRange(col + ':' + col).setNumberFormat(formats[col]);  // '@' keeps "2026-11" as text
+  var n = sh.getLastRow() - 1;
+  var keep = n > 0 ? sh.getRange(2, 1, n, headers.length).getValues().filter(function (r) {
+    return String(r[deviceCol]) !== device;
+  }) : [];
+  var mine = rows.map(function (r) {
+    return headers.map(function (_, i) { return r[i] === undefined || r[i] === null ? '' : r[i]; });
+  });
+  var all = keep.concat(mine);
+  var key = function (v) { return v instanceof Date ? Utilities.formatDate(v, 'UTC', 'yyyy-MM-dd') : String(v); };
+  all.sort(function (a, b) { var x = key(a[sortCol]), y = key(b[sortCol]); return x < y ? 1 : x > y ? -1 : 0; });
+  if (n > 0) sh.getRange(2, 1, n, headers.length).clearContent();
+  if (all.length) sh.getRange(2, 1, all.length, headers.length).setValues(all);
 }
 
 // ---------------------------------------------------------------- parsing (shared with the tests)

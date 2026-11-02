@@ -7,6 +7,13 @@
   tự lấy các dòng mới mỗi lần mở (tab Nhập liệu → Từ iPhone), tự phân loại, không nhập trùng, và gộp với khoản đã
   thêm từ sao kê nếu có. Dòng gõ thẳng vào sheet bằng app Google Sheets (dùng được khi mất sóng) cũng được lấy về.
 - Số tiền gõ dưới 1000 được hiểu là nghìn đồng (45 = 45.000 ₫); nhận cả cách viết 45k, 1tr5, 1,5tr, 1.500.000.
+- **Bản sao trên Google Sheet:** app Mac ghi mọi giao dịch vào tab "Giao dịch" và số tổng theo tháng (theo hạng mục,
+  theo cách trả) vào tab "Tổng hợp", vài giây sau mỗi thay đổi. Mỗi Mac ghi đè phần của mình (cột Máy). Sheet chỉ để
+  xem; app trên Mac vẫn là dữ liệu gốc.
+- **Cách trả:** biểu tượng theo cách trả (💵 💳 🏦 👛), lọc theo cách trả, thẻ "Chi theo cách trả" ở Tổng quan; hai ô
+  nguồn ở Tổng quan là hai nguồn chi nhiều nhất trong tháng.
+- **Ảnh chụp:** đọc màn hình lịch sử giao dịch (MoMo, app ngân hàng); tự nhận ra nguồn tiền (ví, ngân hàng) và có ô
+  "Trả bằng" ở màn hình duyệt; khoản đã có trong app được bỏ chọn sẵn.
 - Mã kết nối nằm trong Keychain. Đổi mã bằng hàm `doiMa`; mã cũ ngừng hoạt động ngay.
 - Code: `phone/Code.gs` (Apps Script), `phone/make_shortcut.py` (tạo và ký file Phím tắt), `phone_inbox.py`.
   Hướng dẫn cài và test: `phone/README.md`.

@@ -5,9 +5,9 @@ import vm from 'node:vm';
 
 const SRC = fs.readFileSync(new URL('../../phone/Code.gs', import.meta.url), 'utf8');
 
-function fakeSheet() {
+function newTab(ss) {
   const rows = [];
-  const sheet = {
+  return {
     rows,
     getLastRow: () => rows.length,
     appendRow: r => rows.push([...r]),
@@ -15,23 +15,31 @@ function fakeSheet() {
     getRange(a, b, n, w) {
       if (typeof a === 'string') return {setFontWeight() {}, setNumberFormat() {}};
       return {
+        setFontWeight() {}, setNumberFormat() {},
         getValues: () => rows.slice(a - 1, a - 1 + n).map(r => Array.from({length: w}, (_, i) => r[i] ?? '')),
         setValues: vals => vals.forEach((v, i) => { rows[a - 1 + i] = [...v]; }),
+        clearContent: () => { rows.splice(a - 1, n); },
       };
     },
     getParent: () => ss,
   };
+}
+
+function fakeSheet() {
+  const tabs = {};
   const ss = {
+    tabs,
     getId: () => 'sheet-1', getUrl: () => 'https://docs.google.com/spreadsheets/d/sheet-1',
-    getSheetByName: name => (name === 'Hộp thư đến' && ss.created ? sheet : null),
-    insertSheet: () => { ss.created = true; return sheet; },
+    getSheetByName: name => tabs[name] || null,
+    insertSheet: name => (tabs[name] = newTab(ss)),
     getSpreadsheetTimeZone: () => 'Asia/Ho_Chi_Minh',
   };
-  return {sheet, ss};
+  return {ss, get sheet() { return tabs['Hộp thư đến']; }};
 }
 
 function load() {
-  const {sheet, ss} = fakeSheet();
+  const fake = fakeSheet();
+  const ss = fake.ss;
   const store = {};
   let uuid = 0;
   const pad = n => String(n).padStart(2, '0');
@@ -54,7 +62,7 @@ function load() {
   vm.createContext(ctx);
   vm.runInContext(SRC, ctx);
   ctx.caiDat();
-  return {ctx, sheet, secret: store.SECRET, store};
+  return {ctx, sheet: fake.sheet, ss, secret: store.SECRET, store};
 }
 
 const tests = {
@@ -140,6 +148,34 @@ const tests = {
     assert.equal(JSON.parse(ctx.doGet({parameter: {a: 'ping', k: secret}}).body).ok, false);
   },
 };
+
+const post = (ctx, secret, body) => JSON.parse(ctx.doPost({parameter: {k: secret},
+  postData: {contents: typeof body === 'string' ? body : JSON.stringify(body)}}).body);
+
+Object.assign(tests, {
+  mirror_replaces_only_that_macs_rows() {
+    const {ctx, ss, secret} = load();
+    const row = (d, amt, mac, id) => [d, 'Chi', amt, 'x', 'Khác', 'Tiền mặt', 'iPhone', 'Có', mac, id];
+    assert.deepEqual(post(ctx, secret, {a: 'mirror', device: 'MacBook Lan', rows: [row('2026-11-01', 45000, 'MacBook Lan', 1)],
+      summary: [['MacBook Lan', '2026-11', 'Tổng', 'Tổng chi', 45000, 1]]}), {ok: true, rows: 1, summary: 1});
+    post(ctx, secret, {a: 'mirror', device: 'MacBook Brian', rows: [row('2026-11-02', 9000, 'MacBook Brian', 7)], summary: []});
+    // Lan's Mac syncs again with two rows: her old row is replaced, Brian's stays.
+    post(ctx, secret, {a: 'mirror', device: 'MacBook Lan',
+      rows: [row('2026-11-03', 30000, 'MacBook Lan', 2), row('2026-11-01', 45000, 'MacBook Lan', 1)], summary: []});
+    const tx = ss.tabs['Giao dịch'].rows;
+    assert.equal(tx[0][0], 'Ngày');
+    assert.deepEqual(tx.slice(1).map(r => [r[0], r[8]]),
+      [['2026-11-03', 'MacBook Lan'], ['2026-11-02', 'MacBook Brian'], ['2026-11-01', 'MacBook Lan']]);
+    assert.equal(ss.tabs['Tổng hợp'].rows.length, 1, 'Lan sent an empty summary the second time');
+  },
+  mirror_refuses_wrong_secret_and_bad_body() {
+    const {ctx, ss, secret} = load();
+    assert.equal(post(ctx, 'nope', {a: 'mirror', device: 'x', rows: []}).error, 'Mã kết nối sai');
+    assert.match(post(ctx, secret, '{not json').error, /không đọc được/);
+    assert.match(post(ctx, secret, {a: 'mirror', rows: []}).error, /tên máy/);
+    assert.equal(ss.tabs['Giao dịch'], undefined);
+  },
+});
 
 const only = process.argv[2];
 let failed = 0;

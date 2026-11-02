@@ -1170,12 +1170,37 @@ function renderPhone() {
       ${state.info.phone_sheet_url ? `<a class="link" href="${esc(state.info.phone_sheet_url)}" target="_blank" rel="noopener">Mở Google Sheet</a>` : ''}
       <button class="link" id="phoneOff" style="color:var(--bad)">Ngắt</button></div>
     <div class="row-form" style="margin-top:10px"><button class="btn" id="phoneCopy" type="button">📋 Sao chép mã cho iPhone</button></div>
-    <p class="hint" style="margin-top:8px">Dán mã này khi thêm Phím tắt "Ghi chi tiêu" trên iPhone. Giữ kín như mật khẩu: ai có mã đều ghi được vào sheet.</p>`
+    <p class="hint" style="margin-top:8px">Dán mã này khi thêm Phím tắt "Ghi chi tiêu" trên iPhone. Giữ kín như mật khẩu: ai có mã đều ghi được vào sheet.</p>
+    <h3 style="margin:18px 0 6px;font-size:15px">Bản sao trên Google Sheet</h3>
+    <label style="display:flex;gap:8px;align-items:center;font-size:14px"><input type="checkbox" id="pushOn" ${state.info.phone_push ? 'checked' : ''}>
+      Ghi mọi giao dịch vào tab <b>Giao dịch</b> và số tổng theo tháng vào tab <b>Tổng hợp</b></label>
+    <div class="row-form" style="margin-top:10px;align-items:center">
+      <label class="lbl" for="devName" style="margin:0">Tên máy</label>
+      <input class="field" id="devName" value="${esc(state.info.device_name || '')}" style="max-width:220px">
+      <button class="btn" id="pushNow" type="button" ${state.info.phone_push ? '' : 'disabled'}>⬆︎ Đẩy ngay</button>
+    </div>
+    <p class="hint" id="pushStatus" style="margin-top:8px">${state.info.phone_push_error ? `<span style="color:var(--bad)">Lần đẩy gần nhất lỗi: ${esc(state.info.phone_push_error)}</span>`
+      : state.info.phone_last_push ? 'Đã đẩy lên lúc ' + esc(state.info.phone_last_push.replace(' ', ' lúc ')) + '. App tự đẩy vài giây sau mỗi thay đổi.'
+      : 'Chưa đẩy lần nào. App tự đẩy vài giây sau mỗi thay đổi.'}
+      Sheet chỉ để xem: sửa trong sheet sẽ bị ghi đè ở lần đẩy sau, hãy sửa trong app.</p>`
     : '<div class="row-form"><button class="btn primary" data-action="phone-wizard" type="button">Kết nối Google Sheet</button></div>';
   $('#phoneOff')?.addEventListener('click', async () => {
     if (!await confirmBox('Ngắt kết nối iPhone?', 'App sẽ ngừng lấy khoản chi từ Google Sheet. Các khoản đã lấy về vẫn giữ nguyên.', 'Ngắt', true)) return;
     await api('/api/phone', {method: 'DELETE'}); await loadInfo(); renderPhone(); toast('Đã ngắt kết nối');
   });
+  $('#pushOn')?.addEventListener('change', async e => {
+    await api('/api/profile', {method: 'POST', body: {phone_push: e.target.checked ? '1' : '0'}});
+    await loadInfo(); renderPhone(); toast(e.target.checked ? 'Đã bật ghi bản sao lên Google Sheet' : 'Đã tắt ghi bản sao');
+  });
+  $('#devName')?.addEventListener('change', async e => {
+    await api('/api/profile', {method: 'POST', body: {device_name: e.target.value}});
+    await loadInfo(); toast('Đã đổi tên máy');
+  });
+  $('#pushNow')?.addEventListener('click', e => busy(e.target, async () => {
+    try { const r = await api('/api/phone/push', {method: 'POST'}); toast(`⬆︎ Đã đẩy ${r.rows} giao dịch lên Google Sheet`); }
+    catch (err) { toast(err.message, true); }
+    await loadInfo(); renderPhone();
+  }));
   $('#phoneCopy')?.addEventListener('click', async () => {
     const {code} = await api('/api/phone/code');
     toast(await copyText(code) ? 'Đã sao chép mã — dán vào iPhone (cùng Apple ID thì dán thẳng được)' : 'Không sao chép được', false);

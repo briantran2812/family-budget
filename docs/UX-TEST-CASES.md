@@ -56,6 +56,7 @@ Có hai loại test case:
 | UX-36 | Cài đặt → iPhone | Sao chép được mã cho iPhone; Ngắt kết nối có hỏi lại |
 | UX-37 | Cách trả | Biểu tượng theo cách trả (💵 tiền mặt, 💳 thẻ, 🏦 chuyển khoản, 👛 ví); lọc được theo cách trả và theo "Chưa ghi cách trả" |
 | UX-38 | Tổng quan: cách trả và nguồn | Thẻ "Chi theo cách trả" có số tiền và % từng cách trả, bấm vào mở danh sách đã lọc; hai ô nguồn là hai nguồn chi nhiều nhất trong tháng |
+| UX-39 | Bản sao lên Google Sheet | Đẩy ngay báo số giao dịch đã đẩy, ghi giờ đẩy; tắt thì nút Đẩy ngay bị khoá |
 
 Bản đóng gói còn được kiểm tra tự động bằng `tests/test_packaged.py`: cửa sổ tải được giao diện,
 Keychain hoạt động, OCR chạy bên trong bundle, và kết nối TLS tới Gmail thành công.
@@ -91,6 +92,8 @@ hàng.
 | M-21 | P2 | Ghi nhanh không mở khoá | Gán Phím tắt cho Chạm vào mặt sau (hoặc nút Tác vụ) → ghi 3 khoản liên tiếp, đếm giây | Mỗi khoản dưới 10 giây kể từ lúc chạm |
 | M-22 | P2 | Mất sóng | Bật Chế độ máy bay → chạy Phím tắt → gõ một dòng vào app Google Sheets → tắt Chế độ máy bay → đồng bộ trên Mac | Phím tắt báo lỗi rõ ràng (không báo "Đã ghi"); dòng gõ trong Google Sheets về được Mac |
 | M-23 | P1 | Lan tự cài Phím tắt | Gửi Lan file Phím tắt qua AirDrop và mã kết nối; không hướng dẫn thêm | Lan tự thêm được Phím tắt và ghi được một khoản |
+| M-24 | P1 | Bản sao trên sheet thật | Cập nhật Code.gs (Deploy → New version) → Cài đặt → Đẩy ngay → mở sheet trên iPhone | Tab Giao dịch có đủ giao dịch của tháng, đúng ngày và số tiền; tab Tổng hợp có Tổng chi, hạng mục và cách trả khớp với Tổng quan trong app |
+| M-25 | P2 | Ảnh lịch sử app ngân hàng | Chụp màn hình lịch sử giao dịch của app ngân hàng hay dùng → dán vào app | Đọc đúng từng khoản chi; ô Trả bằng là tên ngân hàng; khoản tiền vào bị bỏ qua |
 
 ## Mức độ lỗi
 

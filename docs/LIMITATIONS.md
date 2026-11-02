@@ -22,6 +22,9 @@ xử lý hiện có, nếu có.
 | Phím tắt **cần mạng**. Mất sóng thì Phím tắt báo lỗi và không ghi gì | Mất khoản chi nếu người dùng không để ý thông báo lỗi | Gõ thẳng vào sheet bằng app Google Sheets (app này lưu tạm khi mất sóng); app Mac vẫn lấy về được |
 | Sửa hoặc xoá dòng trong sheet **sau khi** Mac đã lấy về thì app **không** cập nhật theo | Hai bên lệch nhau | Sửa hoặc xoá thẳng trong app Mac. Sửa trong sheet chỉ có tác dụng trước lần đồng bộ |
 | Chỉ ghi được **khoản chi**, chưa ghi khoản thu | | Khoản thu (lương…) vẫn nhập trên Mac |
+| Tab **Giao dịch** và **Tổng hợp** chỉ là **bản sao để xem**. Sửa trong sheet sẽ bị ghi đè ở lần đẩy sau | | Sửa trong app trên Mac |
+| Hai Mac cùng bật bản sao thì mỗi khoản nhập từ iPhone **xuất hiện hai lần** trong tab Giao dịch (mỗi máy một dòng, khác cột Máy) | Cộng cả tab sẽ ra số gấp đôi | Chỉ bật "Ghi bản sao" trên một Mac làm sổ chính, hoặc lọc theo cột Máy |
+| Thay đổi chỉ được đẩy **khi app đang mở** (khoảng 10 giây sau thay đổi, và mỗi lần mở app) | Tắt app ngay sau khi sửa thì lần đẩy đó bị bỏ, đến lần mở sau mới đẩy | Bấm "Đẩy ngay" trong Cài đặt trước khi tắt nếu cần |
 | Ngày của khoản chi là **lúc gửi**, không chọn được ngày khác | Ghi bù khoản hôm qua sẽ vào ngày hôm nay | Sửa ngày trong app Mac, hoặc gõ ngày vào cột Thời gian trong sheet trước khi đồng bộ |
 | Lần cấp quyền đầu tiên, Google cảnh báo **"Google chưa xác minh ứng dụng này"** | Người cài có thể sợ và dừng lại | Đây là script của chính người dùng; bấm Nâng cao → Đi tới… (không an toàn). Xem `phone/README.md`, mục A |
 | Sửa `Code.gs` thì phải **triển khai phiên bản mới** (Quản lý bản triển khai → Sửa → Phiên bản mới) | Nếu không, iPhone vẫn chạy code cũ | Địa chỉ /exec và mã kết nối giữ nguyên khi triển khai phiên bản mới |
