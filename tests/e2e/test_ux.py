@@ -778,3 +778,25 @@ def test_ux48_top_bar_buttons_stay_on_one_line(onboarded, open_page):
     page = open_page(viewport={"width": 1028, "height": 800})
     tops = page.evaluate("[...document.querySelectorAll('.topbar .month, #bellBtn, #addBtn')].map(e => Math.round(e.getBoundingClientRect().top))")
     assert max(tops) - min(tops) < 12, tops
+
+
+
+def test_ux49_screenshot_review_shows_image_and_flags_guesses(onboarded, page, tmp_path, monkeypatch):
+    import sys
+    import types
+    rows = ["Hoá đơn bán lẻ", "Cà phê sữa 45.000đ", "Khách đưa 100.000đ", "Tiền thừa 55.000đ"]  # no date on it
+    monkeypatch.setitem(sys.modules, "ocr", types.SimpleNamespace(ocr_rows=lambda path: rows))
+    img = tmp_path / "bill.png"
+    from samples import momo_receipt
+    momo_receipt(img, "x", "y", 1000, "09:10 - 12/10/2026", "1")   # any image; its text comes from the stub
+    page.locator("nav button[data-tab=import]").click()
+    page.set_input_files("#files", str(img))
+    expect(page.locator("#ocrThumbs img")).to_have_count(1)
+    expect(page.locator("#ocrNotes")).to_contain_text("Ảnh không ghi ngày")
+    expect(page.locator("#ocrRows .ocr-row .d.guess")).to_have_count(3)
+    expect(page.locator("#ocrRows .ocr-row .sel:checked")).to_have_count(1)            # not the cash handed over
+    picked = page.locator("#ocrRows .ocr-row", has=page.locator(".sel:checked"))
+    expect(picked.locator(".amt")).to_have_value("45.000")
+    picked.locator(".kind").select_option("income")
+    expect(picked.locator(".cat option").first).to_contain_text("Lương")
+    expect(page.locator("#ocrRaw details[open]")).to_have_count(1)

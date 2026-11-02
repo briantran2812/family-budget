@@ -34,18 +34,34 @@ def find_money(text: str) -> list[tuple[int, int]]:
 DATE_RES = [
     (re.compile(r"\b(\d{1,2})[/.-](\d{1,2})[/.-](\d{4})\b"), ("d", "m", "y")),
     (re.compile(r"\b(\d{4})-(\d{1,2})-(\d{1,2})\b"), ("y", "m", "d")),
+    (re.compile(r"\b(\d{1,2})/(\d{1,2})/(\d{2})\b"), ("d", "m", "y")),  # 02/11/26
 ]
+DATE_LABELS = ("thoi gian", "ngay giao dich", "ngay thanh toan", "ngay gd", "ngay", "time", "date")
 
 
-def find_date(text: str) -> str | None:
+def find_date(text: str, today: date | None = None) -> str | None:
+    """First real date in `text` that is not in the future (an expiry or due date is not when you paid)."""
+    latest = today or date.today()
     for regex, order in DATE_RES:
         for m in regex.finditer(text):
             parts = dict(zip(order, map(int, m.groups())))
+            y = parts["y"] + 2000 if parts["y"] < 100 else parts["y"]
             try:
-                return date(parts["y"], parts["m"], parts["d"]).isoformat()
+                d = date(y, parts["m"], parts["d"])
             except ValueError:
                 continue
+            if d <= latest:
+                return d.isoformat()
     return None
+
+
+def receipt_date(rows: list[str], today: date | None = None) -> str | None:
+    """The date next to a "Thời gian / Ngày giao dịch" label wins over any other date on the screen."""
+    for i, row in enumerate(rows):
+        if normalize(row).startswith(DATE_LABELS):
+            if found := find_date(" ".join(rows[i:i + 2]), today):
+                return found
+    return find_date("\n".join(rows), today)
 
 
 # ---------------------------------------------------------------- HTML → text
@@ -200,14 +216,18 @@ DESC_LABELS = ["noi dung", "loi nhan", "dien giai", "loai dich vu", "dich vu", "
 # Transaction-history screens (MoMo "Giao dịch gần đây", bank apps): "<text> -80.000đ", "<more text>", "14:11 - 01/11".
 HIST_TIME = re.compile(r"^\s*(\d{1,2}):(\d{2})\s*[-–]\s*(\d{1,2})/(\d{1,2})(?:/(\d{4}))?\s*$")
 HIST_MONTH = re.compile(r"^\s*th[aá]ng\s+(\d{1,2})\s*/\s*(\d{4})\s*$", re.I)
-HIST_AMOUNT = re.compile(r"([+\-−–])\s?(\d{1,3}(?:[.,]\d{3})+|\d+)\s?(?:đ|d|₫|vnd)?\s*$", re.I)
+HIST_AMOUNT = re.compile(r"([+\-−–])\s?(?:(\d{1,3}(?:[.,]\d{3}){1,3})\s?(?:đ|d|₫|vnd)?|(\d{4,10})\s?(?:đ|d|₫|vnd))\s*$", re.I)
 HIST_BALANCE = re.compile(r"s[ốo]\s*d[ưu][^:]*:\s*[\d.,]+\s*\S?", re.I)  # "Số dư Túi: 2.471.829đ" — a balance, not a charge
 HIST_PREFIX = re.compile(r"^thanh\s+to[aá]n\s+(?:cho\s+)?", re.I)
 
 
-def parse_history(rows: list[str], today: date | None = None) -> list[dict] | None:
-    """Expenses on a transaction-history screenshot, or None if `rows` is not one (fewer than two time lines)."""
-    if sum(bool(HIST_TIME.match(r)) for r in rows) < 2:
+def parse_history(rows: list[str], today: date | None = None, report: dict | None = None) -> list[dict] | None:
+    """Entries on a transaction-history screenshot, or None if `rows` is not one (fewer than two time lines).
+
+    `report` gets how many entries could not be read, so the review screen can say so instead of dropping them quietly.
+    """
+    times = sum(bool(HIST_TIME.match(r)) for r in rows)
+    if times < 2:
         return None
     today = today or date.today()
     year, entries, cur = today.year, [], None
@@ -230,15 +250,23 @@ def parse_history(rows: list[str], today: date | None = None) -> list[dict] | No
             continue
         row = HIST_BALANCE.sub("", raw).strip()
         if m := HIST_AMOUNT.search(row):
-            cur = {"sign": m.group(1), "amount": int(re.sub(r"[.,]", "", m.group(2))), "text": [row[:m.start()].strip()]}
+            cur = {"sign": m.group(1), "amount": int(re.sub(r"[.,]", "", m.group(2) or m.group(3))),
+                   "text": [row[:m.start()].strip()]}
         elif cur is not None and row:
             cur["text"].append(row)
     out = []
     for e in entries:
-        if e["sign"] == "+" or not e["date"] or e["amount"] < 1000:
-            continue  # money in (interest, refunds) is not an expense; an entry cut off at the edge has no date
+        if not e["date"] or e["amount"] < 1000:
+            continue  # interest of a few hundred đồng is not worth a row
         desc = HIST_PREFIX.sub("", " ".join(t for t in e["text"] if t)).strip()
-        out.append({"date": e["date"], "amount": e["amount"], "description": desc, "selected": True})
+        money_in = e["sign"] == "+"  # offered unticked as income: a refund or a salary is not an expense
+        out.append({"date": e["date"], "amount": e["amount"], "description": desc, "selected": not money_in,
+                    "kind": "income" if money_in else "expense"})
+    if report is not None:
+        small = sum(1 for e in entries if e["amount"] < 1000)
+        report["unreadable"] = max(0, times - len(entries))  # a time line with no amount above it
+        report["cut_off"] = 1 if cur is not None else 0      # an amount with no time line: cut by the screen edge
+        report["tiny"] = small
     return out
 
 
@@ -271,10 +299,6 @@ def detect_source(rows: list[str]) -> str | None:
             value = row.split(":", 1)[1] if ":" in row else (rows[i + 1] if i + 1 < len(rows) else "")
             if found := _named(value) or _named(row):
                 return found
-    text = normalize(" ".join(rows))
-    for name, rx in WALLETS:
-        if re.search(rx, text):
-            return name
     for row in rows[:3]:  # a bank app puts its name alone in the title bar; a payee line is longer
         n = normalize(row)
         if "(" in row or len(n.split()) > 3:
@@ -282,20 +306,34 @@ def detect_source(rows: list[str]) -> str | None:
         for name, rx in BANKS:
             if re.search(rx, n):
                 return name
+    # "Nội dung: chuyen tien MoMo" on a bank receipt says nothing about where the money came from.
+    text = normalize(" ".join(r for r in rows if not normalize(r).startswith(tuple(DESC_LABELS))))
+    for name, rx in WALLETS:
+        if re.search(rx, text):
+            return name
     return None
 
 
-def parse_ocr_rows(rows: list[str]) -> list[dict]:
+INCOME_RECEIPT = ("nhan tien", "tien vao", "da nhan", "nhan chuyen khoan", "hoan tien")
+NOT_TOTAL = ("khach dua", "tien thua", "tien khach", "giam gia", "chiet khau", "tiet kiem", "so du", "uu dai")
+
+
+def parse_ocr_rows(rows: list[str], report: dict | None = None) -> list[dict]:
     source = detect_source(rows)
-    return [{**c, "pay_account": c.get("pay_account") or source} if source else c for c in _parse_ocr_rows(rows)]
+    return [{**c, "pay_account": c.get("pay_account") or source} if source else c
+            for c in _parse_ocr_rows(rows, report)]
 
 
-def _parse_ocr_rows(rows: list[str]) -> list[dict]:
+def _parse_ocr_rows(rows: list[str], report: dict | None = None) -> list[dict]:
     """Candidates from one screenshot. Each has a `selected` guess the user confirms in the app."""
-    history = parse_history(rows)
+    history = parse_history(rows, report=report)
     if history is not None:
         return history
-    found_date = find_date("\n".join(rows)) or date.today().isoformat()
+    found_date = receipt_date(rows)
+    guessed = found_date is None  # shown highlighted in the review: today is a guess, not something on the screen
+    found_date = found_date or date.today().isoformat()
+    text = normalize(" ".join(rows[:6]))
+    kind = "income" if any(w in text for w in INCOME_RECEIPT) else "expense"
     candidates = []
 
     # 1) Labelled totals — one per order on a Shopee/TikTok "Đơn mua" list, one on a bank receipt.
@@ -309,14 +347,21 @@ def _parse_ocr_rows(rows: list[str]) -> list[dict]:
         candidates.append({"date": found_date, "amount": money[-1][0],
                            "description": _describe(rows, i), "selected": True})
 
-    # 2) Nothing labelled: offer every amount, preselect only the largest.
+    # 2) Nothing labelled: offer every amount, preselect the largest that is not cash handed over, change or a discount.
     if not candidates:
         for i, row in enumerate(rows):
             for value, _ in find_money(row):
-                candidates.append({"date": found_date, "amount": value,
-                                   "description": _describe(rows, i), "selected": False})
-        if candidates:
-            max(candidates, key=lambda c: c["amount"])["selected"] = True
+                candidates.append({"date": found_date, "amount": value, "description": _describe(rows, i),
+                                   "selected": False, "_skip": any(w in normalize(row) for w in NOT_TOTAL)})
+        pickable = [c for c in candidates if not c["_skip"]]
+        if pickable:
+            max(pickable, key=lambda c: c["amount"])["selected"] = True
+        for c in candidates:
+            del c["_skip"]
+    for c in candidates:
+        c["kind"] = kind
+        if guessed:
+            c["date_guessed"] = True
 
     seen, unique = set(), []
     for c in candidates:

@@ -633,14 +633,16 @@ def screenshot():
                 except RuntimeError as e:
                     results.append({"file": f.filename, "error": str(e), "candidates": [], "text": ""})
                     continue
-            cands = parsers.parse_ocr_rows(rows)
+            report = {}
+            cands = parsers.parse_ocr_rows(rows, report)
             for cand in cands:
-                cand["category_id"] = rules.categorize(c, cand["description"], "expense", compiled)
+                cand["category_id"] = rules.categorize(c, cand["description"], cand.get("kind", "expense"), compiled)
                 # Overlapping history screenshots show the same payments again: offer them unticked.
-                if c.execute("SELECT 1 FROM transactions WHERE status = 'ok' AND kind = 'expense' AND amount = ? "
-                             "AND abs(julianday(date) - julianday(?)) <= 1", (cand["amount"], cand["date"])).fetchone():
+                if c.execute("SELECT 1 FROM transactions WHERE status = 'ok' AND kind = ? AND amount = ? "
+                             "AND abs(julianday(date) - julianday(?)) <= 1",
+                             (cand.get("kind", "expense"), cand["amount"], cand["date"])).fetchone():
                     cand["selected"], cand["duplicate"] = False, True
-            results.append({"file": f.filename, "candidates": cands, "text": "\n".join(rows)})
+            results.append({"file": f.filename, "candidates": cands, "text": "\n".join(rows), "report": report})
     return jsonify(results)
 
 

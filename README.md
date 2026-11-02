@@ -1,7 +1,8 @@
 # Thu chi gia đình
 
-Ứng dụng quản lý thu chi chạy hoàn toàn trên máy Mac. Không dùng AI, không có server; dữ liệu chỉ nằm
-trên máy của từng người.
+Ứng dụng quản lý thu chi chạy trên máy Mac. Không dùng AI và không có server riêng: chữ trong ảnh do macOS đọc
+ngay trên máy, phần còn lại là quy tắc cố định. Dữ liệu nằm trên máy của từng người; nếu bật nhập từ iPhone, một
+bản sao nằm trong Google Sheet của chính bạn.
 
 - **Gmail:** tự đọc email xác nhận đơn **Shopee** và **TikTok Shop**. Kết nối được nhiều tài khoản
   (vợ + chồng). Mỗi đơn chỉ tính một lần; đơn huỷ tự bỏ ra.

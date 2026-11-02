@@ -275,9 +275,13 @@ details.recsec { margin-top: 16px; } details.recsec > summary { cursor: pointer;
 .result { margin-top: 14px; font-size: 13.5px; padding: 12px 14px; border-radius: 12px; background: var(--surface-2); }
 .result.err { background: var(--bad-soft); color: var(--bad); }
 .result.ok { background: var(--good-soft); color: var(--text); }
-.ocr-row { display: grid; grid-template-columns: 26px 130px minmax(0, 1fr) 180px 140px; gap: 8px; align-items: center;
+.ocr-row { display: grid; grid-template-columns: 26px 130px 78px minmax(0, 1fr) 180px 140px; gap: 8px; align-items: center;
   padding: 8px 0; border-bottom: 1px solid var(--border); }
 .ocr-row .dup-note { grid-column: 2 / -1; font-size: 12px; margin-top: -4px; }
+.ocr-row .d.guess { border-color: var(--warn); background: var(--warn-soft); }
+.ocr-thumbs { display: flex; gap: 10px; flex-wrap: wrap; margin-bottom: 12px; }
+.ocr-thumbs img { height: 220px; max-width: 100%; border-radius: 12px; border: 1px solid var(--border); object-fit: contain; background: var(--surface-2); }
+.ocr-note { font-size: 13px; padding: 8px 12px; border-radius: 10px; background: var(--warn-soft); margin-bottom: 10px; }
 .ocr-row input[type=checkbox] { width: 18px; height: 18px; accent-color: var(--accent); }
 details.mail { border-bottom: 1px solid var(--border); padding: 10px 0; }
 details.mail summary { cursor: pointer; font-size: 14px; display: flex; gap: 10px; align-items: center; }
@@ -351,6 +355,7 @@ ol.howto li { margin: 5px 0; }
   .cols, .grid3, .grid3.two { grid-template-columns: minmax(0, 1fr); }
   .ocr-row { grid-template-columns: 26px minmax(0, 1fr) 120px; }
   .ocr-row .d, .ocr-row .cat { grid-column: 2 / -1; }
+  .ocr-row .kind { grid-column: 2 / -1; }
 }
 @media (max-width: 760px) {
   .shell { display: block; }
@@ -523,6 +528,8 @@ ol.howto li { margin: 5px 0; }
             <input class="field" id="ocrPay" list="accountList" placeholder="Ví MoMo, Visa…, Tiền mặt" style="max-width:240px">
             <span class="muted" id="ocrPayHint" style="font-size:12px"></span>
           </div>
+          <div class="ocr-thumbs" id="ocrThumbs"></div>
+          <div id="ocrNotes"></div>
           <div id="ocrRows"></div>
           <div id="ocrRaw" style="margin-top:10px"></div>
           <div class="modal-foot"><button class="btn" id="ocrCancel">Bỏ</button><button class="btn primary" id="ocrSave">Lưu các dòng đã chọn</button></div>
@@ -1167,17 +1174,30 @@ async function uploadShots(files) {
     $('#ocrPayHint').textContent = found.length === 1 ? '✓ Tự nhận ra từ ảnh — sửa nếu sai'
       : found.length > 1 ? `Ảnh có nhiều nguồn (${found.join(', ')}) — chọn một, hoặc lưu từng ảnh riêng`
       : 'Không nhận ra từ ảnh — chọn để thống kê theo cách trả';
-    const opts = sel => state.cats.filter(c => c.kind === 'expense')
+    const opts = (sel, kind) => state.cats.filter(c => c.kind === kind)
       .map(c => `<option value="${c.id}" ${c.id === sel ? 'selected' : ''}>${c.icon} ${esc(c.name)}</option>`).join('');
+    // Put the screenshot next to what was read from it, so every value can be checked against the image.
+    $('#ocrThumbs').innerHTML = '';
+    [...files].forEach(f => { const img = document.createElement('img'); img.src = URL.createObjectURL(f); img.alt = f.name; $('#ocrThumbs').append(img); });
+    const notes = [];
+    res.forEach(r => {
+      const rp = r.report || {}, lost = (rp.unreadable || 0) + (rp.cut_off || 0);
+      if (lost) notes.push(`⚠️ ${esc(r.file)}: ${lost} giao dịch không đọc được hoặc bị cắt ở mép ảnh — xem ảnh và nhập tay nếu cần.`);
+    });
+    if (cands.some(c => c.date_guessed)) notes.push('⚠️ Ảnh không ghi ngày nên app tạm điền hôm nay (ô ngày tô vàng) — sửa nếu không đúng.');
+    if (cands.some(c => c.kind === 'income')) notes.push('Khoản <b>tiền vào</b> được ghi là Thu; khoản tiền vào trên màn hình lịch sử để bỏ chọn sẵn.');
+    $('#ocrNotes').innerHTML = notes.map(n => `<div class="ocr-note">${n}</div>`).join('');
     $('#ocrRows').innerHTML = cands.length ? cands.map(c => `
       <div class="ocr-row"><input type="checkbox" class="sel" ${c.selected ? 'checked' : ''}>
-        <input class="field d" type="date" value="${c.date}">
+        <input class="field d ${c.date_guessed ? 'guess' : ''}" type="date" value="${c.date}" ${c.date_guessed ? 'title="Ảnh không ghi ngày — đang tạm điền hôm nay"' : ''}>
+        <select class="field kind"><option value="expense" ${c.kind !== 'income' ? 'selected' : ''}>Chi</option><option value="income" ${c.kind === 'income' ? 'selected' : ''}>Thu</option></select>
         <input class="field desc" value="${esc(c.description)}" placeholder="Mô tả">
-        <select class="field cat">${opts(c.category_id)}</select>
+        <select class="field cat">${opts(c.category_id, c.kind === 'income' ? 'income' : 'expense')}</select>
         <input class="field amt num" value="${nf.format(c.amount)}" style="text-align:right">
         ${c.duplicate ? '<div class="muted dup-note">↑ Đã có khoản cùng số tiền, cùng ngày trong app — bỏ chọn để không nhập trùng</div>' : ''}</div>`).join('')
       : '<div class="empty">Không thấy số tiền nào trong ảnh. Xem chữ đọc được bên dưới rồi nhập tay.</div>';
-    $('#ocrRaw').innerHTML = res.map(r => `<details><summary class="muted" style="cursor:pointer;font-size:13px">Chữ đọc được từ ${esc(r.file)}${r.error ? ' — lỗi: ' + esc(r.error) : ''}</summary><pre>${esc(r.text)}</pre></details>`).join('');
+    $$('#ocrRows .kind').forEach(k => k.onchange = () => { $('.cat', k.parentElement).innerHTML = opts(null, k.value); });
+    $('#ocrRaw').innerHTML = res.map(r => `<details open><summary class="muted" style="cursor:pointer;font-size:13px">Chữ đọc được từ ${esc(r.file)}${r.error ? ' — lỗi: ' + esc(r.error) : ''}</summary><pre>${esc(r.text)}</pre></details>`).join('');
     $('#ocrCard').hidden = false;
     $('#ocrCard').scrollIntoView({behavior: 'smooth', block: 'start'});
   } catch (err) { toast(err.message, true); }
@@ -1188,7 +1208,7 @@ $('#ocrCancel').onclick = () => { $('#ocrCard').hidden = true; };
 $('#ocrSave').onclick = async () => {
   const items = $$('#ocrRows .ocr-row').filter(r => $('.sel', r).checked).map(r => ({
     date: $('.d', r).value, description: $('.desc', r).value, category_id: +$('.cat', r).value,
-    amount: parseAmount($('.amt', r).value), kind: 'expense', source: 'screenshot', pay_account: $('#ocrPay').value}));
+    amount: parseAmount($('.amt', r).value), kind: $('.kind', r).value, source: 'screenshot', pay_account: $('#ocrPay').value}));
   if (!items.length) return toast('Chưa chọn dòng nào', true);
   if (items.some(i => !(i.amount > 0))) return toast('Có dòng số tiền chưa hợp lệ', true);
   await api('/api/transactions', {method: 'POST', body: items});

@@ -135,8 +135,9 @@ def test_bank_app_history_style():
     rows = ["Hôm nay", "Chuyển tiền cho TRAN THI B - 250,000 VND", "09:15 - 02/11/2026",
             "Nhận tiền từ CONG TY X + 15,000,000 VND", "08:00 - 01/11/2026"]
     got = parsers.parse_history(rows)
-    assert [(c["date"], c["amount"], c["description"]) for c in got] == [
-        ("2026-11-02", 250_000, "Chuyển tiền cho TRAN THI B")]
+    assert [(c["date"], c["amount"], c["description"], c["kind"], c["selected"]) for c in got] == [
+        ("2026-11-02", 250_000, "Chuyển tiền cho TRAN THI B", "expense", True),
+        ("2026-11-01", 15_000_000, "Nhận tiền từ CONG TY X", "income", False)]   # money in: offered, not ticked
 
 
 def test_single_receipt_is_not_a_history_screen():
@@ -155,3 +156,55 @@ def test_single_receipt_is_not_a_history_screen():
 ])
 def test_detect_source(rows, want):
     assert parsers.detect_source(rows) == want
+
+
+
+# ---------------------------------------------------------------- failure modes found by the independent audit
+
+def test_phone_number_in_a_history_row_is_not_an_amount():
+    rows = ["Nạp tiền điện thoại", "Viettel - 0901234567", "-50.000đ", "09:00 - 01/11/2026",
+            "Thanh toán Grab -45.000đ", "10:00 - 01/11/2026"]
+    report = {}
+    got = parsers.parse_history(rows, report=report)
+    assert all(c["amount"] < 1_000_000 for c in got)
+    assert 901_234_567 not in [c["amount"] for c in got]
+
+
+def test_history_reports_what_it_could_not_read():
+    rows = ["Thanh toán A -20.000đ", "08:00 - 01/11/2026",
+            "Thanh toán B", "09:00 - 01/11/2026",                 # the amount was not read
+            "Thanh toán C -30.000đ"]                              # cut off by the screen edge
+    report = {}
+    got = parsers.parse_history(rows, report=report)
+    assert [c["amount"] for c in got] == [20_000]
+    assert report["unreadable"] == 1 and report["cut_off"] == 1
+
+
+def test_receipt_date_prefers_the_labelled_one_and_never_the_future():
+    from datetime import date
+    rows = ["Hoá đơn", "Hạn dùng 31/12/2099", "Thời gian: 14:32 02/11/2026", "Tổng tiền: 120.000đ"]
+    assert parsers.receipt_date(rows, today=date(2026, 11, 2)) == "2026-11-02"
+    assert parsers.find_date("Hạn 31/12/2099", today=date(2026, 11, 2)) is None
+    assert parsers.find_date("Ngày 02/11/26", today=date(2026, 11, 2)) == "2026-11-02"
+
+
+def test_receipt_without_a_date_is_flagged_as_guessed():
+    [c] = parsers.parse_ocr_rows(["Cửa hàng ABC", "Tổng tiền: 120.000đ"])
+    assert c["date_guessed"] is True
+    [c] = parsers.parse_ocr_rows(["Cửa hàng ABC", "Thời gian 01/11/2026", "Tổng tiền: 120.000đ"])
+    assert "date_guessed" not in c
+
+
+def test_cash_handed_over_is_not_preselected():
+    got = parsers.parse_ocr_rows(["Hoá đơn bán lẻ", "Cà phê sữa 45.000đ", "Khách đưa 100.000đ", "Tiền thừa 55.000đ"])
+    assert [c["amount"] for c in got if c["selected"]] == [45_000]
+
+
+def test_money_received_receipt_is_income():
+    [c] = parsers.parse_ocr_rows(["Vietcombank", "Nhận tiền thành công", "Số tiền: 500.000 VND", "Thời gian 01/11/2026"])
+    assert c["kind"] == "income"
+
+
+def test_bank_title_beats_momo_mentioned_in_the_description():
+    rows = ["Vietcombank", "Chuyển khoản thành công", "Số tiền: 200.000 VND", "Nội dung: nap tien vi MoMo"]
+    assert parsers.detect_source(rows) == "Vietcombank"

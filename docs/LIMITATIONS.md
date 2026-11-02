@@ -50,7 +50,11 @@ xử lý hiện có, nếu có.
 | Giới hạn | Ảnh hưởng | Cách xử lý |
 | --- | --- | --- |
 | OCR có thể đọc sai ảnh mờ, ảnh chụp màn hình máy tính bằng điện thoại, hoặc chữ nằm đè lên hình nền | Sai số tiền | Màn hình duyệt kết quả bắt buộc xem trước khi lưu; số tiền sửa được |
-| Ngày lấy từ ảnh; ảnh không có ngày thì lấy **ngày hôm nay** | Giao dịch có thể rơi vào sai tháng | Sửa ngày trong màn hình duyệt |
+| Ngày lấy từ ảnh (ưu tiên ngày cạnh nhãn "Thời gian", bỏ ngày trong tương lai); ảnh không có ngày, như trang Đơn mua của Shopee, thì tạm lấy **ngày hôm nay** | Giao dịch có thể rơi vào sai tháng | Ô ngày được **tô vàng** kèm lời nhắc; sửa trong màn hình duyệt |
+| **Không dùng AI:** chữ do Vision của macOS đọc ngay trên máy (không cần mạng), số tiền, ngày, nơi trả lấy bằng quy tắc cố định. App không tự thêm thông tin, nhưng OCR có thể **đọc nhầm** chữ số (ví dụ "2.802.271đ" thành "2.802.2710") | Có thể sai số tiền | Ảnh gốc hiện ngay cạnh kết quả, phần chữ đọc được mở sẵn; không lưu gì khi chưa bấm Lưu |
+| Màn hình lịch sử: giao dịch bị cắt ở mép ảnh, hoặc dòng đọc không ra số tiền, sẽ bị bỏ qua | Thiếu giao dịch | App báo "N giao dịch không đọc được hoặc bị cắt"; chụp tiếp phần còn lại |
+| Ảnh không có dòng "Tổng": app đưa ra mọi số tiền và chọn sẵn số lớn nhất (trừ dòng khách đưa, tiền thừa, giảm giá) | Có thể chọn nhầm | Kiểm tra dòng được chọn trước khi lưu |
+| Tiền vào ("+", "Nhận tiền") được ghi là **Thu**; trên màn hình lịch sử thì để bỏ chọn sẵn | | Đổi Chi/Thu ở từng dòng trong màn hình duyệt |
 | Mỗi ảnh là một lần nhập thủ công | Không phù hợp để nhập hàng trăm giao dịch | Xem phần ngân hàng bên dưới: tính năng nhập sao kê sẽ giải quyết việc này |
 
 ## Ngân hàng
