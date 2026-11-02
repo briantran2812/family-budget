@@ -98,6 +98,15 @@ Chưa có máy macOS 11/12 thật để thử: các dòng trên dựa trên `min
 | Mỗi mức chỉ báo **một lần mỗi tháng**: tăng ngân sách hay xoá bớt khoản chi rồi lại chạm mức thì không báo lại | | Cảnh báo ở Tổng quan luôn theo số liệu hiện tại |
 | **iPhone chưa nhận cảnh báo** | Ghi khoản chi trên iPhone không biết hạng mục đã gần hết ngân sách | Xem Tổng quan trên Mac; tab Tổng hợp của Google Sheet có số chi theo hạng mục |
 
+## Ống heo
+
+| Giới hạn | Ảnh hưởng | Cách xử lý |
+| --- | --- | --- |
+| Tháng được ghi **khi app mở** vào ngày cuối tháng hoặc lần đầu mở sau đó, không phải lúc nửa đêm | Mở app vào ngày cuối tháng thì khoản chi tối hôm đó chưa có trong số đã ghi | Hiện "Số liệu tháng này đã đổi"; bấm **Cập nhật** |
+| Số đã ghi là **ảnh chụp** lúc ghi; khoản thêm muộn (sao kê tháng trước, đơn Gmail về trễ) không tự cộng vào | Ống heo lệch với "Còn lại" của tháng đó | Mở ống heo, bấm **Cập nhật** ở tháng có dòng "đã đổi" |
+| "Còn lại" chỉ là **thu − chi đã ghi trong app**, không phải số dư thật của tài khoản ngân hàng | Quên ghi lương hay khoản chi tiền mặt thì ống heo sai theo | Ghi đủ; đối chiếu sao kê để tìm khoản thiếu |
+| Tháng **chưa có khoản thu nào** thì không ghi (thường là dữ liệu chưa đủ, ví dụ đơn Shopee 6 tháng lấy từ Gmail lúc mới kết nối) | Tháng thật sự không có thu nhập không hiện trong ống heo | Ghi khoản thu của tháng đó; lần mở app sau tháng đó được ghi |
+
 ## Khác
 
 | Giới hạn | Ảnh hưởng |

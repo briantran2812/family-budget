@@ -218,6 +218,7 @@ def mirror_payload(conn: sqlite3.Connection) -> dict:
              t["category"] or "Chưa phân loại", t["pay_account"] or "", SRC_LABEL.get(t["source"], t["source"]),
              "Có" if t["status"] == "ok" else "Không", device, t["id"]] for t in txs]
     summary = []
+    piggy = dict(conn.execute("SELECT month, saved FROM piggy").fetchall())
     for (month,) in conn.execute("SELECT DISTINCT substr(date, 1, 7) FROM transactions WHERE status = 'ok' "
                                  "ORDER BY 1 DESC LIMIT 24").fetchall():
         def total(sql, *args):
@@ -228,6 +229,8 @@ def mirror_payload(conn: sqlite3.Connection) -> dict:
         pct = lambda v: round(v / expense, 4) if expense else ""
         summary += [[device, month, "Tổng", "Thu nhập", income, ""], [device, month, "Tổng", "Tổng chi", expense, pct(expense)],
                     [device, month, "Tổng", "Còn lại", income - expense, ""]]
+        if month in piggy:
+            summary.append([device, month, "Ống heo", "Bỏ ống heo", piggy[month], ""])
         for name, amount in total("SELECT COALESCE(c.name, 'Chưa phân loại'), SUM(t.amount) FROM transactions t "
                                   "LEFT JOIN categories c ON c.id = t.category_id WHERE t.status = 'ok' AND t.kind = 'expense' "
                                   "AND substr(t.date, 1, 7) = ? GROUP BY 1 ORDER BY 2 DESC"):

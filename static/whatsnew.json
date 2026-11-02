@@ -34,6 +34,13 @@
           "focus": "#budgetAlerts"
         },
         {
+          "icon": "🐷",
+          "title": "Ống heo",
+          "text": "Cuối mỗi tháng, phần còn lại (thu nhập − chi) tự bỏ vào ống heo. Xem 3 tháng, 6 tháng gần nhất để dành được bao nhiêu.",
+          "goto": "piggy",
+          "focus": "#piggyPage"
+        },
+        {
           "icon": "📸",
           "title": "Đọc ảnh lịch sử MoMo",
           "text": "Chụp màn hình \"Giao dịch gần đây\" của MoMo: mỗi khoản chi thành một dòng, tự điền \"Trả bằng\", khoản đã có được bỏ chọn sẵn.",

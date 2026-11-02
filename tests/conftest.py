@@ -2,6 +2,7 @@
 import os
 import sys
 import tempfile
+from datetime import date
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent.parent
@@ -11,6 +12,13 @@ os.environ["BUDGET_DATA"] = tempfile.mkdtemp(prefix="thuchi-test-")  # before db
 import pytest  # noqa: E402
 
 import db  # noqa: E402
+
+
+@pytest.fixture(autouse=True)
+def piggy_today(monkeypatch):
+    """The server's "today" for the piggy bank: the last day of October 2026, the same day the E2E browser clock shows."""
+    import piggy
+    monkeypatch.setattr(piggy, "today", lambda: date(2026, 10, 31))
 
 
 @pytest.fixture

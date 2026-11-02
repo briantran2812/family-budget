@@ -68,13 +68,21 @@ CREATE TABLE IF NOT EXISTS settings (
 CREATE TABLE IF NOT EXISTS notifications (
     id          INTEGER PRIMARY KEY,
     created_at  TEXT NOT NULL DEFAULT (datetime('now', 'localtime')),
-    kind        TEXT NOT NULL,                   -- budget | phone | gmail | version | error
+    kind        TEXT NOT NULL,                   -- budget | phone | gmail | version | error | piggy
     icon        TEXT NOT NULL DEFAULT '🔔',
     title       TEXT NOT NULL,
     body        TEXT NOT NULL DEFAULT '',
-    link        TEXT,                            -- JSON: {tab, cat, src, whatsnew}
+    link        TEXT,                            -- JSON: {tab, cat, src, whatsnew, piggy}
     dedupe      TEXT UNIQUE,
     read_at     TEXT
+);
+CREATE TABLE IF NOT EXISTS piggy (                -- 🐷 Ống heo: one snapshot per closed month
+    month       TEXT PRIMARY KEY,                -- YYYY-MM
+    income      INTEGER NOT NULL,
+    expense     INTEGER NOT NULL,
+    saved       INTEGER NOT NULL,                -- income − expense, may be negative
+    recorded_at TEXT NOT NULL DEFAULT (datetime('now', 'localtime')),
+    note        TEXT
 );
 """
 

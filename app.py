@@ -21,6 +21,7 @@ import gmail_sync
 import notifications
 import parsers
 import phone_inbox
+import piggy
 import reconcile
 import rules
 import statements
@@ -89,6 +90,7 @@ def list_notifications():
         if db.get_setting(c, "onboarded") == "1":  # announce each version once; new users get the welcome instead
             notifications.add(c, "version", "✨", f"Phiên bản {VERSION}: xem có gì mới", link={"whatsnew": True},
                               dedupe=f"version:{VERSION}")
+        piggy.record_due(c)  # the bell is read when the app opens, so a month that just closed shows up in it
         return jsonify(notifications.listing(c))
 
 
@@ -333,6 +335,23 @@ def summary():
         alerts=budget_alerts, recent=[dict(r) for r in recent], trend=list(reversed(trend)))
 
 
+# ---------------------------------------------------------------- 🐷 piggy bank
+
+@app.get("/api/piggy")
+def piggy_list():
+    with conn() as c:
+        piggy.record_due(c)
+        return jsonify(piggy.listing(c))
+
+
+@app.post("/api/piggy/<month>/refresh")
+def piggy_refresh(month):
+    with conn() as c:
+        if not piggy.refresh(c, month):
+            abort(404)
+        return jsonify(piggy.listing(c))
+
+
 # ---------------------------------------------------------------- import: Gmail & screenshots
 
 @app.post("/api/gmail/accounts")
@@ -444,7 +463,7 @@ def phone_push():
 # Every change is mirrored to the Sheet a few seconds later, batched so a burst of edits makes one upload.
 PUSH_DELAY = 10
 WRITES = ("/api/transactions", "/api/categories", "/api/rules", "/api/gmail/sync", "/api/gmail/reparse",
-          "/api/statements", "/api/statement-lines", "/api/phone/sync")
+          "/api/statements", "/api/statement-lines", "/api/phone/sync", "/api/piggy")
 _push_timer: threading.Timer | None = None
 _push_lock = threading.Lock()
 
