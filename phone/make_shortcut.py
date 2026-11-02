@@ -49,9 +49,10 @@ def build() -> dict:
     account = action("is.workflow.actions.choosefromlist", "Chosen Item", WFInput=attachment(accounts),
                      WFChooseFromListActionPrompt="Trả bằng?")
     device = action("is.workflow.actions.getdevicedetails", "Device Name", WFDeviceDetail="Device Name")
-    desc_q = action("is.workflow.actions.urlencode", "URL Encoded Text", WFInput=attachment(desc))
-    account_q = action("is.workflow.actions.urlencode", "URL Encoded Text", WFInput=attachment(account))
-    device_q = action("is.workflow.actions.urlencode", "URL Encoded Text", WFInput=attachment(device))
+    # URL Encode takes a text field, so its input must be a WFTextTokenString; an attachment encodes to "" (seen on iOS).
+    desc_q = action("is.workflow.actions.urlencode", "URL Encoded Text", WFEncodeMode="Encode", WFInput=tokens(desc))
+    account_q = action("is.workflow.actions.urlencode", "URL Encoded Text", WFEncodeMode="Encode", WFInput=tokens(account))
+    device_q = action("is.workflow.actions.urlencode", "URL Encoded Text", WFEncodeMode="Encode", WFInput=tokens(device))
     # GET, not POST: Apps Script answers with a 302 and a client that re-sends a POST as GET loses the body.
     send = action("is.workflow.actions.downloadurl", "Contents of URL", WFHTTPMethod="GET",
                   WFURL=tokens(code, "&a=add&so=", amount, "&d=", desc_q, "&t=", account_q, "&n=", device_q))
