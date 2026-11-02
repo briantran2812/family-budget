@@ -84,9 +84,9 @@ Cách mở cho nhanh (chọn một):
 | # | Làm gì | Mong đợi | ✓ |
 | --- | --- | --- | --- |
 | T1 | Chạy Phím tắt: gõ `45000` (câu hỏi sau hiện "45.000 ₫ — chi cho gì?"), "Phở bò", chọn Tiền mặt | Trong vòng 10 giây có thông báo **"✓ Đã ghi 45.000 ₫ · Phở bò"**; sheet có thêm một dòng, cột Người nhập là tên iPhone của bạn | |
-| T2 | Gõ `1500000`, "Học phí tháng 11", Chuyển khoản | Câu hỏi sau hiện **1.500.000 ₫**; thông báo ghi 1.500.000 ₫ | |
+| T2 | Gõ `1500000`, "Học phí tháng 11", hạng mục **🎓 Học phí**, Chuyển khoản | Câu hỏi sau hiện **1.500.000 ₫**; thông báo ghi 1.500.000 ₫ | |
 | T3 | Gõ `45` (thiếu số 0) | Thông báo **"✗ 45 ₫ quá nhỏ — gõ đủ các số 0"**, sheet không thêm dòng | |
-| T4 | Trên Mac bấm **Đồng bộ ngay** | "Đã lấy 2 khoản mới từ iPhone". Tab Giao dịch → lọc **iPhone** thấy hai khoản; Học phí tự vào hạng mục Học phí; "Trả bằng" đúng như đã chọn | |
+| T4 | Trên Mac bấm **↻ Đồng bộ** | "Đã lấy 2 khoản từ iPhone". Tab Giao dịch → lọc **iPhone** thấy hai khoản, đúng hạng mục đã chọn trên iPhone (Phở bò chọn ✨ Tự động thì app tự xếp); "Trả bằng" đúng như đã chọn | |
 | T5 | Bấm **Đồng bộ ngay** lần nữa | "Đã lấy 0 khoản mới · 2 đã có", không có giao dịch trùng | |
 | T6 | Ghi thêm một khoản trên iPhone → tắt app Mac → mở lại | App tự báo "📱 Đã lấy 1 khoản mới từ iPhone", không cần bấm gì | |
 | T7 | Bật **Chế độ máy bay** → chạy Phím tắt | Báo lỗi không kết nối được, **không** báo "Đã ghi" | |

@@ -21,7 +21,7 @@ xử lý hiện có, nếu có.
 | **Ai có mã kết nối đều ghi và đọc được** sheet | Lộ mã thì người lạ đọc được các khoản ghi từ điện thoại và ghi thêm dòng rác | Gửi mã qua AirDrop hoặc Universal Clipboard, không dán lên nhóm chat. Lộ mã thì chạy `doiMa` trong Apps Script rồi dán mã mới vào app Mac và Phím tắt |
 | Phím tắt **cần mạng**. Mất sóng thì Phím tắt báo lỗi và không ghi gì | Mất khoản chi nếu người dùng không để ý thông báo lỗi | Gõ thẳng vào sheet bằng app Google Sheets (app này lưu tạm khi mất sóng); app Mac vẫn lấy về được |
 | Sửa hoặc xoá dòng trong sheet **sau khi** Mac đã lấy về thì app **không** cập nhật theo | Hai bên lệch nhau | Sửa hoặc xoá thẳng trong app Mac. Sửa trong sheet chỉ có tác dụng trước lần đồng bộ |
-| Chỉ ghi được **khoản chi**, chưa ghi khoản thu | | Khoản thu (lương…) vẫn nhập trên Mac |
+| Danh sách hạng mục trên iPhone là **danh sách mặc định** lúc tạo Phím tắt | Hạng mục thêm hoặc đổi tên trong app không tự có trên iPhone; chọn mục không khớp thì app tự phân loại theo từ khoá | Sửa bước Danh sách trong Phím tắt cho khớp tên mới |
 | Tab **Giao dịch** và **Tổng hợp** chỉ là **bản sao để xem**. Sửa trong sheet sẽ bị ghi đè ở lần đẩy sau | | Sửa trong app trên Mac |
 | Hai Mac cùng bật bản sao thì mỗi khoản nhập từ iPhone **xuất hiện hai lần** trong tab Giao dịch (mỗi máy một dòng, khác cột Máy) | Cộng cả tab sẽ ra số gấp đôi | Chỉ bật "Ghi bản sao" trên một Mac làm sổ chính, hoặc lọc theo cột Máy |
 | Thay đổi chỉ được đẩy **khi app đang mở** (khoảng 10 giây sau thay đổi, và mỗi lần mở app) | Tắt app ngay sau khi sửa thì lần đẩy đó bị bỏ, đến lần mở sau mới đẩy | Bấm "Đẩy ngay" trong Cài đặt trước khi tắt nếu cần |

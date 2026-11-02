@@ -14,6 +14,7 @@
   nguồn ở Tổng quan là hai nguồn chi nhiều nhất trong tháng.
 - **Ảnh chụp:** đọc màn hình lịch sử giao dịch (MoMo, app ngân hàng); tự nhận ra nguồn tiền (ví, ngân hàng) và có ô
   "Trả bằng" ở màn hình duyệt; khoản đã có trong app được bỏ chọn sẵn.
+- Trên iPhone chọn **hạng mục** như form nhập tay (✨ Tự động để app tự phân loại); chọn Lương hoặc Thu nhập khác thì ghi thành khoản thu.
 - Mã kết nối nằm trong Keychain. Đổi mã bằng hàm `doiMa`; mã cũ ngừng hoạt động ngay.
 - Code: `phone/Code.gs` (Apps Script), `phone/make_shortcut.py` (tạo và ký file Phím tắt), `phone_inbox.py`.
   Hướng dẫn cài và test: `phone/README.md`.

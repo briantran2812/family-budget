@@ -86,7 +86,7 @@ const tests = {
   },
   setup_creates_header_and_secret() {
     const {sheet, secret} = load();
-    assert.deepEqual(sheet.rows[0], ['Mã', 'Thời gian', 'Số tiền', 'Mô tả', 'Trả bằng', 'Người nhập']);
+    assert.deepEqual(sheet.rows[0], ['Mã', 'Thời gian', 'Số tiền', 'Mô tả', 'Trả bằng', 'Người nhập', 'Hạng mục']);
     assert.match(secret, /^[0-9a-f]{24}$/);
   },
   wrong_secret_is_refused() {
@@ -188,6 +188,18 @@ Object.assign(tests, {
     assert.match(ctx.doGet({parameter: {a: 'add', k: secret, so: '45', d: 'x'}}).body, /quá nhỏ — gõ đủ các số 0/);
     assert.match(ctx.doGet({parameter: {a: 'add', k: secret, so: '70000000000', d: 'x'}}).body, /quá lớn/);
     assert.equal(sheet.rows.length, 6);
+  },
+});
+
+Object.assign(tests, {
+  category_column_round_trips_and_old_sheets_get_the_header() {
+    const {ctx, sheet, secret} = load();
+    sheet.rows[0] = sheet.rows[0].slice(0, 6);  // a sheet set up before the column existed
+    const r = ctx.doGet({parameter: {a: 'add', k: secret, so: '45000', d: 'Phở', t: 'Tiền mặt', c: '🛒 Ăn uống & đi chợ'}});
+    assert.equal(r.body, '✓ Đã ghi 45.000 ₫ · Phở · 🛒 Ăn uống & đi chợ');
+    assert.equal(sheet.rows[0][6], 'Hạng mục');
+    const [row] = JSON.parse(ctx.doGet({parameter: {a: 'list', k: secret}}).body).rows;
+    assert.equal(row.category, '🛒 Ăn uống & đi chợ');
   },
 });
 

@@ -234,3 +234,25 @@ def test_real_http_post_follows_google_redirect():
     finally:
         srv.shutdown()
     assert r == {"ok": True, "rows": 1} and seen["body"] == {"a": "mirror", "d": "Phở"}
+
+
+
+def test_category_picked_on_the_phone_wins_over_keywords(conn, fake_sheet):
+    phone_inbox.connect(conn, CODE)
+    fake_sheet["rows"] = [{**row("e1", 300_000, "Quà sinh nhật bé An"), "category": "🍼 Mẹ & bé"},
+                          {**row("e2", 45_000, "Phở bò"), "category": "✨ Tự động"},
+                          {**row("e3", 25_000, "cà phê"), "category": ""}]
+    phone_inbox.sync(conn)
+    got = dict(conn.execute("SELECT t.order_id, c.name FROM transactions t LEFT JOIN categories c ON c.id = t.category_id"))
+    assert got["e1"] == "Mẹ & bé"
+    assert got["e2"] == "Khác"                # not a category name: falls back to keywords
+    assert got["e3"] == "Ăn uống & đi chợ"
+
+
+
+def test_income_category_records_money_in(conn, fake_sheet):
+    phone_inbox.connect(conn, CODE)
+    fake_sheet["rows"] = [{**row("f1", 2_000_000, "Bán đồ cũ", account="Chuyển khoản"), "category": "💰 Thu nhập khác"}]
+    phone_inbox.sync(conn)
+    t = conn.execute("SELECT t.kind, c.name FROM transactions t JOIN categories c ON c.id = t.category_id").fetchone()
+    assert tuple(t) == ("income", "Thu nhập khác")

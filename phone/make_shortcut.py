@@ -13,7 +13,8 @@ from pathlib import Path
 HERE = Path(__file__).resolve().parent
 OUT = HERE / "dist" / "Ghi chi tiêu.shortcut"
 ACCOUNTS = ["Tiền mặt", "Thẻ Visa", "Chuyển khoản", "Ví MoMo"]  # editable on the phone; matched to card statements
-OBJ = "￼"  # where a variable sits inside a text field
+AUTO = "✨ Tự động"  # as in the app's entry form; not a category name, so the Mac falls back to its keywords
+OBJ = "\ufffc"  # where a variable sits inside a text field
 
 
 def ref(action: dict) -> dict:
@@ -40,6 +41,15 @@ def action(identifier: str, name: str, **params) -> dict:
     return {"id": identifier, "name": name, "params": {"UUID": str(uuid.uuid4()).upper(), **params}}
 
 
+def categories() -> list[str]:
+    """Same choices, same order as the app's entry form; income categories last, so picking one records money in."""
+    sys.path.insert(0, str(HERE.parent))
+    import db
+    spend = [f"{icon} {name}" for name, kind, icon, _ in db.DEFAULT_CATEGORIES if kind == "expense"]
+    earn = [f"{icon} {name}" for name, kind, icon, _ in db.DEFAULT_CATEGORIES if kind == "income"]
+    return [AUTO, *spend, *earn]
+
+
 def build() -> dict:
     code = action("is.workflow.actions.gettext", "Text", WFTextActionText="")
     amount = action("is.workflow.actions.ask", "Provided Input", WFAskActionPrompt="Bao nhiêu tiền? (gõ đủ số, ví dụ 45000)",
@@ -49,20 +59,24 @@ def build() -> dict:
                    WFNumber=tokens(amount))
     desc = action("is.workflow.actions.ask", "Provided Input", WFAskActionPrompt=tokens(shown, " ₫ — chi cho gì?"),
                   WFInputType="Text")
+    cats = action("is.workflow.actions.list", "List", WFItems=categories())
+    cat = action("is.workflow.actions.choosefromlist", "Chosen Item", WFInput=attachment(cats),
+                 WFChooseFromListActionPrompt="Hạng mục?")
     accounts = action("is.workflow.actions.list", "List", WFItems=ACCOUNTS)
     account = action("is.workflow.actions.choosefromlist", "Chosen Item", WFInput=attachment(accounts),
                      WFChooseFromListActionPrompt="Trả bằng?")
     device = action("is.workflow.actions.getdevicedetails", "Device Name", WFDeviceDetail="Device Name")
+    cat_q = action("is.workflow.actions.urlencode", "URL Encoded Text", WFEncodeMode="Encode", WFInput=tokens(cat))
     # URL Encode takes a text field, so its input must be a WFTextTokenString; an attachment encodes to "" (seen on iOS).
     desc_q = action("is.workflow.actions.urlencode", "URL Encoded Text", WFEncodeMode="Encode", WFInput=tokens(desc))
     account_q = action("is.workflow.actions.urlencode", "URL Encoded Text", WFEncodeMode="Encode", WFInput=tokens(account))
     device_q = action("is.workflow.actions.urlencode", "URL Encoded Text", WFEncodeMode="Encode", WFInput=tokens(device))
     # GET, not POST: Apps Script answers with a 302 and a client that re-sends a POST as GET loses the body.
     send = action("is.workflow.actions.downloadurl", "Contents of URL", WFHTTPMethod="GET",
-                  WFURL=tokens(code, "&a=add&so=", amount, "&d=", desc_q, "&t=", account_q, "&n=", device_q))
+                  WFURL=tokens(code, "&a=add&so=", amount, "&d=", desc_q, "&t=", account_q, "&n=", device_q, "&c=", cat_q))
     notify = action("is.workflow.actions.notification", "Notification", WFNotificationActionTitle="Thu Chi Gia Đình",
                     WFNotificationActionBody=tokens(send))
-    steps = [code, amount, shown, desc, accounts, account, device, desc_q, account_q, device_q, send, notify]
+    steps = [code, amount, shown, desc, cats, cat, accounts, account, device, desc_q, account_q, device_q, cat_q, send, notify]
     return {
         "WFWorkflowActions": [{"WFWorkflowActionIdentifier": a["id"], "WFWorkflowActionParameters": a["params"]}
                               for a in steps],

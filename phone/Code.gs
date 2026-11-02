@@ -12,7 +12,7 @@
  */
 
 var SHEET = 'Hộp thư đến';
-var HEADERS = ['Mã', 'Thời gian', 'Số tiền', 'Mô tả', 'Trả bằng', 'Người nhập'];
+var HEADERS = ['Mã', 'Thời gian', 'Số tiền', 'Mô tả', 'Trả bằng', 'Người nhập', 'Hạng mục'];  // add columns at the end only
 var props = PropertiesService.getScriptProperties();
 
 function caiDat() {
@@ -23,7 +23,7 @@ function caiDat() {
   if (sh.getLastRow() === 0) {
     sh.appendRow(HEADERS);
     sh.setFrozenRows(1);
-    sh.getRange('A1:F1').setFontWeight('bold');
+    sh.getRange(1, 1, 1, HEADERS.length).setFontWeight('bold');
     sh.getRange('B:B').setNumberFormat('dd/MM/yyyy HH:mm');
     sh.getRange('C:C').setNumberFormat('#,##0');
     sh.setColumnWidth(1, 90);
@@ -85,11 +85,13 @@ function add_(p) {
       sh.getRange('A:A').setNumberFormat('@');
       props.setProperty('ID_AS_TEXT', '1');
     }
-    sh.appendRow([newId_(), new Date(), amount, desc, String(p.t || '').trim(), String(p.n || '').trim()]);
+    ensureHeaders_(sh);
+    sh.appendRow([newId_(), new Date(), amount, desc, String(p.t || '').trim(), String(p.n || '').trim(),
+                  String(p.c || '').trim()]);
   } finally {
     lock.releaseLock();
   }
-  return text_('✓ Đã ghi ' + vnd_(amount) + (desc ? ' · ' + desc : ''));
+  return text_('✓ Đã ghi ' + vnd_(amount) + (desc ? ' · ' + desc : '') + (p.c ? ' · ' + String(p.c).trim() : ''));
 }
 
 /** Every row as an object. Rows typed straight into the sheet get an id and a time so the Mac can dedup them. */
@@ -112,10 +114,17 @@ function list_() {
     }
     var when = v[1] instanceof Date ? Utilities.formatDate(v[1], tz, "yyyy-MM-dd'T'HH:mm:ss") : parseDate(v[1]);
     rows.push({id: String(v[0]), time: when, amount: parseAmount(v[2]), description: String(v[3]).trim(),
-               account: String(v[4]).trim(), by: String(v[5]).trim(), row: i + 2});
+               account: String(v[4]).trim(), by: String(v[5]).trim(), category: String(v[6]).trim(), row: i + 2});
   }
   if (changed) range.setValues(values);
   return rows;
+}
+
+/** Sheets made before a column was added get its header, so the person reading the sheet knows what it is. */
+function ensureHeaders_(sh) {
+  var head = sh.getRange(1, 1, 1, HEADERS.length);
+  var have = head.getValues()[0];
+  if (HEADERS.some(function (h, i) { return have[i] !== h; })) head.setValues([HEADERS]);
 }
 
 function sheet_() {

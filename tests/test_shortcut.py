@@ -37,8 +37,8 @@ def test_url_carries_every_field():
     send = next(a for a in make_shortcut.build()["WFWorkflowActions"]
                 if a["WFWorkflowActionIdentifier"] == "is.workflow.actions.downloadurl")
     url = send["WFWorkflowActionParameters"]["WFURL"]["Value"]
-    assert url["string"].replace(make_shortcut.OBJ, "{}") == "{}&a=add&so={}&d={}&t={}&n={}"
-    assert len(url["attachmentsByRange"]) == 5
+    assert url["string"].replace(make_shortcut.OBJ, "{}") == "{}&a=add&so={}&d={}&t={}&n={}&c={}"
+    assert len(url["attachmentsByRange"]) == 6
 
 
 
@@ -49,3 +49,12 @@ def test_description_prompt_repeats_the_formatted_amount():
     prompt = ask["WFWorkflowActionParameters"]["WFAskActionPrompt"]["Value"]
     assert prompt["string"] == make_shortcut.OBJ + " ₫ — chi cho gì?"
     assert prompt["attachmentsByRange"]["{0, 1}"]["OutputUUID"] == fmt["WFWorkflowActionParameters"]["UUID"]
+
+
+
+def test_category_list_matches_the_entry_form():
+    import db
+    items = make_shortcut.categories()
+    assert items[0] == "✨ Tự động"
+    assert items[1:] == [f"{icon} {name}" for name, kind, icon, _ in
+                         sorted(db.DEFAULT_CATEGORIES, key=lambda c: c[1] != "expense")]

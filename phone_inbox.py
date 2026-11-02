@@ -107,6 +107,17 @@ def code(conn: sqlite3.Connection) -> str:
     return c
 
 
+def category_of(conn: sqlite3.Connection, chosen: str | None) -> tuple[int, str] | None:
+    """(id, kind) of the category picked on the phone ("🛒 Ăn uống & đi chợ"), matched without emoji, accents or case."""
+    name = rules.normalize(re.sub(r"^[^\wÀ-ỹ]+", "", chosen or ""))
+    if not name:
+        return None
+    for cid, cname, kind in conn.execute("SELECT id, name, kind FROM categories"):
+        if rules.normalize(cname) == name:
+            return cid, kind
+    return None
+
+
 def apply_row(conn: sqlite3.Connection, compiled, row: dict) -> str:
     """One sheet row → transactions. Returns imported | duplicate | invalid."""
     rid = str(row.get("id") or "").strip()
@@ -121,18 +132,20 @@ def apply_row(conn: sqlite3.Connection, compiled, row: dict) -> str:
         return "invalid"
     desc = (row.get("description") or "").strip()[:300]
     account = (row.get("account") or "").strip() or None
-    cid = rules.categorize(conn, desc, "expense", compiled)
+    picked = category_of(conn, row.get("category"))
+    kind = picked[1] if picked else "expense"
+    cid = picked[0] if picked else rules.categorize(conn, desc, "expense", compiled)
     # The same charge may already be in the app from a card statement ("Thêm vào app" in Đối chiếu): enrich it.
     added = conn.execute(
-        "SELECT id FROM transactions WHERE source = 'statement' AND status = 'ok' AND kind = 'expense' AND amount = ? "
+        "SELECT id FROM transactions WHERE source = 'statement' AND status = 'ok' AND kind = ? AND amount = ? "
         "AND abs(julianday(date) - julianday(?)) <= 3 ORDER BY abs(julianday(date) - julianday(?)) LIMIT 1",
-        (int(amount), day, day)).fetchone()
+        (kind, int(amount), day, day)).fetchone()
     if added:
         conn.execute("UPDATE transactions SET source = 'phone', order_id = ?, description = ?, category_id = ? "
                      "WHERE id = ?", (rid, desc, cid, added["id"]))
         return "imported"
     conn.execute("INSERT INTO transactions(date, amount, kind, description, source, category_id, order_id, pay_account) "
-                 "VALUES (?, ?, 'expense', ?, 'phone', ?, ?, ?)", (day, int(amount), desc, cid, rid, account))
+                 "VALUES (?, ?, ?, ?, 'phone', ?, ?, ?)", (day, int(amount), kind, desc, cid, rid, account))
     return "imported"
 
 
