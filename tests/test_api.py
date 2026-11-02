@@ -1,3 +1,4 @@
+import io
 import json
 
 
@@ -106,3 +107,15 @@ def test_schema_migration_from_v1(tmp_path, monkeypatch):
     db.init()
     row = db.connect().execute("SELECT icon, budget FROM categories WHERE name = 'Học phí'").fetchone()
     assert (row["icon"], row["budget"]) == ("🎓", None)
+
+
+def test_screenshot_history_flags_payments_already_in_app(api, monkeypatch):
+    import sys
+    import types
+    from test_parsers import MOMO_HISTORY
+    monkeypatch.setitem(sys.modules, "ocr", types.SimpleNamespace(ocr_rows=lambda path: MOMO_HISTORY))
+    api.post("/api/transactions", json={"date": "2026-11-01", "amount": 86_000, "description": "Highlands"})
+    r = api.post("/api/screenshot", data={"files": (io.BytesIO(b"x"), "momo.png")}).get_json()
+    cands = {c["amount"]: c for c in r[0]["candidates"]}
+    assert cands[86_000]["duplicate"] and not cands[86_000]["selected"]
+    assert cands[80_000]["selected"] and "duplicate" not in cands[80_000]

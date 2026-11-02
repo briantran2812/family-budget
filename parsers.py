@@ -197,8 +197,58 @@ ROW_TOTAL_LABELS = ["thanh tien", "tong so tien", "tong thanh toan", "tong tien"
 DESC_LABELS = ["noi dung", "loi nhan", "dien giai", "loai dich vu", "dich vu", "mo ta", "content", "description"]
 
 
+# Transaction-history screens (MoMo "Giao dịch gần đây", bank apps): "<text> -80.000đ", "<more text>", "14:11 - 01/11".
+HIST_TIME = re.compile(r"^\s*(\d{1,2}):(\d{2})\s*[-–]\s*(\d{1,2})/(\d{1,2})(?:/(\d{4}))?\s*$")
+HIST_MONTH = re.compile(r"^\s*th[aá]ng\s+(\d{1,2})\s*/\s*(\d{4})\s*$", re.I)
+HIST_AMOUNT = re.compile(r"([+\-−–])\s?(\d{1,3}(?:[.,]\d{3})+|\d+)\s?(?:đ|d|₫|vnd)?\s*$", re.I)
+HIST_BALANCE = re.compile(r"s[ốo]\s*d[ưu][^:]*:\s*[\d.,]+\s*\S?", re.I)  # "Số dư Túi: 2.471.829đ" — a balance, not a charge
+HIST_PREFIX = re.compile(r"^thanh\s+to[aá]n\s+(?:cho\s+)?", re.I)
+
+
+def parse_history(rows: list[str], today: date | None = None) -> list[dict] | None:
+    """Expenses on a transaction-history screenshot, or None if `rows` is not one (fewer than two time lines)."""
+    if sum(bool(HIST_TIME.match(r)) for r in rows) < 2:
+        return None
+    today = today or date.today()
+    wallet = "Ví MoMo" if any(re.search(r"t[uú]i th[aầ]n t[aà]i|momo|s[ốo] d[ưu] t[uú]i", normalize(r)) for r in rows) else None
+    year, entries, cur = today.year, [], None
+    for raw in rows:
+        if m := HIST_MONTH.match(raw):
+            year = int(m.group(2))
+            continue
+        if m := HIST_TIME.match(raw):
+            if cur is not None:
+                y = int(m.group(5) or year)
+                try:
+                    d = date(y, int(m.group(4)), int(m.group(3)))
+                except ValueError:
+                    d = None
+                if d and d > today:  # no month header on screen and the date belongs to last year
+                    d = d.replace(year=y - 1)
+                cur["date"] = d.isoformat() if d else None
+                entries.append(cur)
+            cur = None  # anything until the next amount (e.g. "Tổng tiền lời tháng 11") belongs to no entry
+            continue
+        row = HIST_BALANCE.sub("", raw).strip()
+        if m := HIST_AMOUNT.search(row):
+            cur = {"sign": m.group(1), "amount": int(re.sub(r"[.,]", "", m.group(2))), "text": [row[:m.start()].strip()]}
+        elif cur is not None and row:
+            cur["text"].append(row)
+    out = []
+    for e in entries:
+        if e["sign"] == "+" or not e["date"] or e["amount"] < 1000:
+            continue  # money in (interest, refunds) is not an expense; an entry cut off at the edge has no date
+        desc = HIST_PREFIX.sub("", " ".join(t for t in e["text"] if t)).strip()
+        out.append({"date": e["date"], "amount": e["amount"], "description": desc, "selected": True,
+                    **({"pay_account": wallet} if wallet else {})})
+    return out
+
+
 def parse_ocr_rows(rows: list[str]) -> list[dict]:
     """Candidates from one screenshot. Each has a `selected` guess the user confirms in the app."""
+    history = parse_history(rows)
+    if history is not None:
+        return history
     found_date = find_date("\n".join(rows)) or date.today().isoformat()
     candidates = []
 

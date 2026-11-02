@@ -526,6 +526,10 @@ def screenshot():
             cands = parsers.parse_ocr_rows(rows)
             for cand in cands:
                 cand["category_id"] = rules.categorize(c, cand["description"], "expense", compiled)
+                # Overlapping history screenshots show the same payments again: offer them unticked.
+                if c.execute("SELECT 1 FROM transactions WHERE status = 'ok' AND kind = 'expense' AND amount = ? "
+                             "AND abs(julianday(date) - julianday(?)) <= 1", (cand["amount"], cand["date"])).fetchone():
+                    cand["selected"], cand["duplicate"] = False, True
             results.append({"file": f.filename, "candidates": cands, "text": "\n".join(rows)})
     return jsonify(results)
 

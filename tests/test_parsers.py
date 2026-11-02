@@ -94,3 +94,50 @@ def test_ocr_rows_unlabelled_preselects_largest():
 
 def test_email_datetime_keeps_time():
     assert parsers.email_datetime("Fri, 31 Oct 2026 09:15:00 +0700")[11:16] in {"09:15", "10:15"}
+
+
+# ---------------------------------------------------------------- history screens (MoMo "Giao dịch gần đây")
+
+MOMO_HISTORY = [  # OCR rows as macOS Vision returns them for the real screen; names changed
+    "3:01 #", "Q Tìm kiếm giao dịch", "Giao dịch gần đây", "Tháng 11/2026",
+    "Tiền lời Túi Thần Tài ngày +270đ", "01/11/2026 Số dư Túi: 2.471.829đ", "02:55 - 02/11",
+    "Tổng tiền lời tháng 11 558đ >",
+    "Thanh toán cho NGUYEN VAN -80.000đ", "AN (Techcombank) Số dư Túi: 21.515đ", "14:11 - 01/11",
+    "Thanh toán HIGHLANDS -86.000d", "COFFEE Số dư Túi: 2.551.559đ", "13:10 - 01/11",
+    "Tháng 10/2026",
+    "Thanh toán cho PAYOO -165.000đ", "Aeon Mall Tan Phu Celado... Số dư Túi: 2.637.271đ", "17:47 - 31/10",
+    "Tiền lời Túi Thần Tài ngày +306đ", "30/10/2026 Số dư Túi: 2.802.2710", "02:45 - 31/10",
+    "Tổng tiền lời tháng 10 12.590đ >",
+    "Thanh toán cho CONG TY -98.000đ",  # cut off by the tab bar: no time line
+    "MoMo Ưu đãi Giao dịch Tôi",
+]
+
+
+def test_momo_history_screen():
+    got = parsers.parse_ocr_rows(MOMO_HISTORY)
+    assert [(c["date"], c["amount"], c["description"], c["pay_account"]) for c in got] == [
+        ("2026-11-01", 80_000, "NGUYEN VAN AN (Techcombank)", "Ví MoMo"),
+        ("2026-11-01", 86_000, "HIGHLANDS COFFEE", "Ví MoMo"),
+        ("2026-10-31", 165_000, "PAYOO Aeon Mall Tan Phu Celado...", "Ví MoMo"),
+    ]
+    assert all(c["selected"] for c in got)
+
+
+def test_history_without_month_header_rolls_back_a_year():
+    from datetime import date
+    rows = ["Thanh toán Grab -45.000đ", "08:10 - 30/12", "Thanh toán Circle K -25.000đ", "21:40 - 28/12"]
+    got = parsers.parse_history(rows, today=date(2027, 1, 3))
+    assert [c["date"] for c in got] == ["2026-12-30", "2026-12-28"]
+    assert "pay_account" not in got[0]  # nothing says MoMo
+
+
+def test_bank_app_history_style():
+    rows = ["Hôm nay", "Chuyển tiền cho TRAN THI B - 250,000 VND", "09:15 - 02/11/2026",
+            "Nhận tiền từ CONG TY X + 15,000,000 VND", "08:00 - 01/11/2026"]
+    got = parsers.parse_history(rows)
+    assert [(c["date"], c["amount"], c["description"]) for c in got] == [
+        ("2026-11-02", 250_000, "Chuyển tiền cho TRAN THI B")]
+
+
+def test_single_receipt_is_not_a_history_screen():
+    assert parsers.parse_history(["Thanh toán thành công", "-6.500.000đ", "14:32 - 10/10/2026"]) is None
