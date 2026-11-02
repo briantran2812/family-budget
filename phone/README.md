@@ -32,6 +32,7 @@ Làm theo thứ tự **A → D trên máy của bạn trước**. Đạt hết m
    (Web app):
    - Thực thi với tư cách (Execute as): **Tôi** (Me)
    - Người có quyền truy cập (Who has access): **Bất kỳ ai** (Anyone)
+     — đúng chữ **Anyone**, **không** chọn "Anyone with Google account" (chọn nhầm thì app báo Google đòi đăng nhập)
 
    Rồi bấm **Triển khai**. "Bất kỳ ai" là để Phím tắt gọi được mà không cần đăng nhập Google. Mã bí
    mật ở bước 6 là thứ chặn người lạ.
