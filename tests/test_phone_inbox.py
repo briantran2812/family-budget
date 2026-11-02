@@ -249,7 +249,7 @@ def test_category_picked_on_the_phone_wins_over_keywords(conn, fake_sheet):
     phone_inbox.sync(conn)
     got = dict(conn.execute("SELECT t.order_id, c.name FROM transactions t LEFT JOIN categories c ON c.id = t.category_id"))
     assert got["e1"] == "Mẹ & bé"
-    assert got["e2"] == "Khác"                # not a category name: falls back to keywords
+    assert got["e2"] == "Ăn uống & đi chợ"    # not a category name: falls back to keywords ("pho bo")
     assert got["e3"] == "Ăn uống & đi chợ"
 
 
@@ -287,3 +287,11 @@ def test_old_code_gs_is_flagged_until_promoted(api, fake_sheet):
     fake_sheet["version"] = phone_inbox.REQUIRED_SCRIPT_VERSION  # new version deployed in Apps Script
     api.post("/api/phone/sync")
     assert not api.get("/api/info").get_json()["phone_script_outdated"]
+
+
+
+def test_vietnamese_google_error_pages_are_explained():
+    assert "Code.gs trên Google là bản cũ" in phone_inbox._explain_html(
+        "<html><body>Lỗi Không tìm thấy hàm tập lệnh: doPost</body></html>", "https://script.google.com/x")
+    assert "New version" in phone_inbox._explain_html(
+        "<div>Không tìm thấy hàm tập lệnh: doGet</div>", "https://script.google.com/x")

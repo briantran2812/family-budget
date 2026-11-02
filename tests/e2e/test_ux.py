@@ -800,3 +800,28 @@ def test_ux49_screenshot_review_shows_image_and_flags_guesses(onboarded, page, t
     picked.locator(".kind").select_option("income")
     expect(picked.locator(".cat option").first).to_contain_text("Lương")
     expect(page.locator("#ocrRaw details[open]")).to_have_count(1)
+
+
+
+def test_ux50_pick_which_screenshot_rows_to_save(onboarded, page, tmp_path, monkeypatch):
+    import sys
+    import types
+    from test_parsers import BANK_HISTORY
+    monkeypatch.setitem(sys.modules, "ocr", types.SimpleNamespace(ocr_rows=lambda path: BANK_HISTORY))
+    img = tmp_path / "bank.png"
+    from samples import momo_receipt
+    momo_receipt(img, "x", "y", 1000, "09:10 - 12/10/2026", "1")
+    page.locator("nav button[data-tab=import]").click()
+    page.set_input_files("#files", str(img))
+    expect(page.locator("#ocrCount")).to_have_text("Đã chọn 2/5 · Thu 72,2 tr · Chi 0")
+    expect(page.locator("#ocrSave")).to_have_text("Lưu 2 dòng đã chọn")
+    expect(page.locator("#ocrRows .ocr-row.off")).to_have_count(3)                 # unticked rows fade
+    page.locator("#ocrAll").check()
+    expect(page.locator("#ocrCount")).to_have_text("Đã chọn 5/5 · Thu 72,2 tr · Chi 40 tr")
+    page.locator("#ocrAll").uncheck()
+    expect(page.locator("#ocrSave")).to_be_disabled()
+    page.locator("#ocrRows .ocr-row").nth(3).locator(".sel").check()            # just the salary
+    expect(page.locator("#ocrSave")).to_have_text("Lưu 1 dòng đã chọn")
+    page.locator("#ocrPay").fill("Techcombank")
+    page.locator("#ocrSave").click()
+    expect(toast(page)).to_have_text("Đã lưu 1 giao dịch")

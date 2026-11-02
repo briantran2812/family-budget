@@ -67,6 +67,10 @@ lỗi S1 (chỉ chạy trên macOS 26). Bản này gồm cả các tính năng c
 
 ### 📸 Ảnh chụp thông minh hơn
 
+- Đọc được **màn hình lịch sử của app ngân hàng**: tiền vào ghi là Thu và chọn sẵn; rút ATM và tiền lãi không chọn sẵn.
+- Màn hình duyệt: **"Chọn tất cả"**, dòng đếm "Đã chọn n/N · Thu · Chi", nút "Lưu n dòng đã chọn", bấm ảnh để xem to.
+- Thêm từ khoá phân loại món ăn, quán xá, đi lại; khoản thu từ công ty tự vào **Lương**.
+
 - Đọc **màn hình lịch sử giao dịch** của MoMo: mỗi khoản chi thành một dòng; bỏ qua tiền lời, số dư và dòng bị cắt ở
   mép ảnh.
 - **Tự nhận ra nguồn tiền** (Ví MoMo, ZaloPay, ngân hàng) và điền sẵn ô "Trả bằng". Không nhận ra thì nhắc bạn chọn.

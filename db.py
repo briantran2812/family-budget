@@ -121,6 +121,31 @@ DEFAULT_CATEGORIES = [
 ]
 
 
+# Default keywords added after a release. A fresh database gets them with DEFAULT_CATEGORIES; an existing one gets each
+# version's list once (tracked by setting "keywords_version"), so a keyword the user later deletes stays deleted.
+# Bare "pho", "cho", "com", "chao", "lau" and "tien cho" are avoided: unaccented they also mean phố, "cho" (for),
+# ".com", chảo, lau nhà and "chuyển tiền cho mẹ".
+KEYWORD_ADDITIONS = {
+    "1.4.0": {
+        "Lương": ["cong ty", "tnhh", "co phan", "payroll", "luong thang", "tien thuong"],
+        "Ăn uống & đi chợ": ["pho bo", "pho ga", "bun bo", "bun rieu", "bun thit nuong", "banh mi", "banh cuon",
+                             "hu tieu", "com tam", "com ga", "com trua", "an sang", "an trua", "an toi", "an lau", "lau thai",
+                             "tra da", "nuoc mia", "sinh to", "gofood", "be food", "lotteria", "kfc", "jollibee",
+                             "mcdonald", "phuc long", "katinat", "starbucks", "trung nguyen", "cong ca phe"],
+        "Đi lại & xăng xe": ["taxi", "mai linh", "vinasun", "do xang", "petrolimex", "rua xe", "sua xe", "thay nhot"],
+    },
+}
+
+
+def _add_keywords(conn: sqlite3.Connection, additions: dict[str, list[str]]) -> None:
+    from rules import normalize
+    for name, keywords in additions.items():
+        row = conn.execute("SELECT id FROM categories WHERE name = ?", (name,)).fetchone()
+        if row:  # the user may have renamed or deleted the category; then there is nothing to add to
+            conn.executemany("INSERT OR IGNORE INTO rules(keyword, category_id) VALUES (?, ?)",
+                             [(normalize(k), row[0]) for k in keywords])
+
+
 def connect() -> sqlite3.Connection:
     DB_PATH.parent.mkdir(parents=True, exist_ok=True)
     conn = sqlite3.connect(DB_PATH)
@@ -142,14 +167,20 @@ def init() -> None:
                 conn.execute("UPDATE categories SET icon = ? WHERE name = ?", (icon, name))
         if "pay_account" not in {r[1] for r in conn.execute("PRAGMA table_info(transactions)")}:
             conn.execute("ALTER TABLE transactions ADD COLUMN pay_account TEXT")  # added in 1.3.0
-        if conn.execute("SELECT COUNT(*) FROM categories").fetchone()[0]:
-            return
-        for sort, (name, kind, icon, keywords) in enumerate(DEFAULT_CATEGORIES):
-            cid = conn.execute("INSERT INTO categories(name, kind, sort, icon) VALUES (?, ?, ?, ?)",
-                               (name, kind, sort, icon)).lastrowid
-            for kw in keywords:
-                conn.execute("INSERT OR IGNORE INTO rules(keyword, category_id) VALUES (?, ?)",
-                             (normalize(kw), cid))
+        if not conn.execute("SELECT COUNT(*) FROM categories").fetchone()[0]:
+            for sort, (name, kind, icon, keywords) in enumerate(DEFAULT_CATEGORIES):
+                cid = conn.execute("INSERT INTO categories(name, kind, sort, icon) VALUES (?, ?, ?, ?)",
+                                   (name, kind, sort, icon)).lastrowid
+                for kw in keywords:
+                    conn.execute("INSERT OR IGNORE INTO rules(keyword, category_id) VALUES (?, ?)",
+                                 (normalize(kw), cid))
+        done = get_setting(conn, "keywords_version")
+        as_tuple = lambda v: tuple(int(x) for x in v.split("."))
+        for version in sorted(KEYWORD_ADDITIONS, key=as_tuple):
+            if not done or as_tuple(version) > as_tuple(done):
+                _add_keywords(conn, KEYWORD_ADDITIONS[version])
+        if KEYWORD_ADDITIONS:
+            set_setting(conn, "keywords_version", max(KEYWORD_ADDITIONS, key=as_tuple))
 
 
 def get_setting(conn: sqlite3.Connection, key: str, default: str = "") -> str:
