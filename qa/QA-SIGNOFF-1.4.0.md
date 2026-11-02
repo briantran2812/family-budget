@@ -4,19 +4,19 @@
 
 | CPU | RC file | SHA-256 |
 | --- | --- | --- |
-| Apple chip (M1, M2…) | `dist/ThuChiGiaDinh-1.4.0-rc-arm64.dmg` | `2c5c58b95044350a30d15eb793ecdc3a4178b84371451d40a8ba50ccceb4a0d4` |
-| Intel | `dist/ThuChiGiaDinh-1.4.0-rc-x86_64.dmg` | `5d6ad4b17ba932ce95df07ca1d8265c4b3a67fed3c90ab21dcd0f9a4d3607e67` |
+| Apple chip (M1, M2…) | `dist/ThuChiGiaDinh-1.4.0-rc-arm64.dmg` | `0bec4915c07697030c505239992344211c2c518617936fa1c333e1fbf86c558b` |
+| Intel | `dist/ThuChiGiaDinh-1.4.0-rc-x86_64.dmg` | `71f4ee78b99a4f07d1f48ad71d5a1b2cc466b7f092b9616aef881107ab56d0c6` |
 
 ## Automated (filled by release.py — do not edit)
 
 | Suite | Result |
 | --- | --- |
-| Unit + integration + OCR | 202 passed in 3.42s |
-| End-to-end UX (WebKit) | 54 passed in 41.10s |
+| Unit + integration + OCR | 208 passed in 3.50s |
+| End-to-end UX (WebKit) | 55 passed in 40.82s |
 | Bundle compatibility arm64 | arm64: macOS ≥ 11.0 |
 | Bundle compatibility x86_64 | x86_64: macOS ≥ 11.0 |
-| Packaged app smoke test arm64 | 7 passed in 3.88s |
-| Packaged app smoke test x86_64 | 7 passed in 9.09s |
+| Packaged app smoke test arm64 | 7 passed in 4.09s |
+| Packaged app smoke test x86_64 | 7 passed in 9.05s |
 
 Reports: `qa/reports/1.4.0/`
 
