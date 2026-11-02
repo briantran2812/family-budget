@@ -8,6 +8,7 @@ trên máy của từng người.
 - **Ảnh chụp:** biên lai MoMo, trang "Đơn mua", hoá đơn điện nước… được đọc bằng OCR của macOS.
 - **Nhập tay:** học phí, lương, đi chợ. Gõ `1.500.000`, `1,5tr` hay `200k` đều được.
 - **Tổng quan:** % theo hạng mục, so với tháng trước, ngân sách từng hạng mục, xu hướng 12 tháng.
+- **🐷 Ống heo:** cuối mỗi tháng, phần còn lại (thu − chi) được ghi lại để xem 3, 6 tháng để dành được bao nhiêu.
 - **Tự phân loại bằng từ khoá.** Khi bạn đổi hạng mục, app hỏi có muốn ghi nhớ không.
 
 ## Cài cho người dùng (gửi cho người nhà)
@@ -82,6 +83,7 @@ Shopee và TikTok thỉnh thoảng đổi mẫu email. Email nào không lấy �
 | `gmail_sync.py` | Đọc Gmail qua IMAP, hỗ trợ nhiều tài khoản |
 | `ocr.py` | OCR bằng Vision framework của macOS |
 | `alerts.py` | Cảnh báo hạng mục chạm 80% ngân sách tháng, thông báo macOS một lần mỗi mức |
+| `piggy.py` | Ống heo: ghi phần còn lại (thu − chi) của mỗi tháng đã qua |
 | `static/index.html` | Toàn bộ giao diện |
 | `demo_data.py` | Tạo dữ liệu mẫu |
 | `packaging/` | Icon, script build, hướng dẫn cài đặt đi kèm file `.dmg` |

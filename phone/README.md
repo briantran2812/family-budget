@@ -117,7 +117,7 @@ Danh sách → đổi tên.
 Ngoài tab Hộp thư đến, app Mac còn ghi hai tab vào cùng sheet:
 
 - **Giao dịch:** mọi giao dịch trong app, gồm Gmail, ảnh chụp, nhập tay, sao kê và iPhone.
-- **Tổng hợp:** mỗi tháng có Thu nhập, Tổng chi, Còn lại, chi theo hạng mục và theo cách trả. Dùng **Data → Create
+- **Tổng hợp:** mỗi tháng có Thu nhập, Tổng chi, Còn lại, Bỏ ống heo (tháng đã qua), chi theo hạng mục và theo cách trả. Dùng **Data → Create
   a filter** để lọc theo tháng.
 
 App tự đẩy khoảng 10 giây sau mỗi thay đổi và mỗi lần mở app. Muốn tắt hoặc đổi tên máy: **Cài đặt → iPhone (Google

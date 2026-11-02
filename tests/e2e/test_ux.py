@@ -598,7 +598,7 @@ def test_ux42_whats_new_once_per_version_and_on_demand(page):
         db.set_setting(c, "seen_version", "1.3.0")   # someone updating from an older version
     reload(page)
     expect(page.get_by_text("Có gì mới trong 1.4.0")).to_be_visible()
-    expect(page.locator("#wnCur .wn-item")).to_have_count(9)
+    expect(page.locator("#wnCur .wn-item")).to_have_count(10)
     page.get_by_role("button", name="Đã hiểu").click()
     reload(page)
     page.wait_for_timeout(300)
@@ -715,3 +715,59 @@ def test_ux46_theme_choice_overrides_macos_and_survives_reload(onboarded, open_p
     light_mac.locator("nav button[data-tab=settings]").click()
     light_mac.locator("[data-theme-pick=dark]").click()
     assert light_mac.evaluate("getComputedStyle(document.body).backgroundColor") == "rgb(15, 16, 23)"
+
+
+def piggy_months():
+    """Six closed months up to October 2026 (the server's "today" is 2026-10-31, see conftest), one of them negative."""
+    for m, income, expense in [("05", 25_000_000, 20_000_000), ("06", 25_000_000, 27_000_000),
+                               ("07", 25_000_000, 19_000_000), ("08", 25_000_000, 21_000_000),
+                               ("09", 25_000_000, 17_500_000), ("10", 30_000_000, 17_000_000)]:
+        add_tx(f"2026-{m}-01", income, "Lương", kind="income")
+        add_tx(f"2026-{m}-15", expense, "Học phí")
+
+
+def test_ux47_piggy_bank_card_modal_and_bell(onboarded, page):
+    add_tx("2026-10-20", 500_000, "Đi chợ Bách Hoá Xanh")              # no income yet: nothing goes in
+    reload(page)
+    expect(page.locator("#pgEmpty")).to_contain_text("Cuối tháng này app sẽ bỏ phần còn lại")
+    piggy_months()
+    reload(page)
+    expect(page.locator("#pgTotal")).to_have_text("33.000.000 ₫")
+    expect(page.locator("#pgLast3")).to_have_text("24.000.000 ₫")
+    expect(page.locator("#pgLast6")).to_have_text("33.000.000 ₫")
+    expect(page.locator("#pgPace")).to_have_text("Nếu giữ nhịp này, 12 tháng nuôi được ~66 tr")
+    page.locator("#piggyCard").click()
+    rows = page.locator(".modal .pg-row")
+    expect(rows).to_have_count(6)
+    expect(rows.first).to_contain_text("Tháng 10, 2026")
+    expect(rows.first).to_contain_text("+12.500.000 ₫")
+    expect(rows.first).to_contain_text("Thu 30 tr · Chi 17,5 tr")
+    expect(page.locator(".modal .pg-row[data-m='2026-06'] .cat-amt")).to_have_text("−2.000.000 ₫")
+    expect(page.locator(".modal .pg-row[data-m='2026-06'] .cat-amt")).to_have_class("cat-amt num pg-neg")
+    expect(page.locator(".modal .pg-changed")).to_have_count(0)
+    page.keyboard.press("Escape")
+
+    add_tx("2026-10-28", 600_000, "Visa Techcombank")                  # a late card charge for October
+    page.locator("#piggyCard").click()
+    expect(page.locator(".modal .pg-changed")).to_have_text("Số liệu tháng này đã đổi: 12,5 tr → 11,9 tr · Cập nhật")
+    page.locator(".modal .pg-changed").get_by_role("button", name="Cập nhật").click()
+    expect(page.locator(".modal .pg-changed")).to_have_count(0)
+    expect(rows.first).to_contain_text("+11.900.000 ₫")
+    expect(page.locator("#pgTotal")).to_have_text("32.400.000 ₫")
+    page.keyboard.press("Escape")
+
+    page.locator("#bellBtn").click()                                   # each month went in with a bell item
+    item = page.locator("#bellList .bell-item", has_text="Tháng 10/2026: bỏ ống heo 12,5 tr")
+    expect(page.locator("#bellList .bell-item", has_text="Tháng 6/2026 chi vượt thu 2 tr — ống heo vơi đi")).to_have_count(1)
+    item.click()
+    expect(page.locator(".modal h3")).to_have_text("🐷 Ống heo")
+
+
+def test_ux47b_piggy_bank_fits_a_phone(onboarded, open_page):
+    piggy_months()
+    page = open_page(viewport={"width": 390, "height": 844})
+    expect(page.locator("#pgTotal")).to_have_text("33.500.000 ₫")
+    assert page.evaluate("document.documentElement.scrollWidth") <= 390
+    page.locator("#piggyCard").click()
+    expect(page.locator(".modal .pg-row")).to_have_count(6)
+    assert page.evaluate("document.documentElement.scrollWidth") <= 390

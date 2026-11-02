@@ -22,7 +22,12 @@ cho người dùng: `docs/RELEASE-NOTES-1.4.0.md`.
 - **Cảnh báo ngân sách:** hạng mục chi tới 80% ngân sách tháng hiện cảnh báo ở đầu trang Tổng quan (bấm vào mở danh
   sách giao dịch của hạng mục) và nhãn "Đã dùng …%" trong "Chi theo hạng mục". Mac hiện thông báo hệ thống một lần
   khi chạm 80% và một lần khi vượt 100%, mỗi hạng mục mỗi tháng; chỉ cho tháng hiện tại. Code: `alerts.py`.
-- **🔔 Chuông thông báo:** cảnh báo ngân sách, khoản mới từ iPhone, đơn mới từ Gmail, phiên bản mới, lỗi ghi lên Google Sheet; số chưa đọc trên chuông, bấm để mở đúng chỗ. **📜 Nhật ký thay đổi** liệt kê mọi phiên bản.
+- **🐷 Ống heo (yêu cầu của người dùng):** cuối mỗi tháng (từ ngày cuối tháng, hoặc lần mở app đầu tiên sau đó) app
+  ghi phần còn lại (thu nhập − chi) của tháng vào ống heo và báo trên chuông. Thẻ "Ống heo" ở Tổng quan có tổng, 3 và
+  6 tháng gần nhất, và ước tính 12 tháng; bấm vào xem từng tháng. Số đã ghi là ảnh chụp: khoản thêm muộn hiện "Số liệu
+  tháng này đã đổi … Cập nhật". Tháng chưa có khoản thu nào thì chưa ghi. Tab "Tổng hợp" trên Google Sheet có dòng
+  "Bỏ ống heo". Code: `piggy.py`.
+- **🔔 Chuông thông báo:** cảnh báo ngân sách, ống heo, khoản mới từ iPhone, đơn mới từ Gmail, phiên bản mới, lỗi ghi lên Google Sheet; số chưa đọc trên chuông, bấm để mở đúng chỗ. **📜 Nhật ký thay đổi** liệt kê mọi phiên bản.
 - **Giao diện Sáng / Tối / Theo máy** (Cài đặt → Giao diện), không phụ thuộc chế độ của macOS.
 - **Đồng bộ:** nút ↻ Đồng bộ ở trang đầu; tự lấy khoản mới lúc mở app, mỗi 5 phút và khi quay lại cửa sổ app.
 - **Sửa lỗi tìm ra khi thử trên iPhone thật:** mô tả, cách trả và người nhập bị trống (URL Encode); tiền mặt hiện biểu

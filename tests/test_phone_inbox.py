@@ -168,6 +168,10 @@ def test_mirror_payload_rows_and_monthly_summary(conn, fake_sheet):
     assert nov[("Hạng mục", "Ăn uống & đi chợ")] == (131_000, 1.0)
     assert nov[("Cách trả", "Ví MoMo")] == (86_000, round(86_000 / 131_000, 4))
     assert {r[1] for r in p["summary"]} == {"2026-11", "2026-10"}
+    assert not [r for r in p["summary"] if r[2] == "Ống heo"]
+    conn.execute("INSERT INTO piggy(month, income, expense, saved) VALUES ('2026-10', 0, 465000, -465000)")
+    piggy_rows = [r for r in phone_inbox.mirror_payload(conn)["summary"] if r[2] == "Ống heo"]
+    assert piggy_rows == [["MacBook Lan", "2026-10", "Ống heo", "Bỏ ống heo", -465_000, ""]]
 
 
 def test_push_records_time_and_error(conn, fake_sheet):

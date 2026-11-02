@@ -207,6 +207,29 @@ details.recsec { margin-top: 16px; } details.recsec > summary { cursor: pointer;
 .trend .col.cur .b { background: var(--bar); }
 .trend .col:hover .b { background: var(--bar); }
 .trend .l { font-size: 11px; color: var(--muted); margin-top: 6px; }
+/* ---------- piggy bank ---------- */
+.piggy { display: grid; grid-template-columns: 40px minmax(0, 1fr) auto 18px; grid-template-areas: "ico main stats go";
+  gap: 4px 14px; align-items: center; margin-bottom: 16px; cursor: pointer; transition: transform .12s, box-shadow .12s; }
+.piggy:hover { transform: translateY(-1px); box-shadow: 0 8px 24px rgba(20, 24, 40, .1); }
+.piggy > .ico { grid-area: ico; } .piggy > .go { grid-area: go; color: var(--muted); font-size: 18px; }
+.pg-main { grid-area: main; min-width: 0; }
+#welcomeEmpty:not(:empty) + .piggy { display: none; }  /* a new user sees "Bắt đầu thôi!" first */
+.piggy .k, .pg-tile .k { color: var(--text-2); font-size: 13px; }
+.pg-main .v { font-size: 20px; font-weight: 800; letter-spacing: -.01em; }
+.pg-note { font-size: 12.5px; color: var(--muted); }
+.pg-empty { font-size: 14px; color: var(--text-2); }
+.pg-stats { grid-area: stats; display: flex; gap: 14px; }
+.pg-stat { min-width: 128px; padding-left: 14px; border-left: 1px solid var(--border); }
+.pg-stat .v { font-size: 16px; font-weight: 700; }
+.pg-stat small, .pg-tile small { display: block; font-size: 11.5px; color: var(--muted); }
+.pg-pos { color: var(--good); } .pg-neg { color: var(--bad); }
+.pg-tiles { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 10px; margin: 14px 0 6px; }
+.pg-tile { background: var(--surface-2); border-radius: 14px; padding: 12px 14px; min-width: 0; }
+.pg-tile .v { font-size: 18px; font-weight: 800; white-space: nowrap; }
+.pg-row { padding: 12px 0; border-bottom: 1px solid var(--border); }
+.pg-row:last-child { border-bottom: 0; }
+.pg-row .bar i.neg { background: var(--bad); } .pg-row .bar i { background: var(--good); }
+.pg-changed { margin-top: 8px; font-size: 13px; background: var(--warn-soft); border-radius: 10px; padding: 7px 10px; }
 #tip { position: fixed; pointer-events: none; background: var(--text); color: var(--bg); padding: 8px 11px;
   border-radius: 10px; font-size: 12.5px; z-index: 60; display: none; white-space: nowrap; box-shadow: var(--shadow); }
 
@@ -345,6 +368,11 @@ ol.howto li { margin: 5px 0; }
   .big { font-size: 32px; }
   .ring { width: 104px; height: 104px; align-self: flex-end; margin-top: -90px; }
   .minis { grid-template-columns: minmax(0, 1fr); }
+  .piggy { grid-template-columns: 40px minmax(0, 1fr) 18px; grid-template-areas: "ico main go" "stats stats stats"; }
+  .pg-stats { margin-top: 8px; } .pg-stat { flex: 1; min-width: 0; }
+  .pg-stat:first-child { border-left: 0; padding-left: 0; }
+  .pg-tiles { grid-template-columns: repeat(2, minmax(0, 1fr)); } .pg-tile:first-child { grid-column: 1 / -1; }
+  .pg-tile .v { font-size: 16px; }
   #addBtn span { display: none; }
 }
 </style>
@@ -407,6 +435,7 @@ ol.howto li { margin: 5px 0; }
           <div class="card mini link" data-src-link="" title="Xem tất cả giao dịch"><span class="ico">🧾</span><div><div class="k">Số giao dịch</div><div class="v num" id="mCount">0</div></div><span class="go">›</span></div>
         </div>
         <div id="welcomeEmpty"></div>
+        <div class="card piggy" id="piggyCard" title="Xem ống heo từng tháng" hidden></div>
         <div class="cols">
           <div>
             <div class="card">
@@ -701,7 +730,7 @@ $('#todayBtn').onclick = () => setMonth(thisMonth());
 $('#addBtn').onclick = () => txModal();
 
 async function refresh() {
-  await Promise.all([loadSummary(), loadTx(), loadBell(), $('#recon').hidden ? null : loadStatements()]);
+  await Promise.all([loadSummary(), loadTx(), loadBell(), loadPiggy(), $('#recon').hidden ? null : loadStatements()]);
 }
 async function loadInfo() {
   state.info = await api('/api/info');
@@ -836,6 +865,61 @@ function tip(e, html) {
   const t = $('#tip'); t.innerHTML = html; t.style.display = 'block';
   t.style.left = Math.min(e.clientX + 14, innerWidth - t.offsetWidth - 8) + 'px';
   t.style.top = (e.clientY - t.offsetHeight - 12) + 'px';
+}
+
+// ---------------------------------------------------------------- 🐷 piggy bank: what is left at each month end
+const sfmt = n => (n < 0 ? '−' : '') + fmt(Math.abs(n));
+const sshort = n => (n < 0 ? '−' : '') + short(Math.abs(n));
+const pgCls = n => n < 0 ? 'pg-neg' : 'pg-pos';
+const pgSoFar = (r, n) => r.months < n ? `<small>mới có ${r.months} tháng</small>` : '';
+const pgPace = r => r.avg >= 0 ? `Nếu giữ nhịp này, 12 tháng nuôi được ~${short(r.avg * 12)}`
+  : `Cứ đà này, 12 tháng ống heo vơi ~${short(-r.avg * 12)}`;
+async function loadPiggy() {
+  let r;
+  try { r = await api('/api/piggy'); } catch { return; }
+  const card = $('#piggyCard');
+  card.hidden = false;
+  card.innerHTML = `<span class="ico">🐷</span>` + (r.months ? `
+    <div class="pg-main"><div class="k">Ống heo · ${r.months} tháng</div><div class="v num ${pgCls(r.total)}" id="pgTotal">${sfmt(r.total)}</div>
+      <div class="pg-note" id="pgPace">${pgPace(r)}</div></div>
+    <div class="pg-stats">
+      <div class="pg-stat"><div class="k">3 tháng gần nhất</div><div class="v num ${pgCls(r.last3)}" id="pgLast3">${sfmt(r.last3)}</div>${pgSoFar(r, 3)}</div>
+      <div class="pg-stat"><div class="k">6 tháng gần nhất</div><div class="v num ${pgCls(r.last6)}" id="pgLast6">${sfmt(r.last6)}</div>${pgSoFar(r, 6)}</div></div>`
+    : `<div class="pg-main"><div class="k">Ống heo</div>
+      <div class="pg-empty" id="pgEmpty">Cuối tháng này app sẽ bỏ phần còn lại (thu nhập − chi) vào ống heo. Sau 3 hay 6 tháng sẽ thấy ống heo lớn dần.</div></div>`)
+    + '<span class="go">›</span>';
+}
+$('#piggyCard').onclick = () => piggyModal();
+function piggyHtml(r) {
+  if (!r.months) return `<div class="empty">🐷 Ống heo chưa có gì.<br>Cuối tháng này app sẽ bỏ phần còn lại (thu nhập − chi) vào đây.</div>`;
+  const max = Math.max(...r.records.map(x => Math.abs(x.saved)), 1);
+  return `<div class="pg-tiles">
+      <div class="pg-tile"><div class="k">Tổng trong ống heo</div><div class="v num ${pgCls(r.total)}">${sfmt(r.total)}</div><small>sau ${r.months} tháng</small></div>
+      <div class="pg-tile"><div class="k">3 tháng gần nhất</div><div class="v num ${pgCls(r.last3)}">${sfmt(r.last3)}</div>${pgSoFar(r, 3)}</div>
+      <div class="pg-tile"><div class="k">6 tháng gần nhất</div><div class="v num ${pgCls(r.last6)}">${sfmt(r.last6)}</div>${pgSoFar(r, 6)}</div></div>
+    <p class="pg-note" style="margin:0 0 4px">${pgPace(r)}</p>
+    ${r.records.map(x => `<div class="pg-row" data-m="${x.month}">
+      <div class="cat-top"><span class="cat-name">${monthName(x.month)}</span>
+        <span class="cat-amt num ${pgCls(x.saved)}">${x.saved > 0 ? '+' : ''}${sfmt(x.saved)}</span></div>
+      <div class="bar"><i class="${x.saved < 0 ? 'neg' : ''}" style="width:${Math.abs(x.saved) / max * 100}%"></i></div>
+      <div class="cat-meta"><span>Thu ${short(x.income)} · Chi ${short(x.expense)}</span></div>
+      ${x.live_saved !== x.saved ? `<div class="pg-changed">Số liệu tháng này đã đổi: ${sshort(x.saved)} → ${sshort(x.live_saved)} ·
+        <button class="link" data-pg-refresh="${x.month}">Cập nhật</button></div>` : ''}</div>`).join('')}`;
+}
+async function piggyModal() {
+  let r;
+  try { r = await api('/api/piggy'); } catch (e) { return toast(e.message, true); }
+  const m = modal(`<h3>🐷 Ống heo</h3>
+    <p class="lead">Cuối mỗi tháng, phần còn lại (thu nhập − chi) được bỏ vào ống heo.</p>
+    <div id="pgBody"></div><div class="modal-foot"><button class="btn primary" data-close>Đóng</button></div>`, {wide: true});
+  const render = r => {
+    $('#pgBody', m.el).innerHTML = piggyHtml(r);
+    $$('[data-pg-refresh]', m.el).forEach(b => b.onclick = () => busy(b, async () => {
+      render(await api(`/api/piggy/${b.dataset.pgRefresh}/refresh`, {method: 'POST'}));
+      toast('Đã cập nhật ống heo'); loadPiggy();
+    }).catch(e => toast(e.message, true)));
+  };
+  render(r);
 }
 
 // ---------------------------------------------------------------- transactions
@@ -1499,6 +1583,7 @@ $('#bellList').onclick = async e => {
   await api('/api/notifications/read', {method: 'POST', body: {id: n.id}}).catch(() => {});
   loadBell();
   if (link.whatsnew) return whatsNew();
+  if (link.piggy) return piggyModal();
   if (link.cat) return openCat(String(link.cat));
   if (link.src) {
     state.src = link.src; state.cat = ''; $('#fCat').value = ''; state.pay = ''; $('#fPay').value = '';

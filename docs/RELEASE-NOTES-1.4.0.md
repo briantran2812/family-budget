@@ -47,13 +47,23 @@ lỗi S1 (chỉ chạy trên macOS 26). Bản này gồm cả các tính năng c
 
 ### 🔔 Chuông thông báo và nhật ký thay đổi
 
-- Chuông ở trên cùng có số thông báo chưa đọc. Có các loại: cảnh báo ngân sách, khoản mới từ iPhone, đơn mới từ
+- Chuông ở trên cùng có số thông báo chưa đọc. Có các loại: cảnh báo ngân sách, ống heo, khoản mới từ iPhone, đơn mới từ
   Gmail, phiên bản mới, lỗi ghi lên Google Sheet. Bấm vào một thông báo để mở đúng chỗ.
 - **📜 Nhật ký thay đổi** liệt kê mọi phiên bản. Mở từ chân danh sách thông báo hoặc Cài đặt → Về ứng dụng.
 
 ### 🌗 Giao diện Sáng / Tối
 
 - Cài đặt → Giao diện: ☀️ Sáng, 🌙 Tối hoặc 💻 Theo máy. Nền sáng vẫn giữ nguyên khi macOS đang để chế độ Tối.
+
+### 🐷 Ống heo
+
+- Cuối mỗi tháng, phần **còn lại** (thu nhập − chi) được bỏ vào ống heo. App ghi vào ngày cuối tháng hoặc lần đầu mở
+  app sau đó, và báo trên chuông: "🐷 Tháng 10/2026: bỏ ống heo 12,5 tr".
+- Thẻ **Ống heo** ở Tổng quan: tổng đã để dành, **3 tháng** và **6 tháng gần nhất**, và "nếu giữ nhịp này, 12 tháng
+  nuôi được bao nhiêu". Bấm vào để xem từng tháng; tháng chi vượt thu hiện màu đỏ.
+- Thêm khoản của tháng cũ sau khi đã ghi (ví dụ nhập sao kê tháng trước) thì hiện "Số liệu tháng này đã đổi" và nút
+  **Cập nhật**.
+- Tháng chưa ghi khoản thu nào thì chưa bỏ ống heo: nhớ ghi lương.
 
 ### 📸 Ảnh chụp thông minh hơn
 
@@ -100,6 +110,7 @@ lỗi S1 (chỉ chạy trên macOS 26). Bản này gồm cả các tính năng c
 | Hai Mac cùng bật bản sao thì khoản từ iPhone hiện hai lần trong tab Giao dịch | Chỉ bật trên một Mac |
 | Bộ đọc ảnh lịch sử mới thử với MoMo; app ngân hàng chưa thử ảnh thật | Gửi ảnh mẫu để chỉnh |
 | Cảnh báo ngân sách chỉ hiện trên Mac, iPhone chưa nhận được | Xem bản sau (Telegram) |
+| Ống heo chỉ tính khoản đã ghi trong app, không phải số dư tài khoản ngân hàng | Ghi đủ thu nhập và chi tiêu |
 | "Phở", "bún", "cơm", "tiền chợ"… chưa tự vào Ăn uống | Chọn hạng mục trên iPhone, hoặc thêm từ khoá trong Cài đặt |
 
 Danh sách đầy đủ: `docs/LIMITATIONS.md`.
