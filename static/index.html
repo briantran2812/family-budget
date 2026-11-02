@@ -373,6 +373,7 @@ ol.howto li { margin: 5px 0; }
           <div>
             <div class="card">
               <div class="card-head"><h2>Chi theo hạng mục</h2><span class="muted" style="font-size:12px">% trên tổng chi</span></div>
+              <button class="link" id="budgetHint" hidden style="font-size:13px;margin:-6px 0 10px">⚠️ Đặt ngân sách tháng để được cảnh báo khi chi gần hết →</button>
               <div class="cats" id="cats"></div>
             </div>
             <div class="card" id="payCard" hidden>
@@ -658,7 +659,7 @@ async function loadInfo() {
   state.info = await api('/api/info');
   const n = state.info.user_name;
   $('#hello').textContent = n ? `Chào ${n} 👋` : 'Xin chào 👋';
-  $('#sideFoot').innerHTML = `<button class="link" id="wnLink" title="Xem tính năng của bản này">Phiên bản ${esc(state.info.version)} · ✨ Có gì mới</button>`;
+  $('#sideFoot').innerHTML = `<button class="link" id="wnLink" title="Xem tính năng của bản này">Phiên bản ${esc(state.info.version)} · <b style="color:var(--accent)">✨ Có gì mới</b></button>`;
   $('#wnLink').onclick = () => whatsNew();
   $('#aboutVer') && ($('#aboutVer').textContent = state.info.version);
   $('#quitBtn').hidden = state.info.desktop;
@@ -737,6 +738,8 @@ async function loadSummary() {
       <span class="go">›</span></button>`).join('');
   $$('#budgetAlerts .alert').forEach(r => r.onclick = () => openCat(r.dataset.cat));
 
+  // Alerts need a budget; without one the feature is invisible, so point at where to set it.
+  $('#budgetHint').hidden = !s.categories.length || state.cats.some(c => c.budget);
   const max = Math.max(...s.categories.map(c => c.pct), 1);
   $('#cats').innerHTML = s.categories.length ? s.categories.map(c => {
     let budget = '';
@@ -1399,6 +1402,7 @@ $('#catForm').onsubmit = async e => {
 };
 $('#revealBtn').onclick = () => api('/api/reveal-data', {method: 'POST'});
 $('#aboutWn').onclick = () => whatsNew();
+$('#budgetHint').onclick = () => { showTab('settings'); $('#catSettings').scrollIntoView({behavior: 'smooth', block: 'start'}); };
 $('#quitBtn').onclick = async () => {
   if (!await confirmBox('Tắt ứng dụng?', 'Mở lại bằng "Thu Chi Gia Dinh.app".', 'Tắt', true)) return;
   await api('/api/shutdown', {method: 'POST'}).catch(() => {});

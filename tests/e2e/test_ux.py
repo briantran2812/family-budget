@@ -654,3 +654,17 @@ def test_ux43b_budget_alerts_fit_a_phone(onboarded, open_page):
     page = open_page(viewport={"width": 390, "height": 844})
     expect(page.locator("#budgetAlerts .alert")).to_have_count(2)
     assert page.evaluate("document.documentElement.scrollWidth") <= 390
+
+
+
+def test_ux44_budget_hint_when_no_budget_is_set(onboarded, page):
+    add_tx(page.evaluate("todayISO()"), 7_000_000, "Học phí tháng 11")
+    reload(page)
+    page.locator("#budgetHint").click()
+    expect(page.locator("#settings")).to_be_visible()
+    page.locator(".catcard", has_text="Học phí").locator(".bud").fill("8.000.000")
+    page.locator(".catcard", has_text="Học phí").locator(".bud").press("Tab")
+    expect(toast(page)).to_contain_text("Ngân sách 8 tr/tháng")
+    page.locator("nav button[data-tab=overview]").click()
+    expect(page.locator("#budgetHint")).to_be_hidden()
+    expect(page.locator("#budgetAlerts")).to_contain_text("Học phí đã dùng 87% ngân sách tháng")

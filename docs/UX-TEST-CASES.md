@@ -61,6 +61,7 @@ Có hai loại test case:
 | UX-41 | Tỷ lệ thu nhập đã chi | Dưới 10% hiện một chữ số lẻ (0,5%), không làm tròn thành 0% |
 | UX-42 | Có gì mới | Hiện một lần sau khi cập nhật phiên bản; mở lại được từ thanh bên và Cài đặt; nút Xem → mở đúng tab; người dùng mới thấy màn chào thay vì Có gì mới |
 | UX-43 | Cảnh báo ngân sách | Dưới 80% thì không có cảnh báo; từ 80% hiện "đã dùng 85% ngân sách tháng … — còn 300k", vượt thì "đã vượt ngân sách tháng 250k" (nặng nhất lên trước); hạng mục 80–100% có nhãn "Đã dùng …%"; bấm cảnh báo mở danh sách đã lọc theo hạng mục; không tràn ngang ở 390px |
+| UX-44 | Chưa đặt ngân sách | Thẻ hạng mục có lối tắt "Đặt ngân sách…" tới Cài đặt; đặt xong thì lối tắt ẩn và cảnh báo hiện ở Tổng quan |
 
 Bản đóng gói còn được kiểm tra tự động bằng `tests/test_packaged.py`: cửa sổ tải được giao diện,
 Keychain hoạt động, OCR chạy bên trong bundle, và kết nối TLS tới Gmail thành công.
