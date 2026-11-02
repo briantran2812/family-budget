@@ -3,6 +3,18 @@
 Không có bản nào được gửi cho người dùng nếu chưa qua cổng QA. Script `packaging/release.py`
 **chặn** release nếu bất kỳ điều kiện nào dưới đây chưa đạt; không thể bỏ qua bằng tay.
 
+## Nhánh git
+
+| Nhánh | Chứa gì | Cách code đi vào |
+| --- | --- | --- |
+| `main` | Chỉ code của bản **đã phát hành** (QA kết luận GO), mỗi bản có tag `vX.Y.Z` | PR từ `develop` sau khi `release.py final` đạt |
+| `develop` | Code đã xong, đạt test tự động, chờ QA | PR từ nhánh việc |
+| `feat/…`, `fix/…`, `chore/…` | Một việc mỗi nhánh, tách ra từ `develop` | Commit thường |
+
+- Không commit thẳng vào `main` hay `develop`.
+- `release.py rc` và `release.py final` chỉ chạy trên `develop` hoặc `release/…`. Nhờ vậy QA luôn thử code đã được gộp, không phải code của một nhánh lẻ.
+- Tag RC (`vX.Y.Z-rc.N`) gắn trên `develop`; tag phát hành (`vX.Y.Z`) gắn trên `main`.
+
 ## Các giai đoạn
 
 | # | Giai đoạn | Đầu ra | Ai làm |
@@ -12,7 +24,7 @@ Không có bản nào được gửi cho người dùng nếu chưa qua cổng Q
 | 3 | **Code + test tự động** | Code kèm test: unit hoặc integration cho logic, E2E (`tests/e2e`) cho mọi thay đổi giao diện | Dev |
 | 4 | **Kiểm thử tự động** (cổng 1) | `release.py rc`: unit + integration + OCR, E2E UX trên WebKit, build, smoke test bản đóng gói. **Fail một test là dừng** | Script |
 | 5 | **QA thủ công** (cổng 2) | Chạy các ca M-xx trong `docs/UX-TEST-CASES.md` **trên đúng file RC**; ghi kết quả vào `qa/QA-SIGNOFF-<ver>.md`; kết luận GO hoặc NO-GO | QA (người không viết code) |
-| 6 | **Phát hành** | `release.py final`: kiểm tra biên bản rồi đưa file vào `release/`. Gửi file đó cho người dùng | Người duyệt |
+| 6 | **Phát hành** | `release.py final`: kiểm tra biên bản rồi đưa file vào `release/`. Mở PR `develop` → `main`, merge, gắn tag `vX.Y.Z` trên `main`. Gửi file trong `release/` cho người dùng | Người duyệt |
 | 7 | **Bảo trì** | Ghi nhận phản hồi và email không đọc được; lỗi S1/S2 xử lý theo luồng hotfix | Dev |
 
 ## Cổng QA: `release.py final` chỉ chạy khi đủ cả 5 điều kiện

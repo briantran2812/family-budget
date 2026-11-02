@@ -198,5 +198,17 @@ def final() -> None:
     print(f"\n✓ Released {final_dmg.relative_to(ROOT)} (approved by {approver.group(1).strip()})")
 
 
+def require_release_branch() -> None:
+    branch = subprocess.run(["git", "rev-parse", "--abbrev-ref", "HEAD"], cwd=ROOT, capture_output=True, text=True).stdout.strip()
+    if branch != "develop" and not branch.startswith("release/"):
+        fail(f"release builds come from `develop` or `release/…`, not `{branch}` — merge the work first "
+             "(docs/RELEASE-PROCESS.md, Nhánh git)")
+    if subprocess.run(["git", "status", "--porcelain", "--untracked-files=no"], cwd=ROOT,
+                      capture_output=True, text=True).stdout.strip():
+        fail("uncommitted changes — QA must test a build that matches a commit")
+
+
 if __name__ == "__main__":
+    if len(sys.argv) > 1 and sys.argv[1] in ("rc", "final"):
+        require_release_branch()
     {"rc": rc, "final": final}.get(sys.argv[1] if len(sys.argv) > 1 else "", lambda: sys.exit(__doc__))()
