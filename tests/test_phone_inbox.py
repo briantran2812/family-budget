@@ -287,3 +287,11 @@ def test_old_code_gs_is_flagged_until_promoted(api, fake_sheet):
     fake_sheet["version"] = phone_inbox.REQUIRED_SCRIPT_VERSION  # new version deployed in Apps Script
     api.post("/api/phone/sync")
     assert not api.get("/api/info").get_json()["phone_script_outdated"]
+
+
+
+def test_vietnamese_google_error_pages_are_explained():
+    assert "Code.gs trên Google là bản cũ" in phone_inbox._explain_html(
+        "<html><body>Lỗi Không tìm thấy hàm tập lệnh: doPost</body></html>", "https://script.google.com/x")
+    assert "New version" in phone_inbox._explain_html(
+        "<div>Không tìm thấy hàm tập lệnh: doGet</div>", "https://script.google.com/x")

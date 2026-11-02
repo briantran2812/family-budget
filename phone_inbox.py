@@ -64,10 +64,10 @@ def _explain_html(body: str, final_url: str) -> str:
     if "accounts.google.com" in final_url or "ServiceLogin" in body:
         return ("Google đòi đăng nhập: bản Deploy chưa mở cho mọi người. Deploy → Manage deployments → ✏️ → "
                 "Who has access: Anyone → Deploy.")
-    if "Script function not found: doPost" in body:
+    if "Script function not found: doPost" in body or "tìm thấy hàm tập lệnh: doPost" in body:  # English / Vietnamese UI
         return ("Code.gs trên Google là bản cũ, chưa nhận được bản sao từ Mac. Dán Code.gs mới, ⌘S, rồi "
                 "Deploy → Manage deployments → ✏️ → Version: New version → Deploy.")
-    if "Script function not found: doGet" in body:
+    if "Script function not found: doGet" in body or "tìm thấy hàm tập lệnh: doGet" in body:
         return ("Bản Deploy không có code (đã Deploy trước khi dán Code.gs, hoặc chưa lưu). Dán Code.gs, ⌘S, rồi "
                 "Deploy → Manage deployments → ✏️ → Version: New version → Deploy.")
     text = re.sub(r"\s+", " ", re.sub(r"<[^>]+>", " ", re.sub(r"(?s)<(script|style).*?</\1>", " ", body))).strip()
