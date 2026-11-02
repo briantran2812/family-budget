@@ -1,6 +1,9 @@
 # Changelog
 
-## Chưa phát hành — nhập từ iPhone
+## 1.4.0 — nhập từ iPhone (beta dùng thử, chưa qua cổng QA)
+
+Gồm cả các tính năng của 1.3.0, bản chưa từng phát hành vì lỗi S1 (bản đóng gói chỉ chạy trên macOS 26). Release note
+cho người dùng: `docs/RELEASE-NOTES-1.4.0.md`.
 
 - **Ghi khoản chi trên iPhone, không cần mở Mac:** Phím tắt "Ghi chi tiêu" hỏi số tiền, nội dung và cách trả, rồi
   gửi tới Apps Script trong tài khoản Google của người dùng. Script ghi một dòng vào sheet "Hộp thư đến". App trên Mac
@@ -16,6 +19,11 @@
   "Trả bằng" ở màn hình duyệt; khoản đã có trong app được bỏ chọn sẵn.
 - Trên iPhone chọn **hạng mục** như form nhập tay (✨ Tự động để app tự phân loại); chọn Lương hoặc Thu nhập khác thì ghi thành khoản thu.
 - Mã kết nối nằm trong Keychain. Đổi mã bằng hàm `doiMa`; mã cũ ngừng hoạt động ngay.
+- **Đồng bộ:** nút ↻ Đồng bộ ở trang đầu; tự lấy khoản mới lúc mở app, mỗi 5 phút và khi quay lại cửa sổ app.
+- **Sửa lỗi tìm ra khi thử trên iPhone thật:** mô tả, cách trả và người nhập bị trống (URL Encode); tiền mặt hiện biểu
+  tượng thẻ; ảnh lịch sử MoMo bị đọc thành số dư; quy ước "tính theo nghìn" gây nhầm (7000 thành 7.000 ₫); tỷ lệ thu
+  nhập đã chi 0,5% hiện thành 0%; dán nhầm địa chỉ trang soạn code hoặc chọn "Anyone with Google account" nay có thông
+  báo nói rõ cách sửa.
 - Code: `phone/Code.gs` (Apps Script), `phone/make_shortcut.py` (tạo và ký file Phím tắt), `phone_inbox.py`.
   Hướng dẫn cài và test: `phone/README.md`.
 

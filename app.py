@@ -23,7 +23,7 @@ import reconcile
 import rules
 import statements
 
-VERSION = "1.3.0"
+VERSION = "1.4.0"
 RESOURCES = Path(getattr(sys, "_MEIPASS", Path(__file__).parent))  # PyInstaller unpacks data files here
 app = Flask(__name__, static_folder=str(RESOURCES / "static"))
 app.config["DESKTOP"] = False
