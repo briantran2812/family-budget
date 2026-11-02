@@ -18,6 +18,7 @@ def add_tx(date, amount, desc, kind="expense", source="manual", status="ok"):
 
 
 def reload(page):
+    page.wait_for_load_state("networkidle")  # reloading mid-request aborts it: "TypeError: Load failed" (flaky UX-01b)
     page.reload()
     page.wait_for_selector("#monthLabel:not(:empty)")
 
@@ -588,3 +589,31 @@ def test_ux41_small_share_of_income_is_not_shown_as_zero(onboarded, page):
     add_tx(d, 237_590, "Đổ xăng")
     reload(page)
     expect(page.locator("#ring")).to_contain_text("0,5%")
+
+
+
+def test_ux42_whats_new_once_per_version_and_on_demand(page):
+    with db.connect() as c:
+        db.set_setting(c, "onboarded", "1")
+        db.set_setting(c, "seen_version", "1.3.0")   # someone updating from an older version
+    reload(page)
+    expect(page.get_by_text("Có gì mới trong 1.4.0")).to_be_visible()
+    expect(page.locator("#wnCur .wn-item")).to_have_count(6)
+    page.get_by_role("button", name="Đã hiểu").click()
+    reload(page)
+    page.wait_for_timeout(300)
+    expect(page.locator(".modal")).to_have_count(0)       # shown once per version
+    page.locator("#wnLink").click()                       # …and on demand from the sidebar
+    page.locator(".wn-item", has_text="Đối chiếu sao kê").get_by_role("button", name="Xem →").click()
+    expect(page.locator("#recon")).to_be_visible()
+    page.locator("nav button[data-tab=settings]").click()
+    page.locator("#aboutWn").click()
+    expect(page.get_by_text("Có gì mới trong 1.4.0")).to_be_visible()
+
+
+def test_ux42b_new_user_gets_welcome_not_whats_new(page):
+    expect(page.get_by_text("Chào mừng đến với Thu Chi Gia Đình")).to_be_visible()
+    page.get_by_role("button", name="Bỏ qua").click()
+    reload(page)
+    page.wait_for_timeout(300)
+    expect(page.locator(".modal")).to_have_count(0)

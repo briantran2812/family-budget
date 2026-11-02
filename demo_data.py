@@ -46,6 +46,8 @@ def main() -> None:
     db.init()
     conn = db.connect()
     db.set_setting(conn, "onboarded", "1")
+    from app import VERSION
+    db.set_setting(conn, "seen_version", VERSION)
     db.set_setting(conn, "user_name", "Lan")
     budgets = {"Mỹ phẩm & làm đẹp": 1_500_000, "Ăn uống & đi chợ": 7_000_000, "Mẹ & bé": 2_500_000}
     for name, b in budgets.items():

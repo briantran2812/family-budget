@@ -8,7 +8,7 @@ from werkzeug.serving import make_server
 
 import db
 import gmail_sync
-from app import app
+from app import VERSION, app
 
 
 @pytest.fixture(scope="session")
@@ -31,6 +31,7 @@ def browser():
 def onboarded(fresh_db):
     with db.connect() as c:
         db.set_setting(c, "onboarded", "1")
+        db.set_setting(c, "seen_version", VERSION)  # "Có gì mới" has its own test (UX-42)
         db.set_setting(c, "user_name", "Lan")
 
 

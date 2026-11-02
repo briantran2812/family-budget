@@ -51,6 +51,16 @@ nav button svg { width: 20px; height: 20px; flex: none; }
 nav button:hover { background: var(--surface-2); color: var(--text); }
 nav button.on { background: var(--accent-soft); color: var(--accent); font-weight: 650; }
 .side-foot { margin-top: auto; padding: 0 10px; color: var(--muted); font-size: 12px; }
+.side-foot button { color: var(--muted); font-size: 12px; padding: 0; }
+.side-foot button:hover { color: var(--accent); }
+.wn-list { display: grid; gap: 10px; margin-top: 14px; }
+.wn-item { display: grid; grid-template-columns: 40px minmax(0, 1fr) auto; gap: 12px; align-items: center; padding: 12px;
+  border-radius: 14px; background: var(--surface-2); }
+.wn-item .ico { font-size: 22px; text-align: center; }
+.wn-item b { display: block; font-size: 14px; }
+.wn-item span { color: var(--text-2); font-size: 13px; }
+.wn-notes { margin: 14px 0 0; padding-left: 18px; color: var(--text-2); font-size: 13px; }
+.focus-ring { outline: 3px solid var(--accent); outline-offset: 4px; border-radius: 16px; transition: outline-color .6s; }
 .content { flex: 1; min-width: 0; }
 .topbar { display: flex; align-items: center; gap: 16px; padding: 22px 32px 6px; flex-wrap: wrap; }
 .hello { font-size: 22px; font-weight: 700; letter-spacing: -.01em; }
@@ -501,6 +511,10 @@ ol.howto li { margin: 5px 0; }
           </form>
         </div>
         <div class="card">
+          <div class="card-head"><h2>Về ứng dụng</h2><button class="btn sm" type="button" id="aboutWn">✨ Có gì mới</button></div>
+          <p class="hint" style="margin:0">Thu Chi Gia Đình phiên bản <b id="aboutVer"></b> — xem tính năng hiện có và cách dùng.</p>
+        </div>
+        <div class="card">
           <h2>Dữ liệu</h2>
           <p class="hint">Mọi thứ nằm trong một file trên máy này: <code id="dataDir"></code></p>
           <div class="row-form">
@@ -636,7 +650,9 @@ async function loadInfo() {
   state.info = await api('/api/info');
   const n = state.info.user_name;
   $('#hello').textContent = n ? `Chào ${n} 👋` : 'Xin chào 👋';
-  $('#sideFoot').textContent = 'Phiên bản ' + state.info.version;
+  $('#sideFoot').innerHTML = `<button class="link" id="wnLink" title="Xem tính năng của bản này">Phiên bản ${esc(state.info.version)} · ✨ Có gì mới</button>`;
+  $('#wnLink').onclick = () => whatsNew();
+  $('#aboutVer') && ($('#aboutVer').textContent = state.info.version);
   $('#quitBtn').hidden = state.info.desktop;
   $('#revealBtn').hidden = !state.info.desktop;
   renderSyncBtn();
@@ -1362,11 +1378,37 @@ $('#catForm').onsubmit = async e => {
   e.target.reset(); await loadCats(); renderSettings();
 };
 $('#revealBtn').onclick = () => api('/api/reveal-data', {method: 'POST'});
+$('#aboutWn').onclick = () => whatsNew();
 $('#quitBtn').onclick = async () => {
   if (!await confirmBox('Tắt ứng dụng?', 'Mở lại bằng "Thu Chi Gia Dinh.app".', 'Tắt', true)) return;
   await api('/api/shutdown', {method: 'POST'}).catch(() => {});
   document.body.innerHTML = '<p style="padding:60px;text-align:center;font-size:18px">Đã tắt. Hẹn gặp lại 👋</p>';
 };
+
+// ---------------------------------------------------------------- what's new (static/whatsnew.json)
+async function whatsNew() {
+  let wn;
+  try { wn = await (await fetch('/static/whatsnew.json')).json(); } catch { return toast('Không mở được danh sách tính năng', true); }
+  const [cur, ...older] = wn.versions;
+  const items = list => `<div class="wn-list">${list.map((it, i) => `
+    <div class="wn-item"><span class="ico">${it.icon}</span><div><b>${esc(it.title)}</b><span>${esc(it.text)}</span></div>
+      ${it.goto ? `<button class="btn sm" data-wn="${i}">Xem →</button>` : ''}</div>`).join('')}</div>`;
+  const m = modal(`<h3>✨ Có gì mới trong ${esc(cur.version)}: ${esc(cur.title)}</h3>
+    <p class="lead">${esc(wn.current_note || '')}</p>
+    <div id="wnCur">${items(cur.items)}</div>
+    ${cur.notes?.length ? `<ul class="wn-notes">${cur.notes.map(n => `<li>${esc(n)}</li>`).join('')}</ul>` : ''}
+    ${older.map(v => `<details style="margin-top:16px"><summary class="muted" style="cursor:pointer;font-size:13px">${esc(v.title)} (từ ${esc(v.version)})</summary>
+      <div class="wn-old">${items(v.items)}</div></details>`).join('')}
+    <div class="modal-foot"><button class="btn primary" data-close>Đã hiểu</button></div>`,
+    {wide: true, onClose: () => api('/api/profile', {method: 'POST', body: {seen_version: state.info.version}}).catch(() => {})});
+  const wire = (box, list) => $$('[data-wn]', box).forEach(b => b.onclick = () => {
+    const it = list[+b.dataset.wn]; m.close(); showTab(it.goto);
+    const el = it.focus && $(it.focus);
+    if (el && !el.hidden) { el.scrollIntoView({behavior: 'smooth', block: 'center'}); el.classList.add('focus-ring'); setTimeout(() => el.classList.remove('focus-ring'), 2200); }
+  });
+  wire($('#wnCur', m.el), cur.items);
+  $$('.wn-old', m.el).forEach((box, i) => wire(box, older[i].items));
+}
 
 // ---------------------------------------------------------------- first run
 function welcome() {
@@ -1377,7 +1419,7 @@ function welcome() {
     <div class="modal-foot"><button class="btn" id="wSkip">Bỏ qua</button><button class="btn primary" id="wNext">Bắt đầu →</button></div>`,
     {wide: true});
   const finish = async (gmail) => {
-    await api('/api/profile', {method: 'POST', body: {user_name: $('#wName', m.el).value, onboarded: 1}});
+    await api('/api/profile', {method: 'POST', body: {user_name: $('#wName', m.el).value, onboarded: 1, seen_version: state.info.version}});
     m.close(); await loadInfo();
     if (gmail) gmailWizard();
   };
@@ -1395,6 +1437,7 @@ function welcome() {
   showTab(tab);
   setMonth(state.month);
   if (!state.info.onboarded) welcome();
+  else if (state.info.seen_version !== state.info.version) whatsNew();
   syncAll(true).catch(() => {});  // the point of the phone inbox: no button to remember
   // While the window stays open, pick up new phone entries every few minutes and when it comes back to the front.
   setInterval(() => document.hidden || syncAll(true, {gmail: false}).catch(() => {}), 5 * 60 * 1000);

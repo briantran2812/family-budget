@@ -57,6 +57,9 @@ Có hai loại test case:
 | UX-37 | Cách trả | Biểu tượng theo cách trả (💵 tiền mặt, 💳 thẻ, 🏦 chuyển khoản, 👛 ví); lọc được theo cách trả và theo "Chưa ghi cách trả" |
 | UX-38 | Tổng quan: cách trả và nguồn | Thẻ "Chi theo cách trả" có số tiền và % từng cách trả, bấm vào mở danh sách đã lọc; hai ô nguồn là hai nguồn chi nhiều nhất trong tháng |
 | UX-39 | Bản sao lên Google Sheet | Đẩy ngay báo số giao dịch đã đẩy, ghi giờ đẩy; tắt thì nút Đẩy ngay bị khoá |
+| UX-40 | Nút ↻ Đồng bộ ở trang đầu | Ẩn khi chưa kết nối gì; bấm thì báo có gì mới hoặc "không có gì mới" |
+| UX-41 | Tỷ lệ thu nhập đã chi | Dưới 10% hiện một chữ số lẻ (0,5%), không làm tròn thành 0% |
+| UX-42 | Có gì mới | Hiện một lần sau khi cập nhật phiên bản; mở lại được từ thanh bên và Cài đặt; nút Xem → mở đúng tab; người dùng mới thấy màn chào thay vì Có gì mới |
 
 Bản đóng gói còn được kiểm tra tự động bằng `tests/test_packaged.py`: cửa sổ tải được giao diện,
 Keychain hoạt động, OCR chạy bên trong bundle, và kết nối TLS tới Gmail thành công.

@@ -67,6 +67,7 @@ def info():
         return jsonify(version=VERSION, desktop=app.config["DESKTOP"], data_dir=str(db.DB_PATH.parent),
                        user_name=db.get_setting(c, "user_name"),
                        onboarded=db.get_setting(c, "onboarded") == "1",
+                       seen_version=db.get_setting(c, "seen_version"),
                        gmail_accounts=gmail_sync.accounts(c),
                        gmail_query=db.get_setting(c, "gmail_query", gmail_sync.DEFAULT_QUERY),
                        gmail_last_sync=db.get_setting(c, "gmail_last_sync"),
@@ -83,7 +84,7 @@ def info():
 def profile():
     data = request.get_json()
     with conn() as c:
-        for key in ("user_name", "onboarded", "gmail_query", "phone_push", "device_name"):
+        for key in ("user_name", "onboarded", "gmail_query", "phone_push", "device_name", "seen_version"):
             if key in data:
                 db.set_setting(c, key, str(data[key]).strip())
     return jsonify(ok=True)
