@@ -67,6 +67,7 @@ Có hai loại test case:
 | UX-47 | Ống heo | Là mục riêng trong menu, không nằm ở Tổng quan; chưa có tháng nào thì giải thích "Cuối tháng này app sẽ bỏ phần còn lại vào đây"; có 6 tháng (một tháng âm) thì đúng tổng, 3 và 6 tháng gần nhất, ước tính 12 tháng, tháng âm màu đỏ; thêm khoản muộn thì hiện "đã đổi … Cập nhật"; mỗi tháng có một thông báo trên chuông, bấm mở mục Ống heo; không tràn ngang ở 390px |
 | UX-48 | Thanh trên cùng ở cửa sổ vừa | Tháng, chuông, Đồng bộ, Thêm khoản luôn nằm trên một dòng (lời chào co lại trước) |
 | UX-49 | Duyệt ảnh minh bạch | Ảnh gốc hiện cạnh kết quả; ảnh không có ngày thì ô ngày tô vàng kèm lời nhắc; không chọn sẵn dòng "Khách đưa"; đổi Chi/Thu thì danh sách hạng mục đổi theo; chữ đọc được mở sẵn |
+| UX-50 | Chọn dòng cần lưu | "Chọn tất cả", dòng đếm "Đã chọn n/N · Thu · Chi", dòng không chọn mờ đi, nút ghi "Lưu n dòng đã chọn" và bị khoá khi chưa chọn dòng nào |
 
 Bản đóng gói còn được kiểm tra tự động bằng `tests/test_packaged.py`: cửa sổ tải được giao diện,
 Keychain hoạt động, OCR chạy bên trong bundle, và kết nối TLS tới Gmail thành công.

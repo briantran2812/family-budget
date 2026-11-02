@@ -284,6 +284,12 @@ details.recsec { margin-top: 16px; } details.recsec > summary { cursor: pointer;
 .ocr-thumbs { display: flex; gap: 10px; flex-wrap: wrap; margin-bottom: 12px; }
 .ocr-thumbs img { height: 220px; max-width: 100%; border-radius: 12px; border: 1px solid var(--border); object-fit: contain; background: var(--surface-2); }
 .ocr-note { font-size: 13px; padding: 8px 12px; border-radius: 10px; background: var(--warn-soft); margin-bottom: 10px; }
+.ocr-row.off { opacity: .5; }
+.ocr-bar { display: flex; align-items: center; gap: 14px; flex-wrap: wrap; padding: 10px 12px; margin-bottom: 6px;
+  border-radius: 12px; background: var(--surface-2); font-size: 14px; }
+.ocr-bar label { display: flex; align-items: center; gap: 8px; font-weight: 600; cursor: pointer; }
+.ocr-bar input, .ocr-row input.sel { width: 20px; height: 20px; accent-color: var(--accent); cursor: pointer; }
+.ocr-thumbs img { cursor: zoom-in; }
 .ocr-row input[type=checkbox] { width: 18px; height: 18px; accent-color: var(--accent); }
 details.mail { border-bottom: 1px solid var(--border); padding: 10px 0; }
 details.mail summary { cursor: pointer; font-size: 14px; display: flex; gap: 10px; align-items: center; }
@@ -532,6 +538,7 @@ ol.howto li { margin: 5px 0; }
           </div>
           <div class="ocr-thumbs" id="ocrThumbs"></div>
           <div id="ocrNotes"></div>
+          <div class="ocr-bar" id="ocrBar"><label><input type="checkbox" id="ocrAll"> Chọn tất cả</label><span class="muted" id="ocrCount"></span></div>
           <div id="ocrRows"></div>
           <div id="ocrRaw" style="margin-top:10px"></div>
           <div class="modal-foot"><button class="btn" id="ocrCancel">Bỏ</button><button class="btn primary" id="ocrSave">Lưu các dòng đã chọn</button></div>
@@ -1182,7 +1189,12 @@ async function uploadShots(files) {
       .map(c => `<option value="${c.id}" ${c.id === sel ? 'selected' : ''}>${c.icon} ${esc(c.name)}</option>`).join('');
     // Put the screenshot next to what was read from it, so every value can be checked against the image.
     $('#ocrThumbs').innerHTML = '';
-    [...files].forEach(f => { const img = document.createElement('img'); img.src = URL.createObjectURL(f); img.alt = f.name; $('#ocrThumbs').append(img); });
+    [...files].forEach(f => {
+      const img = document.createElement('img'); img.src = URL.createObjectURL(f); img.alt = f.name; img.title = 'Bấm để xem ảnh to';
+      img.onclick = () => modal(`<img src="${img.src}" alt="" style="max-width:100%;max-height:80vh;display:block;margin:0 auto;border-radius:12px">
+        <div class="modal-foot"><button class="btn primary" data-close>Đóng</button></div>`, {wide: true});
+      $('#ocrThumbs').append(img);
+    });
     const notes = [];
     res.forEach(r => {
       const rp = r.report || {}, lost = (rp.unreadable || 0) + (rp.cut_off || 0);
@@ -1203,7 +1215,10 @@ async function uploadShots(files) {
         ${c.hint ? `<div class="muted dup-note">↑ ${esc(c.hint)}</div>` : ''}</div>`).join('')
       : res.length && res.every(r => r.error) ? `<div class="result err">${esc(res[0].error)}</div>`
       : '<div class="empty">Không thấy số tiền nào trong ảnh. Xem chữ đọc được bên dưới rồi nhập tay.</div>';
-    $$('#ocrRows .kind').forEach(k => k.onchange = () => { $('.cat', k.parentElement).innerHTML = opts(null, k.value); });
+    $$('#ocrRows .kind').forEach(k => k.onchange = () => { $('.cat', k.parentElement).innerHTML = opts(null, k.value); ocrSelection(); });
+    $$('#ocrRows .sel, #ocrRows .amt').forEach(el => el.addEventListener(el.classList.contains('sel') ? 'change' : 'input', ocrSelection));
+    $('#ocrBar').hidden = !cands.length;
+    ocrSelection();
     $('#ocrRaw').innerHTML = res.map(r => `<details open><summary class="muted" style="cursor:pointer;font-size:13px">Chữ đọc được từ ${esc(r.file)}${r.error ? ' — lỗi: ' + esc(r.error) : ''}</summary><pre>${esc(r.text)}</pre></details>`).join('');
     $('#ocrCard').hidden = false;
     $('#ocrCard').scrollIntoView({behavior: 'smooth', block: 'start'});
@@ -1211,6 +1226,18 @@ async function uploadShots(files) {
   $('#dropText').textContent = 'Kéo thả ảnh, dán (⌘V) hoặc bấm để chọn';
   $('#files').value = '';
 }
+// What will be saved, at a glance: unticked rows fade, the bar and the button count the ticked ones.
+function ocrSelection() {
+  const rows = $$('#ocrRows .ocr-row'), on = rows.filter(r => $('.sel', r).checked);
+  rows.forEach(r => r.classList.toggle('off', !$('.sel', r).checked));
+  const sum = kind => on.filter(r => $('.kind', r).value === kind).reduce((a, r) => a + (parseAmount($('.amt', r).value) || 0), 0);
+  $('#ocrCount').textContent = `Đã chọn ${on.length}/${rows.length} · Thu ${short(sum('income'))} · Chi ${short(sum('expense'))}`;
+  $('#ocrAll').checked = rows.length > 0 && on.length === rows.length;
+  $('#ocrAll').indeterminate = on.length > 0 && on.length < rows.length;
+  $('#ocrSave').textContent = on.length ? `Lưu ${on.length} dòng đã chọn` : 'Chọn dòng cần lưu';
+  $('#ocrSave').disabled = !on.length;
+}
+$('#ocrAll').onchange = e => { $$('#ocrRows .sel').forEach(c => { c.checked = e.target.checked; }); ocrSelection(); };
 $('#ocrCancel').onclick = () => { $('#ocrCard').hidden = true; };
 $('#ocrSave').onclick = async () => {
   const items = $$('#ocrRows .ocr-row').filter(r => $('.sel', r).checked).map(r => ({
