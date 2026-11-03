@@ -1,4 +1,6 @@
-"""Pull expenses entered on iPhone from the Google Sheet behind phone/Code.gs. The connection code lives in the Keychain."""
+"""Pull expenses entered on iPhone or in the family Telegram group from the Google Sheet behind phone/Code.gs.
+
+The connection code lives in the Keychain."""
 import json
 import re
 import sqlite3
@@ -68,8 +70,8 @@ def _explain_html(body: str, final_url: str) -> str:
         return ("Code.gs trên Google là bản cũ, chưa nhận được bản sao từ Mac. Dán Code.gs mới, ⌘S, rồi "
                 "Deploy → Manage deployments → ✏️ → Version: New version → Deploy.")
     if "Authorization is required" in body or "Cần được cấp quyền" in body:
-        return ("Code.gs mới cần thêm quyền mà chưa được cho phép. Mở Apps Script, chọn batQuetEmail → ▶ Run → "
-                "Allow, rồi Deploy → Manage deployments → ✏️ → Version: New version → Deploy.")
+        return ("Code.gs mới cần thêm quyền mà chưa được cho phép. Mở Apps Script, chọn batQuetEmail (hoặc batTelegram) "
+                "→ ▶ Run → Allow, rồi Deploy → Manage deployments → ✏️ → Version: New version → Deploy.")
     if "Script function not found: doGet" in body or "tìm thấy hàm tập lệnh: doGet" in body:
         return ("Bản Deploy không có code (đã Deploy trước khi dán Code.gs, hoặc chưa lưu). Dán Code.gs, ⌘S, rồi "
                 "Deploy → Manage deployments → ✏️ → Version: New version → Deploy.")
@@ -144,13 +146,18 @@ def category_of(conn: sqlite3.Connection, chosen: str | None) -> tuple[int, str]
     return None
 
 
+INBOX_SOURCES = ("phone", "telegram")
+
+
 def apply_row(conn: sqlite3.Connection, compiled, row: dict) -> str:
     """One sheet row → transactions. Returns imported | duplicate | invalid."""
     rid = str(row.get("id") or "").strip()
     amount = row.get("amount")
     if not rid or not isinstance(amount, (int, float)) or amount != amount or amount <= 0:
         return "invalid"  # NaN arrives as null in JSON
-    if conn.execute("SELECT 1 FROM transactions WHERE source = 'phone' AND order_id = ?", (rid,)).fetchone():
+    # Code.gs 4 marks bot rows Kênh = telegram; app 1.4.0 imported such a row as 'phone', so both sources count as seen.
+    source = "telegram" if str(row.get("channel") or "").strip().lower() == "telegram" else "phone"
+    if conn.execute("SELECT 1 FROM transactions WHERE source IN ('phone', 'telegram') AND order_id = ?", (rid,)).fetchone():
         return "duplicate"
     try:
         day = datetime.fromisoformat(str(row.get("time"))[:19]).date().isoformat()
@@ -167,12 +174,27 @@ def apply_row(conn: sqlite3.Connection, compiled, row: dict) -> str:
         "AND abs(julianday(date) - julianday(?)) <= 3 ORDER BY abs(julianday(date) - julianday(?)) LIMIT 1",
         (kind, int(amount), day, day)).fetchone()
     if added:
-        conn.execute("UPDATE transactions SET source = 'phone', order_id = ?, description = ?, category_id = ? "
-                     "WHERE id = ?", (rid, desc, cid, added["id"]))
+        conn.execute("UPDATE transactions SET source = ?, order_id = ?, description = ?, category_id = ? "
+                     "WHERE id = ?", (source, rid, desc, cid, added["id"]))
         return "imported"
     conn.execute("INSERT INTO transactions(date, amount, kind, description, source, category_id, order_id, pay_account) "
-                 "VALUES (?, ?, ?, ?, 'phone', ?, ?, ?)", (day, int(amount), kind, desc, cid, rid, account))
+                 "VALUES (?, ?, ?, ?, ?, ?, ?, ?)", (day, int(amount), kind, desc, source, cid, rid, account))
     return "imported"
+
+
+def apply_cancelled(conn: sqlite3.Connection, ids: list) -> int:
+    """Rows marked "huỷ" in the sheet (Telegram ↩️ Huỷ, /huy) after this Mac imported them. Each id is applied once, so a
+    transaction restored in the app stays restored."""
+    n = 0
+    for rid in ids or []:
+        rid = str(rid or "").strip()
+        key = f"inbox_cancelled:{rid}"
+        if not rid or db.get_setting(conn, key):
+            continue
+        n += conn.execute("UPDATE transactions SET status = 'cancelled' WHERE source IN ('phone', 'telegram') "
+                          "AND order_id = ? AND status = 'ok'", (rid,)).rowcount
+        db.set_setting(conn, key, "1")
+    return n
 
 
 def sync(conn: sqlite3.Connection) -> dict:
@@ -183,14 +205,18 @@ def sync(conn: sqlite3.Connection) -> dict:
     rows = reply.get("rows", [])
     compiled = rules.load(conn)
     counts = {"imported": 0, "duplicate": 0, "invalid": 0}
-    bad_rows = []
+    bad_rows, telegram = [], 0
     for row in rows:
         status = apply_row(conn, compiled, row)
         counts[status] += 1
         if status == "invalid":
             bad_rows.append(row.get("row"))
+        elif status == "imported" and str(row.get("channel") or "").lower() == "telegram":
+            telegram += 1
+    cancelled = apply_cancelled(conn, reply.get("cancelled"))  # Code.gs 4+; older scripts send none
     db.set_setting(conn, "phone_last_sync", datetime.now().strftime("%Y-%m-%d %H:%M"))
-    result = {"total": len(rows), **counts, "bad_rows": bad_rows[:20], "emails_imported": 0}
+    result = {"total": len(rows), **counts, "telegram": telegram, "cancelled": cancelled, "bad_rows": bad_rows[:20],
+              "emails_imported": 0}
     if sheet_email.available(conn):
         try:
             result["emails"] = sheet_email.pull(conn, code(conn))
@@ -204,7 +230,7 @@ def sync(conn: sqlite3.Connection) -> dict:
 # ---------------------------------------------------------------- mirror to the Sheet (tabs "Giao dịch", "Tổng hợp")
 
 SRC_LABEL = {"shopee": "Shopee", "tiktok": "TikTok", "momo": "MoMo", "manual": "Nhập tay", "phone": "iPhone",
-             "screenshot": "Ảnh chụp", "statement": "Sao kê", "email": "Email"}
+             "screenshot": "Ảnh chụp", "statement": "Sao kê", "email": "Email", "telegram": "Telegram"}
 
 
 def device_name(conn: sqlite3.Connection) -> str:
@@ -253,6 +279,10 @@ def mirror_payload(conn: sqlite3.Connection) -> dict:
         for name, amount in total("SELECT COALESCE(pay_account, 'Chưa ghi cách trả'), SUM(amount) FROM transactions "
                                   "WHERE status = 'ok' AND kind = 'expense' AND substr(date, 1, 7) = ? GROUP BY 1 ORDER BY 2 DESC"):
             summary.append([device, month, "Cách trả", name, amount, pct(amount)])
+    # The Telegram bot's /ngansach and budget warnings read these (Code.gs 4); older scripts just store them.
+    this_month = datetime.now().strftime("%Y-%m")
+    summary += [[device, this_month, "Ngân sách", name, budget, ""] for name, budget in conn.execute(
+        "SELECT name, budget FROM categories WHERE budget > 0 AND kind = 'expense' ORDER BY sort, id")]
     import usage
     summary += usage.rows(conn, device)  # groups "Hoạt động" and "Lỗi"; none while share_usage is off
     return {"a": "mirror", "device": device, "rows": rows, "summary": summary}

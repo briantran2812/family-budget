@@ -146,6 +146,9 @@ label.lbl { display: block; font-size: 13px; color: var(--text-2); font-weight: 
 .up { color: var(--bad); } .down { color: var(--good); }
 a.btn, a .btn { color: var(--text); }
 .pill.statement { background: #e3f4ee; color: #0f6b4c; }
+.pill.telegram { background: #e2f1fb; color: #145e8c; }
+@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) .pill.telegram { background: #123247; color: #9fd2f2; } }
+:root[data-theme="dark"] .pill.telegram { background: #123247; color: #9fd2f2; }
 @media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) .pill.statement { background: #12352a; color: #8fd9bb; } }
 :root[data-theme="dark"] .pill.statement { background: #12352a; color: #8fd9bb; }
 .mini.link { cursor: pointer; transition: transform .12s, box-shadow .12s; }
@@ -490,7 +493,7 @@ ol.howto li { margin: 5px 0; }
           </div>
           <div class="segs" id="fSrc">
             <button class="seg on" data-src="">Tất cả</button><button class="seg" data-src="shopee">Shopee</button>
-            <button class="seg" data-src="tiktok">TikTok</button><button class="seg" data-src="momo">MoMo</button><button class="seg" data-src="manual">Nhập tay</button><button class="seg" data-src="phone">iPhone</button>
+            <button class="seg" data-src="tiktok">TikTok</button><button class="seg" data-src="momo">MoMo</button><button class="seg" data-src="manual">Nhập tay</button><button class="seg" data-src="phone">iPhone</button><button class="seg" data-src="telegram">Telegram</button>
             <button class="seg" data-src="screenshot">Ảnh chụp</button><button class="seg" data-src="statement">Sao kê</button><button class="seg" data-src="email">Email khác</button>
           </div>
           <p class="sumline" id="txSum"></p>
@@ -686,8 +689,10 @@ const pct1 = x => x.toFixed(1).replace('.', ',') + '%';
 // Under 10% a rounded whole number hides real spending (238k of 50tr showed as 0%).
 const ringPct = x => x > 0 && x < 10 ? pct1(x) : Math.round(x) + '%';
 const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({'&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;'}[c]));
-const SRC_ICON = {shopee: '🛍️', tiktok: '🎵', momo: '👛', manual: '✍️', phone: '📱', screenshot: '📸', statement: '🏦', email: '✉️'};
-const SRC = {shopee: 'Shopee', tiktok: 'TikTok', momo: 'MoMo', manual: 'Nhập tay', phone: 'iPhone', screenshot: 'Ảnh chụp', statement: 'Sao kê', email: 'Email'};
+const SRC_ICON = {shopee: '🛍️', tiktok: '🎵', momo: '👛', manual: '✍️', phone: '📱', screenshot: '📸', statement: '🏦', email: '✉️', telegram: '💬'};
+const SRC = {shopee: 'Shopee', tiktok: 'TikTok', momo: 'MoMo', manual: 'Nhập tay', phone: 'iPhone', screenshot: 'Ảnh chụp', statement: 'Sao kê', email: 'Email', telegram: 'Telegram'};
+// Where a sync's new rows came from: the sheet's inbox holds both iPhone Shortcut and Telegram bot entries.
+const inboxFrom = r => r.telegram ? (r.telegram === r.imported ? 'Telegram' : 'iPhone và Telegram') : 'iPhone';
 const DOW = ['Chủ nhật', 'Thứ Hai', 'Thứ Ba', 'Thứ Tư', 'Thứ Năm', 'Thứ Sáu', 'Thứ Bảy'];
 const pad = n => String(n).padStart(2, '0');
 const todayISO = () => { const d = new Date(); return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`; };
@@ -1533,11 +1538,11 @@ async function phoneSync(quiet = false) {
     const r = await api('/api/phone/sync', {method: 'POST'});
     const mail = r.emails_imported ? ` · ✉️ ${r.emails_imported} đơn mới từ Gmail (qua Google Sheet)` : '';
     if (!quiet || r.imported || r.emails_imported) {
-      const msg = `📱 Đã lấy ${r.imported} khoản mới từ iPhone` + mail;
-      box.innerHTML = `<div class="result ok"><b>${msg}</b><br><span class="muted">${r.total} dòng trong sheet · ${r.duplicate} đã có · ${r.invalid} dòng không đọc được${r.bad_rows.length ? ' (dòng ' + r.bad_rows.join(', ') + ')' : ''}</span></div>`;
+      const msg = `📱 Đã lấy ${r.imported} khoản mới từ ${inboxFrom(r)}` + mail;
+      box.innerHTML = `<div class="result ok"><b>${msg}</b><br><span class="muted">${r.total} dòng trong sheet · ${r.duplicate} đã có · ${r.invalid} dòng không đọc được${r.bad_rows.length ? ' (dòng ' + r.bad_rows.join(', ') + ')' : ''}${r.cancelled ? ` · bỏ ra ${r.cancelled} khoản đã huỷ` : ''}</span></div>`;
       if (quiet) toast(msg);
     }
-    await loadInfo(); renderPhone(); renderSheetMail(); if (r.imported || r.emails_imported) refresh();
+    await loadInfo(); renderPhone(); renderSheetMail(); if (r.imported || r.emails_imported || r.cancelled) refresh();
   } catch (err) {
     box.innerHTML = `<div class="result err">${esc(err.message)}</div>`;
     if (!quiet) throw err;
@@ -1583,11 +1588,13 @@ async function syncAll(quiet = false, {gmail = true} = {}) {
   if (syncing || !(state.info.phone_connected || (state.info.gmail_accounts || []).length)) return;
   syncing = true; lastSyncAll = Date.now();
   const got = [], errors = [];
+  let dropped = 0;
   try {
     if (state.info.phone_connected) {
       try {
         const r = await api('/api/phone/sync', {method: 'POST'});
-        if (r.imported) got.push(`${r.imported} khoản từ iPhone`);
+        if (r.imported) got.push(`${r.imported} khoản từ ${inboxFrom(r)}`);
+        dropped = r.cancelled || 0;
         if (r.emails_imported) got.push(`${r.emails_imported} đơn từ Gmail (qua Google Sheet)`);
       }
       catch (err) { errors.push(err.message); }
@@ -1598,7 +1605,8 @@ async function syncAll(quiet = false, {gmail = true} = {}) {
       catch (err) { errors.push(err.message); }
     }
     await loadInfo().catch(() => {}); renderPhone(); renderAccounts();
-    if (got.length) { refresh(); toast('↻ Đã lấy ' + got.join(', ')); }
+    const undone = dropped ? `bỏ ra ${dropped} khoản đã huỷ trong sheet hoặc Telegram` : '';
+    if (got.length || dropped) { refresh(); toast(got.length ? '↻ Đã lấy ' + got.join(', ') + (undone ? '; ' + undone : '') : '↻ Đã ' + undone); }
     else if (!quiet) toast(errors.length ? 'Đồng bộ chưa xong' : '↻ Đã đồng bộ — không có gì mới', !!errors.length);
     if (errors.length && !quiet) errors.forEach(e => toast(e, true));
   } finally { syncing = false; }

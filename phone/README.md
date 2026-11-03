@@ -30,8 +30,10 @@ Làm theo thứ tự **A → D trên máy của bạn trước**. Đạt hết m
      Code chỉ mở đúng sheet tạo ở bước này.
    - Từ Code.gs bản 3 Google hỏi thêm **quyền Gmail** (cho mục "Gmail qua Google Sheet" bên dưới). Script chỉ
      đọc Gmail khi bạn chạy `batQuetEmail`; không chạy thì không đọc thư nào.
+   - Từ Code.gs bản 4 Google hỏi thêm quyền **kết nối tới dịch vụ bên ngoài** (cho bot Telegram). Script chỉ
+     gọi Telegram khi bạn chạy `batTelegram`.
    - Nhật ký thực thi ghi "Đã tạo sheet Hộp thư đến…". Quay lại tab Sheet sẽ thấy tab **Hộp thư đến**
-     có 6 cột.
+     có 9 cột (Kênh cho biết dòng từ iPhone hay Telegram; Trạng thái `huỷ` thì app không tính dòng đó).
 5. Bấm **Triển khai → Bản triển khai mới** (Deploy → New deployment) → biểu tượng ⚙️ → **Ứng dụng web**
    (Web app):
    - Thực thi với tư cách (Execute as): **Tôi** (Me)
@@ -145,6 +147,23 @@ Khi Google không cho tạo App Password, script đọc Gmail của **chủ shee
 Từng bước, kể cả xác nhận địa chỉ chuyển tiếp: [docs/DEPLOY.md mục G](../docs/DEPLOY.md). Giới hạn:
 [docs/LIMITATIONS.md](../docs/LIMITATIONS.md), mục "Gmail qua Google Sheet".
 
+## Bot Telegram cho nhóm gia đình
+
+Ghi khoản chi và xem báo cáo trong một nhóm Telegram (anh + vợ + bot), không cần mở Mac. Bot chạy ngay trong Apps
+Script của sheet: lịch `pollTelegram` mỗi phút đọc tin nhắn mới (nên chậm tối đa khoảng 1 phút), ghi vào **Hộp thư
+đến** với Kênh `telegram`, Người nhập `Telegram · <tên>`. App Mac lấy về như khoản từ iPhone.
+
+1. @BotFather → `/newbot` → lấy token; `/setprivacy` → chọn bot → **Disable** (bỏ bước này thì trong nhóm bot chỉ thấy lệnh).
+2. Project Settings → Script properties → `TELEGRAM_TOKEN` = token.
+3. Dán Code.gs bản 4 → ⌘S → chạy **`batTelegram`** → **Cho phép** → **sau đó** Triển khai → Quản lý bản triển khai → ✏️ →
+   **Phiên bản mới**.
+4. Tạo nhóm, thêm bot, gõ `/ketnoi <mã 6 số>` (mã in trong nhật ký của `batTelegram`).
+5. Gõ `45k phở` → bấm hạng mục → cách trả → "✓ Đã ghi …". Báo cáo: `/homnay`, `/tuan`, `/thang`, `/ngansach`, `/ongheo`;
+   hướng dẫn: `/huongdan`. Tắt: `tatTelegram`; đổi mã: `doiMaTelegram`.
+
+Từng bước, quota và cách bot tính báo cáo: [docs/DEPLOY.md mục H](../docs/DEPLOY.md). Giới hạn:
+[docs/LIMITATIONS.md](../docs/LIMITATIONS.md), mục "Bot Telegram".
+
 ## Sự cố thường gặp
 
 | Hiện tượng | Nguyên nhân và cách sửa |
@@ -155,6 +174,8 @@ Từng bước, kể cả xác nhận địa chỉ chuyển tiếp: [docs/DEPLOY
 | Sửa `Code.gs` mà iPhone vẫn chạy như cũ | Triển khai → Quản lý bản triển khai → ✏️ → Phiên bản: **Phiên bản mới** → Triển khai. Địa chỉ và mã giữ nguyên |
 | Lộ mã kết nối | Chạy `doiMa` ngay, rồi dán mã mới vào app Mac và các iPhone |
 | Sau khi dán Code.gs bản 3, Phím tắt/app báo "Authorization is required" | Chưa cho phép quyền Gmail. Chọn `batQuetEmail` → ▶ Chạy → Cho phép, rồi Triển khai phiên bản mới |
+| Trong nhóm gõ `45k phở` mà bot im, nhưng `/huongdan` thì trả lời | Privacy mode còn bật: @BotFather → `/setprivacy` → Disable, rồi xoá bot khỏi nhóm và thêm lại |
+| Bot không trả lời gì cả, kể cả `/huongdan` | Chưa chạy `batTelegram` (không có lịch `pollTelegram` trong Triggers), token sai, hoặc nhóm chưa `/ketnoi`. Xem Script properties → `TG_LAST_ERROR` và Executions |
 | Tab Email trống sau `batQuetEmail` | Gmail của chủ sheet không có thư khớp trong 30 ngày, hoặc bộ lọc chuyển tiếp chưa tạo. Thử tìm đúng câu đó trong Gmail |
 
 ## Cho người phát triển
@@ -162,7 +183,10 @@ Từng bước, kể cả xác nhận địa chỉ chuyển tiếp: [docs/DEPLOY
 - `Code.gs` được test trong Node với dịch vụ Google giả lập: `node tests/apps_script/harness.mjs`
   (chạy kèm `pytest`).
 - `phone_inbox.py` (phía Mac) có test ở `tests/test_phone_inbox.py`; UX-34 đến UX-36 trong
-  `tests/e2e/test_ux.py`. Email qua sheet: `sheet_email.py`, `tests/test_sheet_email.py`, UX-51.
+  `tests/e2e/test_ux.py`. Email qua sheet: `sheet_email.py`, `tests/test_sheet_email.py`, UX-51. Bot Telegram: các test
+  `telegram_*` trong harness (Bot API giả lập), UX-53.
+- Bot dùng **polling** (`getUpdates`), không dùng webhook: web app Apps Script luôn trả 302, Telegram coi đó là webhook
+  lỗi và gửi lại mãi.
 - Phím tắt dùng **GET**, không dùng POST. Apps Script luôn trả 302 sang `googleusercontent.com`, và
   máy khách nào đổi POST thành GET khi đi theo chuyển hướng sẽ làm mất dữ liệu gửi đi.
 - Mã kết nối không nằm trong file `.shortcut`; iOS hỏi mã lúc thêm phím tắt (`WFWorkflowImportQuestions`).

@@ -63,6 +63,27 @@ Cách cài: `docs/DEPLOY.md` mục G.
 | Email đi qua **Google Sheet trong Drive** của chủ sheet | Ai được chia sẻ sheet đọc được nội dung email đơn hàng | Không chia sẻ sheet; tab Email chỉ có thư khớp câu tìm |
 | **Shopee/TikTok có thể không gửi email cho từng đơn** (như mục Gmail ở trên) | Tab Email chỉ có bản tin, khảo sát | Chụp màn hình trang "Đơn mua" |
 
+## Bot Telegram (nhóm gia đình)
+
+Cách cài: `docs/DEPLOY.md` mục H.
+
+| Giới hạn | Ảnh hưởng | Cách xử lý |
+| --- | --- | --- |
+| Bot đọc tin nhắn **mỗi phút** (Apps Script không nhận webhook được) | Trả lời và nút bấm chậm tới khoảng 1 phút; bấm nút thấy vòng xoay một lúc | Bấm một lần rồi đợi; bấm lại không ghi trùng |
+| Báo cáo tính tới **lần Mac đồng bộ gần nhất**, cộng các khoản ghi qua Telegram/iPhone sau đó (dòng "Số liệu tới…") | Khoản nhập tay trên Mac, sao kê, sửa/xoá trên Mac chỉ vào báo cáo sau khi Mac mở và đẩy bản sao | Mở app trên Mac (tự đẩy khi mở) |
+| **Đơn Gmail, ảnh chụp** chỉ vào app khi **một Mac mở** | Không thấy trong báo cáo Telegram cho tới lúc đó, kể cả khi tab Email đã có thư | Mở app trên Mac |
+| Khoản chọn ✨ Tự động nằm ở **"Chưa phân loại (chờ Mac)"** cho tới khi Mac phân loại | % theo hạng mục lệch trong lúc chờ | Chọn hạng mục cụ thể bằng nút |
+| Bấm **↩️ Huỷ** sau khi Mac đã lấy khoản đó: báo cáo vẫn tính nó cho tới lần Mac đồng bộ kế tiếp; app **1.4.0** không biết huỷ | Số tạm thời cao hơn | App 1.5.0 tự đánh dấu "Không tính" khi đồng bộ; app 1.4.0 thì xoá tay |
+| Tin nhắn Telegram **không mã hoá đầu cuối** (nhóm và bot đi qua máy chủ Telegram) | Telegram đọc được số tiền, nội dung các khoản và báo cáo | Không gõ số thẻ, số tài khoản vào nhóm. Không dùng thì `tatTelegram` |
+| Token bot nằm trong **Script properties** của sheet | Ai sửa được script của sheet thì lấy được token và điều khiển bot | Không chia sẻ quyền sửa sheet; lộ thì @BotFather → `/revoke`, đặt token mới, chạy `batTelegram` |
+| Ai đã ở trong nhóm đã kết nối đều **ghi, huỷ và xem báo cáo** được | Thêm người lạ vào nhóm là cho họ xem số liệu | Nhóm chỉ có hai vợ chồng; lộ mã `/ketnoi` thì `doiMaTelegram` |
+| Privacy mode của bot phải **tắt** (`/setprivacy` → Disable) | Quên bước này thì trong nhóm bot chỉ thấy lệnh, gõ "45k phở" không có gì xảy ra | `batTelegram` và `/huongdan` báo khi còn bật; tắt xong phải xoá bot khỏi nhóm và thêm lại |
+| Lịch mỗi phút dùng khoảng **8–25 phút/ngày** trong quota trigger **90 phút/ngày** của tài khoản Gmail thường (cùng quota với quét Gmail mục G) | Hết quota thì bot im tới khi quota hồi lại | Xem Executions; `tatTelegram` khi không dùng |
+| Tắt bot (hoặc hết quota) **quá 24 giờ** thì Telegram xoá các tin chưa đọc | Khoản gõ trong lúc đó bị mất, bot không trả lời | Gõ lại sau khi bật |
+| Số tiền đọc theo **mẫu cố định**: phải bắt đầu bằng số (`45k phở`, không phải `phở 45k`); số trần dưới 1.000 thì bot hỏi lại; tin nhắn thường bắt đầu bằng số ("5 phút nữa về") cũng bị hỏi | Phải bấm Huỷ cho những câu đó | Không có gì được ghi khi chưa bấm hạng mục |
+| Chỉ có **hạng mục mặc định** trên nút (như Phím tắt iPhone); không gửi ảnh hoá đơn qua bot | Hạng mục tự tạo trên Mac không có nút; ảnh gửi vào nhóm bị bỏ qua | Chọn ✨ Tự động rồi đổi trên Mac; ảnh thì thêm trên Mac |
+| Mỗi sheet cần **một bot riêng**; hai Mac cùng đẩy bản sao thì báo cáo chỉ dùng **máy đẩy gần nhất** | Bot dùng chung giữa TEST và PRODUCTION sẽ mất tin | Tạo bot TEST riêng |
+
 ## Ảnh chụp (OCR)
 
 | Giới hạn | Ảnh hưởng | Cách xử lý |

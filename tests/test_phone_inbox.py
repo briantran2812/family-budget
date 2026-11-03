@@ -295,3 +295,85 @@ def test_vietnamese_google_error_pages_are_explained():
         "<html><body>Lỗi Không tìm thấy hàm tập lệnh: doPost</body></html>", "https://script.google.com/x")
     assert "New version" in phone_inbox._explain_html(
         "<div>Không tìm thấy hàm tập lệnh: doGet</div>", "https://script.google.com/x")
+
+
+# ---------------------------------------------------------------- Telegram bot rows (Code.gs 4)
+
+def tg_row(rid, amount, desc="Phở", category="🛒 Ăn uống & đi chợ", account="Tiền mặt", n=2):
+    return {**row(rid, amount, desc, account=account, n=n), "by": "Telegram · Lan", "category": category, "channel": "telegram"}
+
+
+def test_telegram_rows_import_with_their_own_source(conn, fake_sheet):
+    phone_inbox.connect(conn, CODE)
+    fake_sheet["rows"] = [tg_row("t1", 45_000), {**row("i1", 30_000, "Gửi xe"), "channel": "iphone"},
+                          tg_row("t2", 2_000_000, "Bán đồ cũ", "💰 Thu nhập khác", "Chuyển khoản", n=4)]
+    r = phone_inbox.sync(conn)
+    assert (r["imported"], r["telegram"], r["cancelled"]) == (3, 2, 0)
+    got = {t["order_id"]: (t["source"], t["kind"], t["cat"]) for t in conn.execute(
+        "SELECT t.order_id, t.source, t.kind, c.name AS cat FROM transactions t JOIN categories c ON c.id = t.category_id")}
+    assert got == {"t1": ("telegram", "expense", "Ăn uống & đi chợ"), "i1": ("phone", "expense", "Đi lại & xăng xe"),
+                   "t2": ("telegram", "income", "Thu nhập khác")}
+    assert phone_inbox.SRC_LABEL["telegram"] == "Telegram"
+    assert [r[6] for r in phone_inbox.mirror_payload(conn)["rows"] if r[3] == "Phở"] == ["Telegram"]
+
+
+def test_telegram_row_an_older_app_imported_as_iphone_is_not_imported_again(conn, fake_sheet):
+    """App 1.4.0 knows no Kênh column: it imported a bot row as source 'phone'. The new app must see it as done."""
+    phone_inbox.connect(conn, CODE)
+    fake_sheet["rows"] = [{k: v for k, v in tg_row("t1", 45_000).items() if k != "channel"}]
+    phone_inbox.sync(conn)
+    fake_sheet["rows"] = [tg_row("t1", 45_000)]
+    r = phone_inbox.sync(conn)
+    assert (r["imported"], r["duplicate"]) == (0, 1)
+    assert conn.execute("SELECT source FROM transactions").fetchall()[0][0] == "phone"
+
+
+def test_rows_cancelled_after_import_are_marked_once(conn, fake_sheet):
+    phone_inbox.connect(conn, CODE)
+    fake_sheet["rows"] = [tg_row("t1", 45_000), row("p1", 30_000, "Gửi xe")]
+    phone_inbox.sync(conn)
+    fake_sheet["rows"] = [row("p1", 30_000, "Gửi xe")]  # Code.gs leaves cancelled rows out of `rows`…
+    fake_sheet["cancelled"] = ["t1", "never-imported"]  # …and names them, also ones this Mac never saw
+    r = phone_inbox.sync(conn)
+    assert (r["imported"], r["cancelled"]) == (0, 1)
+    status = lambda rid: conn.execute("SELECT status FROM transactions WHERE order_id = ?", (rid,)).fetchone()[0]
+    assert (status("t1"), status("p1")) == ("cancelled", "ok")
+    assert [r[7] for r in phone_inbox.mirror_payload(conn)["rows"] if r[3] == "Phở"] == ["Không"]
+    conn.execute("UPDATE transactions SET status = 'ok' WHERE order_id = 't1'")  # restored by hand in the app
+    assert phone_inbox.sync(conn)["cancelled"] == 0
+    assert status("t1") == "ok"
+
+
+def test_list_reply_from_code_gs_2_still_imports(conn, fake_sheet):
+    """Code.gs stays at REQUIRED_SCRIPT_VERSION 2 for the iPhone: no `cancelled`, no `channel` is the normal case."""
+    assert phone_inbox.REQUIRED_SCRIPT_VERSION == 2
+    fake_sheet["version"] = 2
+    phone_inbox.connect(conn, CODE)
+    fake_sheet["rows"] = [row("a1", 45_000)]
+    r = phone_inbox.sync(conn)
+    assert (r["imported"], r["telegram"], r["cancelled"]) == (1, 0, 0)
+    assert conn.execute("SELECT source FROM transactions").fetchone()[0] == "phone"
+
+
+def test_mirror_payload_sends_budgets_for_the_bot(conn, fake_sheet):
+    from datetime import datetime
+
+    import db
+    db.set_setting(conn, "device_name", "MacBook Lan")
+    conn.execute("UPDATE categories SET budget = 2000000 WHERE name = 'Ăn uống & đi chợ'")
+    conn.execute("UPDATE categories SET budget = 1500000 WHERE name = 'Học phí'")
+    conn.execute("UPDATE categories SET budget = 0 WHERE name = 'Khác'")
+    budgets = [r for r in phone_inbox.mirror_payload(conn)["summary"] if r[2] == "Ngân sách"]
+    month = datetime.now().strftime("%Y-%m")
+    assert budgets == [["MacBook Lan", month, "Ngân sách", "Học phí", 1_500_000, ""],
+                       ["MacBook Lan", month, "Ngân sách", "Ăn uống & đi chợ", 2_000_000, ""]]
+
+
+def test_sync_notification_names_telegram(api, fake_sheet):
+    api.post("/api/phone/connect", json={"code": CODE})
+    fake_sheet["rows"] = [tg_row("t1", 45_000)]
+    assert api.post("/api/phone/sync").get_json()["telegram"] == 1
+    fake_sheet["rows"] = [tg_row("t1", 45_000), row("p2", 30_000, "Gửi xe")]
+    api.post("/api/phone/sync")
+    titles = [n["title"] for n in api.get("/api/notifications").get_json()["items"]]
+    assert "Đã lấy 1 khoản mới từ Telegram" in titles and "Đã lấy 1 khoản mới từ iPhone" in titles

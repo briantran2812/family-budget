@@ -12,6 +12,17 @@
   báo cần bản 3. Cài: `docs/DEPLOY.md` mục G. Code: `sheet_email.py`.
 - Code.gs bản 3 cần quyền Gmail (toàn quyền: Google không có mức chỉ đọc cho `GmailApp`); cho phép bằng `batQuetEmail`
   **trước** khi Deploy → New version. App giải thích trang "Authorization is required" của Google.
+- **Bot Telegram cho nhóm gia đình** (anh + vợ + bot): gõ `45k phở`, `1tr5 học phí ck` trong nhóm, bấm nút hạng mục
+  và cách trả, bot ghi vào tab Hộp thư đến (Kênh `telegram`, Người nhập `Telegram · <tên>`) và trả "✓ Đã ghi …" kèm nút
+  ↩️ Huỷ; `/huy` huỷ khoản mình vừa ghi. Báo cáo `/homnay`, `/tuan`, `/thang`, `/ngansach`, `/ongheo`, cảnh báo ngân sách
+  80%/100% một lần mỗi tháng, báo cáo tuần tối Chủ nhật 20:00 và tháng vào ngày 1 lúc 8:00. Số liệu = bản sao của Mac
+  đẩy gần nhất + các khoản ghi sau đó. Không AI: số tiền đọc theo quy tắc, còn lại là nút bấm. Bot chạy trong Apps
+  Script của sheet (`Code.gs` bản 4, `batTelegram`, đọc tin mỗi phút, chậm tối đa ~1 phút). Cài: `docs/DEPLOY.md` mục H.
+- Code.gs bản 4: hai cột mới **Kênh** và **Trạng thái** ở Hộp thư đến; dòng `huỷ` không còn trong `a=list` (app 1.4.0
+  không bao giờ lấy) và được liệt kê trong `cancelled`; app đánh dấu "Không tính" khoản đã lấy rồi bị huỷ (mỗi khoản một
+  lần, khôi phục trong app thì giữ). Nguồn mới **💬 Telegram** (nhãn, bộ lọc ở Giao dịch). Bản sao gửi thêm nhóm
+  `Ngân sách` vào tab Tổng hợp. App vẫn chỉ cần Code.gs bản 2; Code.gs bản 4 cần thêm quyền "kết nối dịch vụ bên ngoài":
+  chạy `batTelegram` → Allow **trước** khi Deploy → New version.
 - **Thống kê sử dụng** (Cài đặt, bật sẵn, tắt được): số lần mở app, số lần dùng từng việc trong 30 ngày và 10 lỗi gần nhất (số thẻ/tài khoản được che) được ghi vào tab "Tổng hợp" của Google Sheet, nhóm "Hoạt động" và "Lỗi", để người cài app biết app có được dùng và chỗ nào hay vướng. Nút "Xem dữ liệu sẽ gửi" hiện đúng các dòng sẽ gửi. Không cần sửa Code.gs. Code: `usage.py`.
 
 ## 1.4.0 — nhập từ iPhone (beta dùng thử, chưa qua cổng QA)

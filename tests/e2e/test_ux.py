@@ -887,3 +887,34 @@ def test_ux52_usage_statistics_card_shows_what_is_sent_and_switches_off(onboarde
     page.locator("#usagePreviewBtn").click()
     expect(page.locator("#usagePreview tbody tr").filter(has_text="Phiên bản app")).to_have_count(1)
     assert not page.evaluate("document.documentElement.scrollWidth > innerWidth")
+
+
+def test_ux53_telegram_entry_has_its_own_label_and_filter(onboarded, open_page, fake_sheet):
+    import phone_inbox
+    fake_sheet["rows"] = [{**phone_row("tg1", 145_000, "Bún chả cả nhà"), "by": "Telegram · Lan",
+                           "category": "🛒 Ăn uống & đi chợ", "channel": "telegram"},
+                          phone_row("p1", 30_000, "Gửi xe")]
+    with db.connect() as c:
+        phone_inbox.connect(c, fake_sheet["code"])
+    p = open_page()
+    expect(p.locator(".toast").last).to_contain_text("Đã lấy 2 khoản từ iPhone và Telegram")
+    tile = p.locator(".src-mini").first                                    # the biggest source this month
+    expect(tile.locator(".ico")).to_have_text("💬")
+    expect(tile.locator(".k")).to_have_text("Telegram")
+    p.locator("nav button[data-tab=tx]").click()
+    p.locator("#fSrc .seg[data-src=telegram]").click()
+    rows = p.locator("#txList .txrow")
+    expect(rows).to_have_count(1)
+    expect(rows.first).to_contain_text("Bún chả cả nhà")
+    expect(rows.first.locator(".pill.telegram")).to_have_text("Telegram")
+    p.locator("#fSrc .seg[data-src=phone]").click()
+    expect(rows).to_have_count(1)
+    expect(rows.first).to_contain_text("Gửi xe")
+    fake_sheet["rows"] = [phone_row("p1", 30_000, "Gửi xe")]
+    fake_sheet["cancelled"] = ["tg1"]                                       # ↩️ Huỷ pressed in the group afterwards
+    p.locator("#syncAllBtn").click()
+    expect(p.locator(".toast").last).to_contain_text("bỏ ra 1 khoản đã huỷ trong sheet hoặc Telegram")
+    p.locator("#fSrc .seg[data-src=telegram]").click()
+    expect(rows).to_have_count(1)
+    expect(rows.first).to_have_class("txrow cancelled")
+    expect(rows.first).to_contain_text("Không tính")

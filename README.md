@@ -12,6 +12,8 @@ bản sao nằm trong Google Sheet của chính bạn.
 - **Tổng quan:** % theo hạng mục, so với tháng trước, ngân sách từng hạng mục, xu hướng 12 tháng.
 - **🐷 Ống heo:** cuối mỗi tháng, phần còn lại (thu − chi) được ghi lại để xem 3, 6 tháng để dành được bao nhiêu.
 - **Tự phân loại bằng từ khoá.** Khi bạn đổi hạng mục, app hỏi có muốn ghi nhớ không.
+- **Telegram:** ghi khoản chi (`45k phở tm`) và xem báo cáo (`/thang`) trong nhóm gia đình, không cần mở Mac; bot chạy
+  trong Apps Script của Google Sheet ([docs/DEPLOY.md](docs/DEPLOY.md) mục H).
 
 ## Cài cho người dùng (gửi cho người nhà)
 

@@ -447,8 +447,11 @@ def phone_sync():
         with conn() as c:
             r = phone_inbox.sync(c)
             if r["imported"]:
-                notifications.add(c, "phone", "📱", f"Đã lấy {r['imported']} khoản mới từ iPhone",
-                                  link={"tab": "tx", "src": "phone"})
+                only_tg, some_tg = r["telegram"] == r["imported"], r["telegram"] > 0
+                where = "Telegram" if only_tg else "iPhone và Telegram" if some_tg else "iPhone"
+                notifications.add(c, "phone", "💬" if only_tg else "📱", f"Đã lấy {r['imported']} khoản mới từ {where}",
+                                  link={"tab": "tx", "src": "telegram"} if only_tg else {"tab": "tx"} if some_tg
+                                  else {"tab": "tx", "src": "phone"})
             if r["emails_imported"]:
                 notifications.add(c, "gmail", "✉️", f"{r['emails_imported']} đơn mới từ Gmail (qua Google Sheet)",
                                   link={"tab": "tx"})

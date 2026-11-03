@@ -19,6 +19,7 @@ Runbook cho tối nay và cho mỗi lần sửa lỗi sau này. Làm theo thứ 
 - `Code.gs` có `SCRIPT_VERSION`. App cần bản nào thì ghi ở `phone_inbox.REQUIRED_SCRIPT_VERSION`; sheet chạy bản cũ
   hơn thì app báo "Code.gs trên Google là bản cũ" ở thẻ iPhone. Code.gs cũng đi TEST → PRODUCTION như app (mục E).
   Đọc Gmail qua sheet (mục G) cần bản 3 nhưng không bắt buộc: sheet bản 2 thì iPhone vẫn chạy, mục Gmail báo cần bản 3.
+  Bot Telegram (mục H) cần bản 4; app 1.4.0 vẫn chạy với bản 4 (chỉ thêm cột và trường).
 
 Máy vợ chạy macOS 11 trở lên là được, chip Apple hay Intel đều có file cài. Đọc ảnh chụp biên lai cần macOS 13+;
 máy cũ hơn vẫn nhập tay, nhận iPhone, Gmail, sao kê bình thường (`docs/LIMITATIONS.md`, mục "macOS 11/12 so với 13+").
@@ -56,11 +57,12 @@ Làm trên Mac, trình duyệt đăng nhập Google **của anh**. Làm hai lầ
    ```sh
    pbcopy < ~/family-budget/phone/Code.gs     # chép vào clipboard rồi ⌘V vào trình soạn Apps Script
    ```
-   Thấy: dòng `var SCRIPT_VERSION = 3;` ở gần đầu file (bản 1.4.0 là `2`).
+   Thấy: dòng `var SCRIPT_VERSION = 4;` ở gần đầu file (bản 1.4.0 là `2`).
 4. Thanh trên: chọn hàm **caiDat** → **▶ Run** → **Review permissions** → chọn tài khoản →
    "Google hasn't verified this app" → **Advanced → Go to … (unsafe)** → **Allow**. Từ bản 3 Google hỏi cả quyền
-   Gmail (cho mục G); script chỉ đọc Gmail khi đã chạy `batQuetEmail`.
-   Thấy: Execution log ghi `Đã tạo sheet "Hộp thư đến"…`; tab Sheet có tab **Hộp thư đến** với 7 cột.
+   Gmail (cho mục G); script chỉ đọc Gmail khi đã chạy `batQuetEmail`. Từ bản 4 hỏi thêm quyền "kết nối tới dịch vụ
+   bên ngoài" (cho bot Telegram, mục H); script chỉ gọi Telegram khi đã chạy `batTelegram`.
+   Thấy: Execution log ghi `Đã tạo sheet "Hộp thư đến"…`; tab Sheet có tab **Hộp thư đến** với 9 cột.
 5. **Deploy → New deployment** → ⚙️ → **Web app**:
    - Execute as: **Me**
    - Who has access: **Anyone** ← đúng chữ "Anyone". **Không** chọn "Anyone with Google account": chọn nhầm thì
@@ -75,7 +77,7 @@ Làm trên Mac, trình duyệt đăng nhập Google **của anh**. Làm hai lầ
    ```sh
    curl -sL 'MA&a=ping'
    ```
-   Thấy: `{"ok":true,"sheet":"https://docs.google.com/…","name":"Thu Chi — TEST","version":3}`
+   Thấy: `{"ok":true,"sheet":"https://docs.google.com/…","name":"Thu Chi — TEST","version":4}`
    (lần 2 là `Thu Chi — PRODUCTION`). Thấy trang HTML có "Sign in" thì bước 5 chưa chọn **Anyone**: Deploy →
    Manage deployments → ✏️ → Who has access: Anyone → Deploy.
 
@@ -243,8 +245,8 @@ chỗ vợ bị vướng), và cột **Máy** = tên máy vợ (bước 6). Các
 
 1. **TEST trước**: mở sheet **Thu Chi — TEST** → Extensions → Apps Script → xoá hết, dán `phone/Code.gs` mới → ⌘S →
    **Deploy → Manage deployments → ✏️ (Edit) → Version: New version → Deploy**. **Không** bấm New deployment: nó tạo
-   địa chỉ mới và mọi mã kết nối cũ ngừng hoạt động. Bản cần quyền mới (bản 3: Gmail) thì chạy `batQuetEmail` → Allow
-   **trước** khi Deploy (mục G1). Kiểm: `curl -sL 'MÃ TEST&a=ping'` ra `"version":<số mới>`;
+   địa chỉ mới và mọi mã kết nối cũ ngừng hoạt động. Bản cần quyền mới (bản 3: Gmail; bản 4: dịch vụ bên
+   ngoài cho Telegram) thì chạy `batQuetEmail` hoặc `batTelegram` → Allow **trước** khi Deploy (mục G1, H3). Kiểm: `curl -sL 'MÃ TEST&a=ping'` ra `"version":<số mới>`;
    trên máy anh bấm ↻ Đồng bộ → cảnh báo "Code.gs … bản cũ" (nếu có) biến mất; Phím tắt TEST ghi được.
 2. **PRODUCTION sau**, chỉ khi TEST ổn và **trước hoặc cùng lúc** cài app mới lên máy vợ: làm y hệt trên sheet
    **Thu Chi — PRODUCTION**. Kiểm bằng `curl` với MÃ PRODUCTION và một khoản thật trên iPhone.
@@ -275,7 +277,7 @@ open -a "Thu Chi Gia Dinh"
 - Tab Giao dịch/Tổng hợp của sheet sẽ được ghi đè theo dữ liệu vừa khôi phục ở lần đẩy kế tiếp.
 
 **3. Code.gs**: Deploy → Manage deployments → ✏️ → Version: chọn **phiên bản cũ** trong danh sách → Deploy. Địa chỉ và
-mã giữ nguyên. Dán lại Code.gs bản 2 vào trình soạn thì chạy `tatQuetEmail` **trước** (lịch 30 phút chạy code đã lưu chứ không
+mã giữ nguyên. Dán lại Code.gs bản 2 vào trình soạn thì chạy `tatQuetEmail` (và `tatTelegram`) **trước** (lịch 30 phút chạy code đã lưu chứ không
 theo bản Deploy; mất hàm `quetEmail` thì Google gửi thư báo lỗi mỗi lần). App 1.5.0 thấy bản 2 thì ngừng lấy email và
 báo trong mục Gmail; Phím tắt iPhone không bị ảnh hưởng.
 
@@ -297,7 +299,7 @@ Cần `Code.gs` bản 3 và app 1.5.0. App cũ không đọc tab Email nhưng v�
 ### G1. Bật trên sheet (làm TEST trước, rồi PRODUCTION)
 
 1. Mở sheet (**Thu Chi — TEST**, sau đó **Thu Chi — PRODUCTION**) → **Extensions → Apps Script** → xoá hết, dán
-   `phone/Code.gs` mới → ⌘S. Thấy `var SCRIPT_VERSION = 3;`.
+   `phone/Code.gs` mới → ⌘S. Thấy `var SCRIPT_VERSION = 3;` (hoặc số lớn hơn).
 2. Chọn hàm **batQuetEmail** → **▶ Run** → **Review permissions** → chọn **tài khoản Google của anh** (chủ sheet) →
    Advanced → Go to … (unsafe) → **Allow**. Google ghi "Read, compose, send, and permanently delete all your email":
    đó là quyền duy nhất Google cho `GmailApp` (xem "Vì sao không chỉ đọc" bên dưới). Code chỉ tìm và đọc thư.
@@ -308,7 +310,7 @@ Cần `Code.gs` bản 3 và app 1.5.0. App cũ không đọc tab Email nhưng v�
    gọi, kể cả Phím tắt iPhone (app Mac sẽ báo "Code.gs mới cần thêm quyền…"). Sửa: làm bước 2 rồi Deploy lại.
 4. Kiểm:
    ```sh
-   curl -sL 'MÃ&a=ping'          # "version":3
+   curl -sL 'MÃ&a=ping'          # "version":3 (hoặc lớn hơn)
    curl -sL 'MÃ&a=emails' | head -c 400
    ```
    Thấy `{"ok":true,"rows":[{"id":"18…","date":"2026-…","from":"Shopee <…>",…}],"next":"…","more":false,"scanned":"…"}`.
@@ -356,6 +358,120 @@ chưa làm. Script chạy trong tài khoản của anh, không gửi thư đi đ
 - Nội dung cắt ở **45.000 ký tự** (một ô Sheets chứa tối đa 50.000). Email đơn hàng thường dưới 10.000.
 - App nhớ dòng cuối đã lấy (con trỏ = Mã thư) và mỗi lần lấy tối đa 100 dòng một trang. Con trỏ bị xoá (Mac tắt
   hơn 90 ngày) thì script gửi lại từ đầu, app bỏ qua thư đã có. **Đừng sắp xếp hay sửa tab Email** bằng tay.
+
+---
+
+## H. Bot Telegram cho nhóm gia đình
+
+Vợ ghi khoản chi và xem báo cáo ngay trong một **nhóm Telegram** (anh + vợ + bot), không cần mở Mac. Bot chạy trong
+Apps Script của **sheet PRODUCTION** (không thêm tài khoản, máy chủ nào): cứ mỗi phút script đọc tin nhắn mới trong
+nhóm, nên bot trả lời chậm **tối đa khoảng 1 phút**. Không có AI: số tiền đọc theo quy tắc, còn lại là bấm nút.
+
+```
+Nhóm Telegram ──"45k phở tm"──▶ Telegram ◀──getUpdates mỗi phút── Apps Script (pollTelegram) ──▶ tab "Hộp thư đến"
+                                                                              │                        (Kênh = telegram)
+                         ◀── nút hạng mục, "✓ Đã ghi…", báo cáo ───────────────┘                          │
+app Mac (máy vợ) ◀──────────────────────────── a=list mỗi lần đồng bộ, như khoản từ iPhone ─────────────────┘
+```
+
+Cần `Code.gs` bản 4 (app 1.4.0 vẫn chạy với bản này; app 1.5.0 thêm nhãn 💬 Telegram và bỏ ra khoản đã huỷ). Làm trên
+sheet **TEST** trước với một nhóm thử, rồi làm lại trên **PRODUCTION** với nhóm gia đình. Mỗi sheet cần **một bot
+riêng** (hai sheet cùng đọc một bot thì mỗi tin nhắn chỉ đến một bên).
+
+### H1. Tạo bot (trên điện thoại hoặc Telegram Desktop, khoảng 3 phút)
+
+1. Mở Telegram, tìm **@BotFather** (có dấu tích xanh) → **Start**.
+2. Gõ `/newbot`. Đặt tên hiện thị, ví dụ `Sổ thu chi nhà mình`, rồi tên đăng nhập kết thúc bằng `bot`, ví dụ
+   `sothuchi_nhaminh_bot` (TEST: `sothuchi_nhaminh_test_bot`).
+3. BotFather trả về **token** dạng `123456789:AAH…`. Đây là chìa khoá điều khiển bot: giữ kín như mật khẩu, không
+   dán vào nhóm chat, không ghi vào Code.gs.
+4. **Bắt buộc — tắt privacy mode:** gõ `/setprivacy` → chọn bot vừa tạo → **Disable**. BotFather trả lời
+   "Privacy mode is disabled". Bỏ bước này thì trong nhóm bot **chỉ thấy lệnh** `/…`, không thấy `45k phở`, và im lặng
+   như hỏng. Đã thêm bot vào nhóm rồi mới tắt thì phải **xoá bot khỏi nhóm và thêm lại** mới có tác dụng. `batTelegram`
+   và `/huongdan` đều báo nếu privacy mode còn bật.
+
+### H2. Cất token vào sheet
+
+1. Mở sheet → **Extensions → Apps Script** → ⚙️ **Project Settings** (thanh trái) → kéo xuống **Script properties** →
+   **Add script property**.
+2. Property: `TELEGRAM_TOKEN` · Value: token ở H1 bước 3 → **Save script properties**.
+
+Token chỉ nằm trong Script properties của sheet đó (người được chia sẻ sheet với quyền sửa script mới xem được).
+
+### H3. Bật bot (thứ tự này quan trọng)
+
+1. Trình soạn code: xoá hết, dán `phone/Code.gs` mới → ⌘S. Thấy `var SCRIPT_VERSION = 4;`.
+2. Chọn hàm **batTelegram** → **▶ Run** → **Review permissions** → tài khoản của anh → Advanced → Go to … (unsafe) →
+   **Allow**. Google hỏi thêm quyền **"Connect to an external service"** (`UrlFetchApp`, để gọi api.telegram.org).
+   Thấy trong Execution log:
+   ```
+   Bot @sothuchi_nhaminh_bot đang chạy (đọc tin nhắn mỗi phút). Trong nhóm gia đình gõ: /ketnoi 123456
+   ```
+   Chép mã 6 số. Trong **Triggers** (biểu tượng đồng hồ, thanh trái) có một dòng `pollTelegram` · Time-based · Every
+   minute. Chạy `batTelegram` lần nữa không tạo lịch thứ hai và giữ nguyên mã.
+3. **Bước 2 phải xong trước bước này.** **Deploy → Manage deployments → ✏️ → Version: New version → Deploy**. Giống
+   mục G: Deploy khi chưa Allow thì Google có thể trả "Authorization is required" cho mọi lời gọi, kể cả Phím tắt iPhone.
+   Bot tự nó chạy theo lịch (dùng code đã lưu), nhưng `a=list` mới cho app Mac (cột Kênh, khoản đã huỷ) cần New version.
+4. Kiểm: `curl -sL 'MÃ&a=ping'` ra `"version":4`.
+
+### H4. Nhóm gia đình
+
+1. Telegram → ✏️ → **New Group** → thêm vợ → đặt tên, ví dụ `Thu chi nhà mình` → Create.
+2. Trong nhóm: tên nhóm → **Add members** → tìm tên đăng nhập của bot → Add.
+3. Gõ trong nhóm: `/ketnoi 123456` (mã ở H3). Đợi tối đa 1 phút. Thấy:
+   `✓ Đã kết nối nhóm "Thu chi nhà mình". Thử gõ: 45k phở`.
+   Nhóm (hay chat riêng) chưa kết nối thì bot bỏ qua mọi tin nhắn, chỉ trả lời một câu "Bot riêng của gia đình…" mỗi
+   ngày. Lộ mã: chạy `doiMaTelegram` (mã mới, mọi nhóm phải `/ketnoi` lại). Chat riêng với bot cũng kết nối được
+   bằng cùng lệnh.
+
+### H5. Thử
+
+1. Gõ `45k phở`. Trong ≤ 1 phút bot trả lời `45.000 ₫ · Phở — hạng mục?` với các nút: **✨ Tự động**, các hạng mục chi
+   như trong app, rồi 💼 Lương, 💰 Thu nhập khác (chọn hai nút này thì ghi thành **khoản thu**).
+2. Bấm **🛒 Ăn uống & đi chợ** → bot hỏi "trả bằng gì?" → bấm **💵 Tiền mặt**. Tin nhắn của bot đổi thành
+   `✓ Đã ghi 45.000 ₫ · Phở · 🛒 Ăn uống & đi chợ · Tiền mặt — Lan` kèm nút **↩️ Huỷ**. Tab Hộp thư đến có dòng mới:
+   Người nhập `Telegram · Lan`, Kênh `telegram`.
+3. Gõ cách trả ở cuối thì bot bỏ câu hỏi đó: `45.000 phở tm`, `1tr5 học phí ck`, `120000 cà phê visa`, `200k đi chợ momo`.
+   Gõ thiếu số 0 (`45 phở`) thì bot hỏi lại "Ý bạn là 45.000 ₫?" chứ không tự đoán.
+4. Bấm **↩️ Huỷ** (ai trong nhóm cũng bấm được; tin nhắn ghi tên người huỷ) hoặc gõ `/huy` (huỷ khoản **chính mình** ghi
+   gần nhất, trong 24 giờ). Cột Trạng thái thành `huỷ`. Mac chưa lấy thì không bao giờ lấy; Mac đã lấy thì lần đồng bộ
+   sau app 1.5.0 đánh dấu "Không tính" (app 1.4.0 thì không: xoá tay trong app).
+5. Gõ `/thang`: chi, thu, còn lại, hạng mục và %, cách trả, số khoản, và dòng
+   `Số liệu tới lần Mac đồng bộ 05/11 21:30 + 2 khoản ghi sau đó`. Các lệnh khác: `/homnay`, `/tuan` (thứ Hai → hôm nay),
+   `/thang 10`, `/ngansach`, `/ongheo`, `/huongdan`.
+6. Trên Mac vợ bấm ↻ Đồng bộ → khoản vừa ghi có nhãn **Telegram**; Giao dịch → lọc **Telegram** (ca **M-31**).
+
+**Báo cáo tự gửi** vào mọi nhóm đã kết nối: tối **Chủ nhật 20:00** báo cáo tuần (thứ Hai → Chủ nhật), **ngày 1 lúc 8:00**
+báo cáo tháng trước kèm ống heo; mỗi báo cáo một lần (giờ theo múi giờ của sheet: File → Settings → Time zone). Chậm
+tối đa 1 phút như mọi tin khác (ca **M-32**).
+
+### Số liệu báo cáo lấy từ đâu
+
+- Tab **Giao dịch** (bản sao app Mac đẩy lên) của **máy đẩy gần nhất**: mỗi lần đẩy, script ghi giờ đẩy và giờ máy đó
+  đọc Hộp thư đến lần cuối. Máy khác bị bỏ qua để khoản iPhone/Telegram không bị đếm hai lần.
+- Cộng các dòng **Hộp thư đến** ghi **sau** lần đọc đó (Telegram, iPhone, gõ tay), trừ dòng `huỷ`. Dòng chọn
+  ✨ Tự động hoặc không có hạng mục tính vào **"Chưa phân loại (chờ Mac)"** cho tới khi Mac phân loại.
+- **Ngân sách**: app 1.5.0 gửi kèm các dòng nhóm `Ngân sách` trong tab Tổng hợp. Ghi một khoản chi vào hạng mục có ngân sách
+  mà tháng này đã dùng ≥ 80% hoặc vượt 100% thì tin "Đã ghi" có thêm một dòng ⚠️/🔴, mỗi hạng mục mỗi mức một lần mỗi tháng.
+- **Ống heo**: nhóm `Ống heo` trong tab Tổng hợp (tháng đã khép sổ trên Mac).
+- Mac chưa đẩy lần nào từ khi lên bản 4 thì báo cáo nói rõ "Chưa có số liệu từ Mac" và chỉ tính các khoản trong Hộp thư
+  đến: mở app trên Mac một lần là có.
+
+### Tắt, đổi, gỡ
+
+- `tatTelegram`: xoá lịch mỗi phút (bot im). `batTelegram` bật lại, giữ mã và nhóm.
+- `doiMaTelegram`: mã `/ketnoi` mới và quên mọi nhóm đã kết nối.
+- Đổi token (lộ token): @BotFather → `/revoke` → chọn bot → sửa `TELEGRAM_TOKEN` trong Script properties → chạy `batTelegram`.
+- Lỗi gần nhất của bot (nếu có) nằm ở Script properties → `TG_LAST_ERROR` (không bao giờ chứa token). Từng lần chạy
+  xem ở **Executions** (thanh trái).
+
+### Quota Apps Script
+
+Tài khoản Gmail thường: trigger chạy tối đa **90 phút/ngày** cộng lại, gọi URL tối đa 20.000 lần/ngày. Lịch mỗi phút
+là 1.440 lần chạy/ngày; lúc không có tin nhắn mỗi lần là một lời gọi `getUpdates` (khoảng 0,3–1 giây) → khoảng
+**8–25 phút/ngày** (10–30% quota); mỗi khoản ghi thêm khoảng 1–2 giây. Quét Gmail 30 phút/lần (mục G) thêm khoảng
+2–8 phút. Hết quota thì Google tạm dừng các trigger tới khi quota ngày hồi lại và gửi thư báo lỗi: bot im, Phím tắt iPhone
+và app Mac vẫn chạy. Xem thời gian thật ở **Executions** (cột Duration).
 
 ---
 
