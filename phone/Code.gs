@@ -24,11 +24,14 @@
 
 // Bump when the Mac app needs something new from this script; the app warns when the deployed copy is older
 // (phone_inbox.REQUIRED_SCRIPT_VERSION). Promote Code.gs test → production like the app itself.
-var SCRIPT_VERSION = 5;  // 3: tab "Email" (quetEmail) and a=emails; 4: Telegram bot, columns Kênh/Trạng thái;
-                         // 5: keywords from the Mac (tab "Từ khoá"), fast bot replies while a conversation is active
+var SCRIPT_VERSION = 6;  // 3: tab "Email" (quetEmail) and a=emails; 4: Telegram bot, columns Kênh/Trạng thái;
+                         // 5: keywords from the Mac (tab "Từ khoá"), fast bot replies while a conversation is active;
+                         // 6: column Ngày chi ("phở hôm qua"), duplicate warnings, iPhone entries posted to the group
 
 var SHEET = 'Hộp thư đến';
-var HEADERS = ['Mã', 'Thời gian', 'Số tiền', 'Mô tả', 'Trả bằng', 'Người nhập', 'Hạng mục', 'Kênh', 'Trạng thái'];  // add columns at the end only
+var HEADERS = ['Mã', 'Thời gian', 'Số tiền', 'Mô tả', 'Trả bằng', 'Người nhập', 'Hạng mục', 'Kênh', 'Trạng thái',
+               'Ngày chi'];  // add columns at the end only
+var CAT_COL = 7, STATUS_COL = 9, DAY_COL = 10;  // 1-based
 var props = PropertiesService.getScriptProperties();
 
 function caiDat() {
@@ -84,7 +87,8 @@ function doGet(e) {
   if (action === 'add') return add_(p);
   if (action === 'list') {
     var l = list_();
-    return json_({ok: true, rows: l.rows, cancelled: l.cancelled, name: sheet_().getParent().getName(), version: SCRIPT_VERSION});
+    return json_({ok: true, rows: l.rows, cancelled: l.cancelled, kept: l.kept, name: sheet_().getParent().getName(),
+                  version: SCRIPT_VERSION});
   }
   if (action === 'ping') {
     var ss = sheet_().getParent();
@@ -99,10 +103,26 @@ function add_(p) {
   if (!(amount > 0)) return text_('✗ Số tiền "' + (p.so || '') + '" chưa đúng. Gõ đủ số, ví dụ 45000.');
   if (amount < 1000) return text_('✗ ' + vnd_(amount) + ' quá nhỏ — gõ đủ các số 0, ví dụ 45000 cho 45.000 ₫.');
   if (amount >= 1e10) return text_('✗ ' + vnd_(amount) + ' quá lớn — kiểm tra lại số 0.');
-  var desc = String(p.d || '').trim().slice(0, 300);
-  appendInbox_([newId_(), new Date(), amount, desc, String(p.t || '').trim(), String(p.n || '').trim(),
-                String(p.c || '').trim(), 'iphone', '']);
-  return text_('✓ Đã ghi ' + vnd_(amount) + (desc ? ' · ' + desc : '') + (p.c ? ' · ' + String(p.c).trim() : ''));
+  var when = parseDay_(String(p.d || ''), today_());
+  var desc = when.text.slice(0, 300);
+  var id = newId_(), by = String(p.n || '').trim(), cat = String(p.c || '').trim(), pay = String(p.t || '').trim();
+  appendInbox_([id, new Date(), amount, desc, pay, by, cat, 'iphone', '', when.day]);
+  var dup = twin_(id, amount, when.day, by, 'iphone');
+  announce_(id, {a: amount, d: desc, t: pay, c: catFromLabel_(cat), by: by || 'iPhone', day: when.day}, dup);
+  return text_('✓ Đã ghi ' + vnd_(amount) + (desc ? ' · ' + desc : '') + (cat ? ' · ' + cat : '') +
+      (when.typed ? ' · 🗓 ' + dm_(when.day) : '') + (dup ? '\n' + dupText_(dup, amount) : ''));
+}
+
+/** An iPhone entry shown in the family group too, with the same buttons as one typed there: the group is the shared book. */
+function announce_(id, p, dup) {
+  if (!String(props.getProperty('TELEGRAM_TOKEN') || '').trim()) return;
+  try {
+    chats_().forEach(function (chat) {
+      send_(chat.id, '📱 ' + doneText_(p) + (dup ? '\n' + dupText_(dup, p.a) : ''), dup ? dupKeyboard_(id) : doneKeyboard_(id));
+    });
+  } catch (e) {
+    logError_(e);  // the entry is saved; the group message is a courtesy
+  }
 }
 
 function appendInbox_(row) {
@@ -135,7 +155,7 @@ function list_() {
   var values = range.getValues();
   var tz = sh.getParent().getSpreadsheetTimeZone();
   var changed = false;
-  var rows = [], cancelled = [];
+  var rows = [], cancelled = [], kept = [];
   for (var i = 0; i < values.length; i++) {
     var v = values[i];
     if (v[2] === '' && v[3] === '') continue;  // blank line
@@ -145,18 +165,27 @@ function list_() {
       if (!typed) { v[1] = now; changed = true; }
     }
     if (isCancelled_(v[8])) { cancelled.push(String(v[0])); continue; }
+    if (isKept_(v[8])) kept.push(String(v[0]));
     var when = v[1] instanceof Date ? Utilities.formatDate(v[1], tz, "yyyy-MM-dd'T'HH:mm:ss") : parseDate(v[1]);
-    rows.push({id: String(v[0]), time: when, amount: parseAmount(v[2]), description: String(v[3]).trim(),
+    var row = {id: String(v[0]), time: when, amount: parseAmount(v[2]), description: String(v[3]).trim(),
                account: String(v[4]).trim(), by: String(v[5]).trim(), category: String(v[6]).trim(),
-               channel: String(v[7]).trim(), row: i + 2});
+               channel: String(v[7]).trim(), row: i + 2};
+    var spent = v[9] === '' || v[9] === undefined ? '' : day_(v[9], tz);
+    if (spent) row.date = spent;  // the day it was spent, when not the day it was typed
+    rows.push(row);
   }
   if (changed) range.setValues(values);
-  return {rows: rows, cancelled: cancelled};
+  return {rows: rows, cancelled: cancelled, kept: kept};
 }
 
 /** "huỷ", "Hủy", "huy", "đã huỷ" typed in Trạng thái all count, so an iPhone row can be cancelled in the sheet too. */
 function isCancelled_(v) {
   return /^(da )?huy$/.test(unaccent_(v));
+}
+
+/** "khác" (✔ Khác khoản in Telegram): a possible duplicate the family said is a separate payment. */
+function isKept_(v) {
+  return /^(khac|khac khoan|giu ca hai)$/.test(unaccent_(v));
 }
 
 /** Sheets made before a column was added get its header, so the person reading the sheet knows what it is. */
@@ -517,6 +546,7 @@ var PAY_WORDS = {'tm': 'Tiền mặt', 'tien mat': 'Tiền mặt', 'ck': 'Chuy�
                  'visa': 'Thẻ Visa', 'the': 'Thẻ Visa', 'the visa': 'Thẻ Visa', 'momo': 'Ví MoMo', 'vi momo': 'Ví MoMo'};
 var TG_PENDING_SECONDS = 21600;  // CacheService keeps at most 6 hours
 var TG_UNDO_MS = 24 * 3600e3;    // /huy reaches back this far
+var TG_RESEND_MS = 180e3;        // the same entry from the same person this soon is asked about, not recorded
 var TG_PAIR_TRIES = 10;          // wrong /ketnoi codes accepted per day, across all chats
 // Fast replies: after an update the run keeps long polling. It all counts toward the 90 min/day of trigger time.
 var TG_FAST_MINUTES = 40;        // per day; Script property TG_FAST_MINUTES overrides it, 0 turns fast replies off
@@ -805,14 +835,19 @@ function stranger_(chatId) {
 
 // ---- recording an entry
 
-/** "45k phở tm" → {amount: 45000, desc: 'Phở', account: 'Tiền mặt'}; "45 phở" → {small: 45, …}; null if no amount. */
-function parseEntry_(text) {
+/**
+ * "45k phở tm hôm qua" → {amount: 45000, desc: 'Phở', account: 'Tiền mặt', day: yesterday}; "45 phở" → {small: 45, …};
+ * null if no amount. `today` is "YYYY-MM-DD" in the sheet's zone.
+ */
+function parseEntry_(text, today) {
   var words = String(text || '').trim().split(/\s+/);
   var raw = words.shift() || '';
   if (!/^\d/.test(raw)) return null;
   if (words.length && /^\d+([.,]\d+)?$/.test(raw) && /^(k|nghìn|nghin|ngàn|ngan|tr|triệu|trieu)$/i.test(words[0])) {
     raw += words.shift();  // "2 triệu"
   }
+  var when = parseDay_(words.join(' '), today || today_());
+  words = when.text ? when.text.split(' ') : [];
   var account = '';
   [2, 1].some(function (n) {  // "tiền mặt" before "mặt"
     var tail = words.length >= n ? unaccent_(words.slice(-n).join(' ')) : '';
@@ -824,11 +859,59 @@ function parseEntry_(text) {
   var desc = words.join(' ').replace(/^[-–:·,.\s]+/, '').slice(0, 300);
   desc = desc.charAt(0).toUpperCase() + desc.slice(1);
   if (/^\d{1,3}$/.test(raw)) {  // "45" could mean 45.000 ₫ or a typo: ask, never guess
-    return +raw > 0 ? {small: +raw, desc: desc, account: account} : null;
+    return +raw > 0 ? {small: +raw, desc: desc, account: account, day: when.day} : null;
   }
   var amount = parseShortcutAmount(raw);
   if (!(amount > 0)) return null;
-  return {amount: amount, desc: desc, account: account, tooBig: amount >= 1e10};
+  return {amount: amount, desc: desc, account: account, day: when.day, tooBig: amount >= 1e10};
+}
+
+var DAY_WORDS = [['hôm qua', 1], ['hom qua', 1], ['hqua', 1], ['tối qua', 1], ['đêm qua', 1], ['trưa qua', 1],
+                 ['chiều qua', 1], ['sáng qua', 1], ['hôm kia', 2], ['hom kia', 2], ['hkia', 2]];
+var DAY_BACK = 60;  // "1/2 kg thịt" in November is not a date
+
+/** "phở hôm qua" → {day: yesterday, typed: true, text: 'phở'}; also "01/11", "ngày 1/11/2026". Otherwise today. */
+function parseDay_(text, today) {
+  var s = ' ' + String(text || '').normalize('NFC').replace(/\s+/g, ' ') + ' ';
+  var day = '';
+  DAY_WORDS.some(function (w) {
+    var re = new RegExp(' ' + w[0] + '(?= )', 'i');
+    if (!re.test(s)) return false;
+    s = s.replace(re, ' ');
+    day = addDays_(today, -w[1]);
+    return true;
+  });
+  var m = day ? null : s.match(/ (?:ngày )?(\d{1,2})\/(\d{1,2})(?:\/(\d{4}|\d{2}))?(?= )/i);
+  if (m) {
+    var y = m[3] ? (m[3].length === 2 ? 2000 + +m[3] : +m[3]) : +today.slice(0, 4);
+    var d = String(iso_(y, +m[2], +m[1]) || '').slice(0, 10);
+    if (d && !m[3] && d > today) d = String(iso_(y - 1, +m[2], +m[1]) || '').slice(0, 10);  // "31/12" typed on 1 January
+    if (d && addDays_(d, 0) === d && d <= today && d >= addDays_(today, -DAY_BACK)) {
+      day = d;
+      s = s.replace(m[0], ' ');
+    }
+  }
+  return {day: day || today, typed: !!day, text: s.replace(/\s+/g, ' ').trim()};
+}
+
+var tzMemo_ = null;
+function tz_() {
+  if (!tzMemo_) {
+    try {
+      tzMemo_ = sheet_().getParent().getSpreadsheetTimeZone();
+    } catch (e) {
+      return 'Asia/Ho_Chi_Minh';  // before caiDat
+    }
+  }
+  return tzMemo_;
+}
+
+function today_() {
+  return Utilities.formatDate(now_(), tz_(), 'yyyy-MM-dd');
+}
+
+function dm_(day) {
+  return day.slice(8, 10) + '/' + day.slice(5, 7);
 }
 
 function onText_(m, text) {
@@ -841,11 +924,16 @@ function onText_(m, text) {
   }
   if (e.tooBig) return reply_(m, '✗ ' + vnd_(e.amount) + ' quá lớn — kiểm tra lại số 0.');
   var p = {a: e.amount || e.small, d: e.desc, t: e.account || lastPay_(m.from.id), small: !!e.small,
-           by: m.from.first_name || '', uid: m.from.id};
+           by: m.from.first_name || '', uid: m.from.id, day: e.day};
+  if (p.day === today_()) delete p.day;
   var c = autoCat_(p.d);
   if (c !== null) p.c = c;
   var key = String(m.message_id);
-  if (!p.small && p.c !== undefined && p.t) return record_(m.chat.id, null, key, p, m.message_id);
+  var last = jsonProp_('TG_LAST_' + m.from.id, null);
+  if (!p.small && last && last.sig === sig_(p) && Date.now() - last.at < TG_RESEND_MS) {
+    p.again = last.text;  // sent twice while the bot was slow to answer: ask before counting it twice
+  }
+  if (!p.small && !p.again && p.c !== undefined && p.t) return record_(m.chat.id, null, key, p, m.message_id);
   putPending_(m.chat.id, key, p);
   var ask = step_(p, key);
   send_(m.chat.id, ask.text, ask.keyboard, m.message_id);
@@ -880,6 +968,10 @@ function addressed_(m, bot) {
 
 /** The next question for a pending entry: the amount (small number), the category, then how it was paid. */
 function step_(p, key) {
+  if (p.again) {
+    return {text: 'Bạn vừa ghi ' + p.again + '. Ghi thêm một khoản nữa?',
+            keyboard: [[button_('➕ Vẫn ghi', 'f|' + key), button_('✖️ Không', 'x|' + key)]]};
+  }
   if (p.small) {
     return {text: 'Ý bạn là ' + vnd_(p.a * 1000) + '? Lần sau gõ đủ số, ví dụ ' + p.a + 'k.',
             keyboard: [[button_(vnd_(p.a * 1000), 'k|' + key), button_('Huỷ', 'x|' + key)]]};
@@ -903,7 +995,12 @@ function summary_(p) {
   if (p.d) parts.push(p.d);
   if (p.c !== undefined) parts.push(catLabel_(p.c));
   if (p.t) parts.push(p.t);
+  if (p.day && p.day !== today_()) parts.push('🗓 ' + dm_(p.day));  // only when not today, so it stands out
   return parts.join(' · ');
+}
+
+function sig_(p) {
+  return [p.a, unaccent_(p.d), p.day || ''].join('|');
 }
 
 /** A category is 'a' (✨ Tự động), an index into CATS, or {n, i, k} for one the user made on the Mac. */
@@ -944,7 +1041,7 @@ function onButton_(q) {
     answer_(q, '');
     return undoButton_(q, chatId, msgId, part[1]);
   }
-  if (part[0] === 'e' || part[0] === 'r' || part[0] === 'g') {
+  if (/^[ergdym]$/.test(part[0])) {
     answer_(q, '');
     return changeButton_(q, chatId, msgId, part);
   }
@@ -962,10 +1059,11 @@ function onButton_(q) {
     putPending_(chatId, key, {skipped: true});
     return edit_(chatId, msgId, '✖️ Bỏ qua: ' + summary_(p));
   }
+  if (part[0] === 'f') delete p.again;
   if (part[0] === 'k' && p.small) { p.a *= 1000; p.small = false; }
   if (part[0] === 'c' && !p.small) p.c = part[2] === 'a' ? 'a' : Math.min(Math.max(+part[2] || 0, 0), CATS.length - 1);
   if (part[0] === 'p' && !p.small) p.t = ACCOUNTS[+part[2]] || ACCOUNTS[0];
-  if (p.small || p.c === undefined || !p.t) {
+  if (p.again || p.small || p.c === undefined || !p.t) {
     putPending_(chatId, key, p);
     var ask = step_(p, key);
     return edit_(chatId, msgId, ask.text, ask.keyboard);
@@ -979,22 +1077,24 @@ function firstLine_(q) {
 
 /** Appends the row, then edits the question `msgId` into the confirmation, or (no question was asked) replies to `replyTo`. */
 function record_(chatId, msgId, key, p, replyTo) {
-  var id = newId_();
-  appendInbox_([id, now_(), p.a, p.d, p.t, 'Telegram · ' + p.by, catLabel_(p.c), 'telegram', '']);
+  var id = newId_(), day = p.day || today_();
+  appendInbox_([id, now_(), p.a, p.d, p.t, 'Telegram · ' + p.by, catLabel_(p.c), 'telegram', '', day]);
   putPending_(chatId, key, {done: id});
+  var dup = twin_(id, p.a, day, 'Telegram · ' + p.by, 'telegram');
   var pay = jsonProp_('TG_PAY', {});
   if (pay[p.uid] !== p.t) {
     pay[p.uid] = p.t;
     setJson_('TG_PAY', pay);
   }
-  var text = doneText_(p) + warning_(p.c);
+  var text = doneText_(p) + warning_(p.c) + (dup ? '\n' + dupText_(dup, p.a) : '');
+  var keyboard = dup ? dupKeyboard_(id) : doneKeyboard_(id);
   if (msgId) {
-    edit_(chatId, msgId, text, doneKeyboard_(id));
+    edit_(chatId, msgId, text, keyboard);
   } else {
-    var sent = send_(chatId, text, doneKeyboard_(id), replyTo);
+    var sent = send_(chatId, text, keyboard, replyTo);
     msgId = sent.ok && sent.result ? sent.result.message_id : null;
   }
-  setJson_('TG_LAST_' + p.uid, {id: id, at: Date.now(), chat: chatId, msg: msgId, text: summary_(p)});
+  setJson_('TG_LAST_' + p.uid, {id: id, at: Date.now(), chat: chatId, msg: msgId, text: summary_(p), sig: sig_(p)});
 }
 
 function doneText_(p) {
@@ -1002,7 +1102,42 @@ function doneText_(p) {
 }
 
 function doneKeyboard_(id) {
-  return [[button_('✏️ Đổi hạng mục', 'e|' + id), button_('↩️ Huỷ', 'u|' + id)]];
+  return [[button_('✏️ Đổi hạng mục', 'e|' + id), button_('📅 Đổi ngày', 'd|' + id), button_('↩️ Huỷ', 'u|' + id)]];
+}
+
+function dupKeyboard_(id) {
+  return [[button_('↩️ Trùng — huỷ khoản này', 'u|' + id)], [button_('✔ Khác khoản', 'm|' + id)]];
+}
+
+function dupText_(dup, amount) {
+  return '⚠️ ' + dup.by + ' đã ghi ' + vnd_(amount) + (dup.desc ? ' · ' + dup.desc : '') + (dup.at ? ' lúc ' + dup.at : '') +
+      '. Có trùng không?';
+}
+
+/**
+ * Another entry of the same amount and day typed by someone else, or through another channel: maybe the same payment
+ * (dedupe.typed_twin on the Mac). Looks at recent inbox rows, then the Mac's own entries in its "Giao dịch" mirror.
+ */
+function twin_(id, amount, day, by, channel) {
+  var sh = sheet_(), tz = tz_();
+  var n = sh.getLastRow() - 1;
+  var first = Math.max(1, n - 299);
+  var rows = n > 0 ? sh.getRange(first + 1, 1, n - first + 1, HEADERS.length).getValues() : [];
+  for (var i = rows.length - 1; i >= 0; i--) {
+    var v = rows[i];
+    if (String(v[0]) === String(id) || isCancelled_(v[8]) || parseAmount(v[2]) !== amount) continue;
+    if ((v[9] === '' || v[9] === undefined ? day_(v[1], tz) : day_(v[9], tz)) !== day) continue;
+    if (String(v[5]).trim() === by && String(v[7]).trim() === channel) continue;  // one person's two lunches
+    return {by: String(v[5]).trim() || 'iPhone', desc: String(v[3]).trim(),
+            at: v[1] instanceof Date ? Utilities.formatDate(v[1], tz, 'HH:mm') : ''};
+  }
+  var tx = sh.getParent().getSheetByName(TX_SHEET), device = lastPush_().device;
+  if (!device || !tx || tx.getLastRow() < 2) return null;
+  var hit = tx.getRange(2, 1, tx.getLastRow() - 1, TX_HEADERS.length).getValues().filter(function (r) {
+    return String(r[8]) === device && String(r[7]) === 'Có' && /^(Nhập tay|Ảnh chụp)$/.test(String(r[6])) &&
+        Number(r[2]) === amount && day_(r[0], tz) === day;
+  })[0];
+  return hit ? {by: 'Máy ' + device, desc: String(hit[3]).trim(), at: ''} : null;
 }
 
 function warning_(c) {
@@ -1016,30 +1151,40 @@ function undoButton_(q, chatId, msgId, id) {
   var text = firstLine_(q);
   if (/^↩️/.test(text)) return;  // a double tap after the first one went through
   var r = cancelRow_(id);
-  text = text.replace(/^✓ Đã ghi /, '');
+  text = text.replace(/^(📱 )?✓ Đã ghi /, '');
   if (r === 'missing') return edit_(chatId, msgId, '✓ Đã ghi ' + text + '\n⚠️ Không thấy dòng này trong sheet (đã xoá?).');
   edit_(chatId, msgId, '↩️ Đã huỷ: ' + text + (r === 'ok' && q.from && q.from.first_name ? ' (' + q.from.first_name + ' huỷ)' : ''));
 }
 
-/** ✏️ Đổi hạng mục (e) opens the grid, a category (r) is written to the row, Giữ nguyên (g) goes back. */
+/**
+ * ✏️ Đổi hạng mục (e) opens the grid and a category (r) is written; 📅 Đổi ngày (d) lists the last 7 days and one (y) is
+ * written to Ngày chi; ✔ Khác khoản (m) marks Trạng thái "khác"; Giữ nguyên (g) goes back.
+ */
 function changeButton_(q, chatId, msgId, part) {
-  var id = part[1];
-  var c = part[0] !== 'r' ? undefined : part[2] === 'a' ? 'a' : Math.min(Math.max(+part[2] || 0, 0), CATS.length - 1);
-  var row = inboxEntry_(id, c === undefined ? undefined : catLabel_(c));
+  var id = part[1], op = part[0];
+  var c = op !== 'r' ? undefined : part[2] === 'a' ? 'a' : Math.min(Math.max(+part[2] || 0, 0), CATS.length - 1);
+  var day = op === 'y' && /^\d{8}$/.test(part[2] || '') ? part[2].replace(/(\d{4})(\d\d)(\d\d)/, '$1-$2-$3') : '';
+  var row = op === 'r' ? inboxEntry_(id, CAT_COL, catLabel_(c)) : day ? inboxEntry_(id, DAY_COL, day)
+      : op === 'm' ? inboxEntry_(id, STATUS_COL, 'khác') : inboxEntry_(id);
   if (!row) return edit_(chatId, msgId, firstLine_(q) + '\n⚠️ Không thấy dòng này trong sheet (đã xoá?).');
   var v = row.v;
+  var by = String(v[5]).trim();
   var p = {a: parseAmount(v[2]), d: String(v[3]).trim(), t: String(v[4]).trim(),
-           by: String(v[5]).replace(/^Telegram · /, '').trim(), c: catFromLabel_(v[6])};
+           by: /^Telegram · /.test(by) ? by.replace(/^Telegram · /, '') : by, c: catFromLabel_(v[6]),
+           day: v[9] === '' || v[9] === undefined ? '' : day_(v[9], tz_())};
+  var head = String(v[7]).trim() === 'iphone' ? '📱 ' : '';
   if (row.cancelled) return edit_(chatId, msgId, '↩️ Đã huỷ: ' + doneText_(p).replace(/^✓ Đã ghi /, ''));
   if (row.imported) {
-    return edit_(chatId, msgId, doneText_(p) + '\nMac đã lấy khoản này rồi: đổi hạng mục trong app trên Mac.',
+    return edit_(chatId, msgId, head + doneText_(p) + '\nMac đã lấy khoản này rồi: sửa trong app trên Mac.',
         [[button_('↩️ Huỷ', 'u|' + id)]]);
   }
-  if (part[0] === 'e') {
-    return edit_(chatId, msgId, doneText_(p) + '\nĐổi sang hạng mục nào?',
+  if (op === 'e') {
+    return edit_(chatId, msgId, head + doneText_(p) + '\nĐổi sang hạng mục nào?',
         catGrid_('r|' + id + '|').concat([[button_('Giữ nguyên', 'g|' + id)]]));
   }
-  edit_(chatId, msgId, doneText_(p) + (part[0] === 'r' ? warning_(p.c) : ''), doneKeyboard_(id));
+  if (op === 'd') return edit_(chatId, msgId, head + doneText_(p) + '\nNgày chi là ngày nào?', dayGrid_(id));
+  var note = op === 'm' ? '\n✔ Khác khoản' + (q.from && q.from.first_name ? ' (' + q.from.first_name + ')' : '') : '';
+  edit_(chatId, msgId, head + doneText_(p) + (op === 'r' ? warning_(p.c) : '') + note, doneKeyboard_(id));
   var uid = q.from && q.from.id;
   var last = uid ? jsonProp_('TG_LAST_' + uid, null) : null;
   if (last && last.id === id) {
@@ -1049,10 +1194,10 @@ function changeButton_(q, chatId, msgId, part) {
 }
 
 /**
- * Inbox row `id` read under the script lock: {v, cancelled, imported}, or null. With `category` it is written to Hạng mục,
+ * Inbox row `id` read under the script lock: {v, cancelled, imported}, or null. With `col` the cell is set to `value`,
  * unless the Mac has listed the row since: it imported the row then, and never reads it again.
  */
-function inboxEntry_(id, category) {
+function inboxEntry_(id, col, value) {
   var lock = LockService.getScriptLock();
   lock.waitLock(10000);
   try {
@@ -1066,9 +1211,10 @@ function inboxEntry_(id, category) {
       if (String(v[0]) !== String(id)) continue;
       var when = v[1] instanceof Date ? stamp_(v[1], tz) : parseDate(v[1]);
       var out = {v: v, cancelled: isCancelled_(v[8]), imported: !!listed && !!when && when <= listed};
-      if (category !== undefined && !out.cancelled && !out.imported) {
-        sh.getRange(i + 2, 7, 1, 1).setValues([[category]]);
-        v[6] = category;
+      if (col && !out.cancelled && !out.imported) {
+        ensureHeaders_(sh);
+        sh.getRange(i + 2, col, 1, 1).setValues([[value]]);
+        v[col - 1] = value;
       }
       return out;
     }
@@ -1076,6 +1222,17 @@ function inboxEntry_(id, category) {
   } finally {
     lock.releaseLock();
   }
+}
+
+/** Today and the 6 days before, as buttons; "y|<id>|20261102". */
+function dayGrid_(id) {
+  var today = today_(), names = ['CN', 'T2', 'T3', 'T4', 'T5', 'T6', 'T7'];
+  var days = [0, 1, 2, 3, 4, 5, 6].map(function (n) {
+    var d = addDays_(today, -n);
+    var label = n === 0 ? 'Hôm nay' : n === 1 ? 'Hôm qua' : names[new Date(d + 'T00:00:00Z').getUTCDay()] + ' ' + dm_(d);
+    return button_(label, 'y|' + id + '|' + d.replace(/-/g, ''));
+  });
+  return rows_(days, 3).concat([[button_('Giữ nguyên', 'g|' + id)]]);
 }
 
 function undoLast_(m) {
@@ -1098,7 +1255,7 @@ function cancelRow_(id) {
     var ids = n > 0 ? sh.getRange(2, 1, n, 1).getValues() : [];
     for (var i = 0; i < ids.length; i++) {
       if (String(ids[i][0]) !== String(id)) continue;
-      var cell = sh.getRange(i + 2, HEADERS.length, 1, 1);
+      var cell = sh.getRange(i + 2, STATUS_COL, 1, 1);
       if (isCancelled_(cell.getValues()[0][0])) return 'already';
       ensureHeaders_(sh);
       cell.setValues([['huỷ']]);
@@ -1149,7 +1306,8 @@ function ledger_() {
     if (!when || when <= cutoff) return;  // already in the Mac's mirror
     var name = String(v[6]).replace(/^[^\wÀ-ỹ]+/, '').trim();
     var cat = catByName_(name);
-    out.entries.push({day: when.slice(0, 10), kind: cat && cat[2] === 'income' ? 'income' : 'expense', amount: amount,
+    var spent = v[9] === '' || v[9] === undefined ? when.slice(0, 10) : day_(v[9], tz);
+    out.entries.push({day: spent, kind: cat && cat[2] === 'income' ? 'income' : 'expense', amount: amount,
                       cat: cat ? cat[1] : !name || unaccent_(name) === 'tu dong' ? WAITING : name,
                       pay: String(v[4]).trim(), late: true});
   });

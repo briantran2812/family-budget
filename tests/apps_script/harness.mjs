@@ -207,7 +207,7 @@ const tests = {
   },
   setup_creates_header_and_secret() {
     const {sheet, secret} = load();
-    assert.deepEqual(sheet.rows[0], ['Mã', 'Thời gian', 'Số tiền', 'Mô tả', 'Trả bằng', 'Người nhập', 'Hạng mục', 'Kênh', 'Trạng thái']);
+    assert.deepEqual(sheet.rows[0], ['Mã', 'Thời gian', 'Số tiền', 'Mô tả', 'Trả bằng', 'Người nhập', 'Hạng mục', 'Kênh', 'Trạng thái', 'Ngày chi']);
     assert.match(secret, /^[0-9a-f]{24}$/);
   },
   wrong_secret_is_refused() {
@@ -615,7 +615,7 @@ Object.assign(tests, {
       const e = ctx.parseEntry_(text);
       assert.deepEqual([e.amount, e.desc, e.account, e.small], [amount, desc, account, undefined], text);
     }
-    assert.deepEqual(JSON.parse(JSON.stringify(ctx.parseEntry_('45 phở'))), {small: 45, desc: 'Phở', account: ''});
+    assert.deepEqual(JSON.parse(JSON.stringify(ctx.parseEntry_('45 phở'))), {small: 45, desc: 'Phở', account: '', day: '2026-11-05'});
     for (const none of ['phở 45k', 'đón con chưa?', '0 phở', '', '10h đón con', '1.5 phở']) assert.equal(ctx.parseEntry_(none), null, none);
     assert.equal(ctx.parseEntry_('70000000000 x').tooBig, true);
   },
@@ -662,8 +662,9 @@ Object.assign(tests, {
       [45000, 'Phở', 'Tiền mặt', 'Telegram · Lan', '🛒 Ăn uống & đi chợ', 'telegram', '']);
     assert.ok(row[1] instanceof Date);
     assert.deepEqual(buttons(done), [{text: '✏️ Đổi hạng mục', callback_data: 'e|' + row[0]},
-      {text: '↩️ Huỷ', callback_data: 'u|' + row[0]}]);
-    assert.deepEqual(env.sheet.rows[0].slice(7), ['Kênh', 'Trạng thái'], 'old sheets get the new headers');
+      {text: '📅 Đổi ngày', callback_data: 'd|' + row[0]}, {text: '↩️ Huỷ', callback_data: 'u|' + row[0]}]);
+    assert.equal(row[9], '2026-11-05', 'Ngày chi: today unless the message says otherwise');
+    assert.deepEqual(env.sheet.rows[0].slice(7), ['Kênh', 'Trạng thái', 'Ngày chi'], 'old sheets get the new headers');
     calls = tap(env, ask.message, press(pay, 'Tiền mặt'), HAO);  // a late second tap
     assert.equal(only1(calls, 'answerCallbackQuery').params.text, 'Đã ghi rồi');
     assert.equal(calls.length, 1, 'no edit, no second row');
@@ -1028,7 +1029,7 @@ Object.assign(tests, {
     assert.deepEqual([row[2], row[3], row[4], row[5], row[6], row[7]],
       [45000, 'Phở bò', 'Tiền mặt', 'Telegram · Lan', '🛒 Ăn uống & đi chợ', 'telegram']);
     assert.deepEqual(buttons(done).map(b => [b.text, b.callback_data]),
-      [['✏️ Đổi hạng mục', 'e|' + row[0]], ['↩️ Huỷ', 'u|' + row[0]]]);
+      [['✏️ Đổi hạng mục', 'e|' + row[0]], ['📅 Đổi ngày', 'd|' + row[0]], ['↩️ Huỷ', 'u|' + row[0]]]);
     // No payment word: Lan's last one. Hào has none yet, so he is asked once.
     assert.match(only1(say(env, '30k bún chả'), 'sendMessage').params.text, /^✓ Đã ghi 30\.000 ₫ · Bún chả · 🛒 Ăn uống & đi chợ · Tiền mặt — Lan$/);
     const ask = only1(say(env, '50k phở bò', {from: HAO}), 'sendMessage');
@@ -1088,7 +1089,7 @@ Object.assign(tests, {
     assert.equal(edit.params.text, done.params.text + '\nĐổi sang hạng mục nào?');
     assert.equal(buttons(edit).at(-1).text, 'Giữ nguyên');
     assert.ok(buttons(edit).every(b => Buffer.byteLength(b.callback_data) <= 64));
-    assert.deepEqual(buttons(only1(tap(env, msg, 'g|' + id), 'editMessageText')).map(b => b.text), ['✏️ Đổi hạng mục', '↩️ Huỷ']);
+    assert.deepEqual(buttons(only1(tap(env, msg, 'g|' + id), 'editMessageText')).map(b => b.text), ['✏️ Đổi hạng mục', '📅 Đổi ngày', '↩️ Huỷ']);
     calls = tap(env, msg, press(edit, 'Mẹ & bé'));
     edit = only1(calls, 'editMessageText');
     assert.equal(edit.params.text, '✓ Đã ghi 45.000 ₫ · Phở bò · 🍼 Mẹ & bé · Tiền mặt — Lan');
@@ -1103,7 +1104,7 @@ Object.assign(tests, {
     advance(60e3);
     env.ctx.doGet({parameter: {a: 'list', k: env.secret}});
     edit = only1(tap(env, msg2, 'e|' + id2), 'editMessageText');
-    assert.equal(edit.params.text, two.params.text + '\nMac đã lấy khoản này rồi: đổi hạng mục trong app trên Mac.');
+    assert.equal(edit.params.text, two.params.text + '\nMac đã lấy khoản này rồi: sửa trong app trên Mac.');
     assert.deepEqual(buttons(edit).map(b => b.text), ['↩️ Huỷ']);
     tap(env, msg2, 'r|' + id2 + '|7');  // from a grid opened before the Mac read it
     assert.equal(inbox(env)[1][6], '🛒 Ăn uống & đi chợ', 'unchanged');
@@ -1263,6 +1264,128 @@ Object.assign(tests, {
     env.ctx.kiemTraTelegram();
     assert.match(text(), /Từ khoá từ Mac: %s 8 \(máy MacBook Lan, /);
     assert.match(text(), /Trả lời nhanh hôm nay: 1\/40 phút · nhanh/);
+  },
+});
+
+// ---------------------------------------------------------------- Code.gs 6: the day it was spent, duplicates
+
+const list = env => JSON.parse(env.ctx.doGet({parameter: {a: 'list', k: env.secret}}).body);
+const iphone = (env, so, d, extra = {}) => env.ctx.doGet({parameter: {a: 'add', k: env.secret, so, d, t: 'Tiền mặt',
+  n: 'iPhone của Lan', ...extra}}).body;
+
+Object.assign(tests, {
+  day_words_and_dates() {
+    const {ctx} = load();
+    const T = '2026-11-05';
+    const cases = {'phở hôm qua': ['2026-11-04', 'phở'], 'Hôm qua phở': ['2026-11-04', 'phở'], 'đi chợ hqua': ['2026-11-04', 'đi chợ'],
+      'bún tối qua': ['2026-11-04', 'bún'], 'học phí hôm kia': ['2026-11-03', 'học phí'], 'điện 01/11': ['2026-11-01', 'điện'],
+      'điện ngày 1/11/2026': ['2026-11-01', 'điện'], 'điện 31/10': ['2026-10-31', 'điện'],
+      '1/2 kg thịt': [T, '1/2 kg thịt'], 'mua quà': [T, 'mua quà'], 'sang qua nhà': [T, 'sang qua nhà'],
+      'điện 06/11': [T, 'điện 06/11'], '30/02 x': [T, '30/02 x'], 'x 31/12': [T, 'x 31/12'], '': [T, '']};
+    for (const [text, want] of Object.entries(cases)) {
+      const r = ctx.parseDay_(text, T);
+      assert.deepEqual([r.day, r.text, r.typed], [...want, want[0] !== T], text);
+    }
+    assert.equal(ctx.parseDay_('quà 31/12', '2027-01-01').day, '2026-12-31', 'no year: the last 31/12');
+  },
+  telegram_day_word_sets_ngay_chi_and_shows_the_day() {
+    const env = bot();
+    pushRules(env);
+    const done = only1(say(env, '45k phở bò hôm qua tm'), 'sendMessage');
+    assert.equal(done.params.text, '✓ Đã ghi 45.000 ₫ · Phở bò · 🛒 Ăn uống & đi chợ · Tiền mặt · 🗓 04/11 — Lan');
+    const [row] = inbox(env);
+    assert.deepEqual([row[3], row[4], row[9]], ['Phở bò', 'Tiền mặt', '2026-11-04']);
+    const [listed] = list(env).rows;
+    assert.equal(listed.date, '2026-11-04');
+  },
+  telegram_change_the_day_from_the_button() {
+    const env = bot();
+    pushRules(env);
+    const done = only1(say(env, '60k bún chả tm'), 'sendMessage');
+    const [row] = inbox(env);
+    const grid = only1(tap(env, done.message, press(done, 'Đổi ngày')), 'editMessageText');
+    assert.match(grid.params.text, /Ngày chi là ngày nào\?$/);
+    assert.deepEqual(buttons(grid).map(b => b.text),
+      ['Hôm nay', 'Hôm qua', 'T3 03/11', 'T2 02/11', 'CN 01/11', 'T7 31/10', 'T6 30/10', 'Giữ nguyên']);
+    const back = only1(tap(env, done.message, press(grid, 'Hôm qua')), 'editMessageText');
+    assert.equal(back.params.text, '✓ Đã ghi 60.000 ₫ · Bún chả · 🛒 Ăn uống & đi chợ · Tiền mặt · 🗓 04/11 — Lan');
+    assert.equal(inbox(env)[0][9], '2026-11-04');
+    assert.equal(list(env).rows[0].date, '2026-11-04');
+    assert.equal(row[0], inbox(env)[0][0]);
+  },
+  telegram_same_entry_sent_twice_is_asked_about() {
+    const env = bot();
+    pushRules(env);
+    only1(say(env, '45k phở bò tm'), 'sendMessage');
+    const ask = only1(say(env, '45k phở bò tm'), 'sendMessage');
+    assert.equal(ask.params.text, 'Bạn vừa ghi 45.000 ₫ · Phở bò · 🛒 Ăn uống & đi chợ · Tiền mặt. Ghi thêm một khoản nữa?');
+    assert.equal(inbox(env).length, 1, 'not recorded yet');
+    const done = only1(tap(env, ask.message, press(ask, 'Vẫn ghi')), 'editMessageText');
+    assert.match(done.params.text, /^✓ Đã ghi 45\.000 ₫ · Phở bò/);
+    assert.equal(inbox(env).length, 2);
+    const again = only1(say(env, '45k phở bò tm'), 'sendMessage');
+    assert.match(only1(tap(env, again.message, press(again, 'Không')), 'editMessageText').params.text, /^✖️ Bỏ qua/);
+    assert.equal(inbox(env).length, 2);
+    advance(181e3);
+    assert.match(only1(say(env, '45k phở bò tm'), 'sendMessage').params.text, /^✓ Đã ghi/, 'three minutes later: a new lunch');
+    assert.match(only1(say(env, '45k phở bò tm', {from: HAO}), 'sendMessage').params.text, /hạng mục|trả bằng|⚠️/, 'someone else');
+  },
+  telegram_two_people_typing_the_same_payment_get_a_warning() {
+    const env = bot();
+    pushRules(env);
+    only1(say(env, '127k bún chả tm'), 'sendMessage');
+    const warn = only1(say(env, '127k bún chả cả nhà tm', {from: HAO}), 'sendMessage');
+    assert.equal(warn.params.text, '✓ Đã ghi 127.000 ₫ · Bún chả cả nhà · 🛒 Ăn uống & đi chợ · Tiền mặt — Hào\n' +
+      '⚠️ Telegram · Lan đã ghi 127.000 ₫ · Bún chả lúc 12:00. Có trùng không?');
+    assert.deepEqual(buttons(warn).map(b => b.text), ['↩️ Trùng — huỷ khoản này', '✔ Khác khoản']);
+    const kept = only1(tap(env, warn.message, press(warn, 'Khác khoản'), HAO), 'editMessageText');
+    assert.match(kept.params.text, /\n✔ Khác khoản \(Hào\)$/);
+    const second = inbox(env)[1];
+    assert.equal(second[8], 'khác');
+    const l = list(env);
+    assert.deepEqual(l.kept, [second[0]]);
+    assert.equal(l.rows.length, 2, 'a kept row is still listed');
+    const other = only1(say(env, '127k bún chả tối tm', {from: HAO}), 'sendMessage');  // the third one is warned again
+    assert.match(other.params.text, /⚠️/);
+    tap(env, other.message, press(other, 'Trùng — huỷ khoản này'), HAO);
+    assert.deepEqual(list(env).cancelled, [inbox(env)[2][0]]);
+  },
+  iphone_entry_is_posted_to_the_group_with_its_day_and_duplicate_warning() {
+    const env = bot();
+    pushRules(env);
+    only1(say(env, '45k phở bò hôm qua tm', {from: HAO}), 'sendMessage');
+    env.tg.calls.length = 0;
+    const body = iphone(env, '45000', 'Phở hôm qua', {c: '🛒 Ăn uống & đi chợ'});
+    assert.equal(body, '✓ Đã ghi 45.000 ₫ · Phở · 🛒 Ăn uống & đi chợ · 🗓 04/11\n' +
+      '⚠️ Telegram · Hào đã ghi 45.000 ₫ · Phở bò lúc 12:00. Có trùng không?');
+    const [row] = inbox(env).slice(-1);
+    assert.deepEqual([row[3], row[7], row[9]], ['Phở', 'iphone', '2026-11-04']);
+    const post = only1(env.tg.calls, 'sendMessage');
+    assert.equal(post.params.chat_id, GROUP.id);
+    assert.equal(post.params.text, '📱 ✓ Đã ghi 45.000 ₫ · Phở · 🛒 Ăn uống & đi chợ · Tiền mặt · 🗓 04/11 — iPhone của Lan\n' +
+      '⚠️ Telegram · Hào đã ghi 45.000 ₫ · Phở bò lúc 12:00. Có trùng không?');
+    const undone = only1(tap(env, post.message, press(post, 'Trùng — huỷ khoản này')), 'editMessageText');
+    assert.equal(undone.params.text, '↩️ Đã huỷ: 45.000 ₫ · Phở · 🛒 Ăn uống & đi chợ · Tiền mặt · 🗓 04/11 — iPhone của Lan (Lan huỷ)');
+    assert.deepEqual(list(env).cancelled, [row[0]], 'the group can cancel an iPhone entry');
+    env.tg.calls.length = 0;
+    assert.equal(iphone(env, '30000', 'Gửi xe'), '✓ Đã ghi 30.000 ₫ · Gửi xe');
+    const plain = only1(env.tg.calls, 'sendMessage');
+    assert.deepEqual(buttons(plain).map(b => b.text), ['✏️ Đổi hạng mục', '📅 Đổi ngày', '↩️ Huỷ']);
+  },
+  iphone_entry_without_telegram_calls_nobody() {
+    const env = load();
+    assert.equal(iphone(env, '45000', 'Phở'), '✓ Đã ghi 45.000 ₫ · Phở');
+    assert.deepEqual(env.tg.calls, []);
+    env.store.TELEGRAM_TOKEN = env.tg.token;
+    env.tg.fail = 'throw';  // Telegram down: the entry is still saved and answered
+    assert.match(iphone(env, '30000', 'Gửi xe'), /^✓ Đã ghi 30\.000 ₫/);
+    assert.equal(env.sheet.rows.length, 3);
+  },
+  mac_form_entry_in_the_mirror_is_a_twin_too() {
+    const env = bot();
+    pushRules(env, RULES, 'MacBook Lan', {rows: [['2026-11-05', 'Chi', 250000, 'Nhà sách', 'Giáo dục', 'Tiền mặt', 'Nhập tay', 'Có', 'MacBook Lan', 7]]});
+    const warn = only1(say(env, '250k ăn trưa tm'), 'sendMessage');
+    assert.match(warn.params.text, /\n⚠️ Máy MacBook Lan đã ghi 250\.000 ₫ · Nhà sách\. Có trùng không\?$/);
   },
 });
 
