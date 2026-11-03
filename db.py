@@ -29,8 +29,12 @@ CREATE TABLE IF NOT EXISTS transactions (
     source      TEXT NOT NULL DEFAULT 'manual',  -- manual | shopee | tiktok | screenshot
     category_id INTEGER REFERENCES categories(id) ON DELETE SET NULL,
     order_id    TEXT,
-    status      TEXT NOT NULL DEFAULT 'ok',      -- ok | cancelled
+    status      TEXT NOT NULL DEFAULT 'ok',      -- ok | cancelled | merged (folded into dup_with, see dedupe.py)
     pay_account TEXT,                            -- how it was paid, e.g. "Visa Techcombank"; NULL = unknown
+    entered_by  TEXT,                            -- who typed it: "Telegram · Vy", the iPhone or Mac name; NULL = a machine
+    link_ref    TEXT,                            -- "momo:<order>" of the email record merged into this one
+    dup_with    INTEGER,                         -- the other transaction of a possible or merged duplicate
+    dup_state   TEXT,                            -- NULL | open (ask the user) | kept (both are real)
     created_at  TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
     UNIQUE (source, order_id)
 );
@@ -172,8 +176,12 @@ def init() -> None:
             conn.execute("ALTER TABLE categories ADD COLUMN budget INTEGER")
             for name, _kind, icon, _kw in DEFAULT_CATEGORIES:
                 conn.execute("UPDATE categories SET icon = ? WHERE name = ?", (icon, name))
-        if "pay_account" not in {r[1] for r in conn.execute("PRAGMA table_info(transactions)")}:
+        tx_cols = {r[1] for r in conn.execute("PRAGMA table_info(transactions)")}
+        if "pay_account" not in tx_cols:
             conn.execute("ALTER TABLE transactions ADD COLUMN pay_account TEXT")  # added in 1.3.0
+        for col in ("entered_by TEXT", "link_ref TEXT", "dup_with INTEGER", "dup_state TEXT"):  # added in 1.5.1
+            if col.split()[0] not in tx_cols:
+                conn.execute(f"ALTER TABLE transactions ADD COLUMN {col}")
         if not conn.execute("SELECT COUNT(*) FROM categories").fetchone()[0]:
             for sort, (name, kind, icon, keywords) in enumerate(DEFAULT_CATEGORIES):
                 cid = conn.execute("INSERT INTO categories(name, kind, sort, icon) VALUES (?, ?, ?, ?)",

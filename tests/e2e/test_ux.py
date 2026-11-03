@@ -922,3 +922,40 @@ def test_ux53_telegram_entry_has_its_own_label_and_filter(onboarded, open_page, 
     expect(rows).to_have_count(1)
     expect(rows.first).to_have_class("txrow cancelled")
     expect(rows.first).to_contain_text("Không tính")
+
+
+def test_ux54_momo_chip_includes_what_was_paid_with_the_wallet(onboarded, open_page, fake_sheet):
+    import phone_inbox
+    fake_sheet["rows"] = [phone_row("p1", 746_855, "Tiền điện tháng 10", account="Ví MoMo"),
+                          phone_row("p2", 30_000, "Gửi xe")]
+    with db.connect() as c:
+        phone_inbox.connect(c, fake_sheet["code"])
+    p = open_page()
+    expect(p.locator(".toast").last).to_contain_text("Đã lấy 2 khoản")
+    p.locator("nav button[data-tab=tx]").click()
+    p.locator("#fSrc .seg[data-src=momo]").click()
+    rows = p.locator("#txList .txrow")
+    expect(rows).to_have_count(1)
+    expect(rows.first).to_contain_text("Tiền điện tháng 10")
+
+
+def test_ux55_possible_duplicate_is_answered_in_the_dialog(onboarded, open_page, fake_sheet):
+    import phone_inbox
+    fake_sheet["rows"] = [{**phone_row("t1", 127_000, "Đi chợ"), "by": "Telegram · Brian", "channel": "telegram"},
+                          {**phone_row("p1", 127_000, "Chợ sáng"), "by": "iPhone của Lan"}]
+    with db.connect() as c:
+        phone_inbox.connect(c, fake_sheet["code"])
+    p = open_page()
+    expect(p.locator(".toast").last).to_contain_text("Đã lấy 2 khoản")
+    p.locator("#bellBtn").click()
+    p.locator(".bell-item", has_text="Có thể trùng").first.click()
+    box = p.locator(".modal #mDup")
+    expect(box).to_contain_text("Có thể trùng")
+    expect(box).to_contain_text("127.000 ₫")
+    box.locator("[data-a=drop]").click()
+    expect(p.locator(".toast").last).to_contain_text("Đã bỏ khoản trùng")
+    p.locator("nav button[data-tab=tx]").click()
+    rows = p.locator("#txList .txrow")
+    expect(rows).to_have_count(2)
+    expect(p.locator("#txList .pill.warn")).to_have_count(0)
+    expect(p.locator("#txList .txrow.cancelled")).to_have_count(1)

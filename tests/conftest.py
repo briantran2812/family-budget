@@ -91,7 +91,7 @@ def fake_sheet(monkeypatch, fake_keyring):
     import phone_inbox
     state = {"rows": [], "calls": [], "code": PHONE_CODE, "name": "Thu Chi — PRODUCTION",
              "version": phone_inbox.REQUIRED_SCRIPT_VERSION, "emails": [], "email_page": 100, "scanned": "",
-             "email_error": None, "cancelled": []}
+             "email_error": None, "cancelled": [], "kept": []}
     monkeypatch.setattr(phone_inbox.keyring, "set_password", lambda s, u, p: fake_keyring.__setitem__((s, u), p))
     monkeypatch.setattr(phone_inbox.keyring, "get_password", lambda s, u: fake_keyring.get((s, u)))
     monkeypatch.setattr(phone_inbox.keyring, "delete_password", lambda s, u: fake_keyring.pop((s, u), None))
@@ -113,6 +113,8 @@ def fake_sheet(monkeypatch, fake_keyring):
             return {"ok": True, "rows": page, "next": page[-1]["id"] if page else since,
                     "more": start + len(page) < len(ids), "scanned": state["scanned"], "version": state["version"]}
         extra = {"cancelled": state["cancelled"]} if state["cancelled"] else {}  # Code.gs 2 and 3 send no such field
+        if state["kept"]:
+            extra["kept"] = state["kept"]  # Code.gs 6
         return {"ok": True, "rows": state["rows"], **script, **extra}
     monkeypatch.setattr(phone_inbox, "_get", fake_get)
     state["pushes"] = []

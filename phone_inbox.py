@@ -15,6 +15,7 @@ import keyring
 import keyring.errors
 
 import db
+import dedupe
 import rules
 
 KEYRING_SERVICE = "family-budget-phone"
@@ -149,7 +150,7 @@ def category_of(conn: sqlite3.Connection, chosen: str | None) -> tuple[int, str]
 INBOX_SOURCES = ("phone", "telegram")
 
 
-def apply_row(conn: sqlite3.Connection, compiled, row: dict) -> str:
+def apply_row(conn: sqlite3.Connection, compiled, row: dict, kept=frozenset()) -> str:
     """One sheet row → transactions. Returns imported | duplicate | invalid."""
     rid = str(row.get("id") or "").strip()
     amount = row.get("amount")
@@ -159,8 +160,8 @@ def apply_row(conn: sqlite3.Connection, compiled, row: dict) -> str:
     source = "telegram" if str(row.get("channel") or "").strip().lower() == "telegram" else "phone"
     if conn.execute("SELECT 1 FROM transactions WHERE source IN ('phone', 'telegram') AND order_id = ?", (rid,)).fetchone():
         return "duplicate"
-    try:
-        day = datetime.fromisoformat(str(row.get("time"))[:19]).date().isoformat()
+    try:  # Code.gs 6 sends the day it was spent ("phở hôm qua"); older ones only the time it was typed
+        day = datetime.fromisoformat(str(row.get("date") or row.get("time"))[:19]).date().isoformat()
     except ValueError:
         return "invalid"
     desc = (row.get("description") or "").strip()[:300]
@@ -177,8 +178,13 @@ def apply_row(conn: sqlite3.Connection, compiled, row: dict) -> str:
         conn.execute("UPDATE transactions SET source = ?, order_id = ?, description = ?, category_id = ? "
                      "WHERE id = ?", (source, rid, desc, cid, added["id"]))
         return "imported"
-    conn.execute("INSERT INTO transactions(date, amount, kind, description, source, category_id, order_id, pay_account) "
-                 "VALUES (?, ?, ?, ?, ?, ?, ?, ?)", (day, int(amount), kind, desc, source, cid, rid, account))
+    by = (row.get("by") or "").strip() or None
+    tx_id = conn.execute(
+        "INSERT INTO transactions(date, amount, kind, description, source, category_id, order_id, pay_account, entered_by) "
+        "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)", (day, int(amount), kind, desc, source, cid, rid, account, by)).lastrowid
+    if rid in kept:  # "✔ Khác khoản" was tapped in Telegram before this Mac read the row
+        conn.execute("UPDATE transactions SET dup_state = 'kept' WHERE id = ?", (tx_id,))
+    dedupe.check_typed(conn, tx_id)
     return "imported"
 
 
@@ -197,6 +203,18 @@ def apply_cancelled(conn: sqlite3.Connection, ids: list) -> int:
     return n
 
 
+def apply_kept(conn: sqlite3.Connection, ids: list) -> int:
+    """Rows answered "✔ Khác khoản" in Telegram (Trạng thái "khác") after this Mac flagged them as possible duplicates."""
+    n = 0
+    for rid in ids or []:
+        t = conn.execute("SELECT id FROM transactions WHERE source IN ('phone', 'telegram') AND order_id = ? "
+                         "AND dup_state = 'open'", (str(rid),)).fetchone()
+        if t:
+            dedupe.resolve(conn, t["id"], "keep")
+            n += 1
+    return n
+
+
 def sync(conn: sqlite3.Connection) -> dict:
     """iPhone rows, then (Code.gs 3+) the Gmail copies in the "Email" tab; an email failure never fails the iPhone part."""
     import sheet_email
@@ -206,14 +224,16 @@ def sync(conn: sqlite3.Connection) -> dict:
     compiled = rules.load(conn)
     counts = {"imported": 0, "duplicate": 0, "invalid": 0}
     bad_rows, telegram = [], 0
+    kept = frozenset(str(k) for k in reply.get("kept") or ())  # Code.gs 6+
     for row in rows:
-        status = apply_row(conn, compiled, row)
+        status = apply_row(conn, compiled, row, kept)
         counts[status] += 1
         if status == "invalid":
             bad_rows.append(row.get("row"))
         elif status == "imported" and str(row.get("channel") or "").lower() == "telegram":
             telegram += 1
     cancelled = apply_cancelled(conn, reply.get("cancelled"))  # Code.gs 4+; older scripts send none
+    apply_kept(conn, kept)
     db.set_setting(conn, "phone_last_sync", datetime.now().strftime("%Y-%m-%d %H:%M"))
     result = {"total": len(rows), **counts, "telegram": telegram, "cancelled": cancelled, "bad_rows": bad_rows[:20],
               "emails_imported": 0}
@@ -254,7 +274,8 @@ def mirror_payload(conn: sqlite3.Connection) -> dict:
     device = device_name(conn)
     txs = conn.execute(
         "SELECT t.id, t.date, t.kind, t.amount, t.description, c.name AS category, t.pay_account, t.source, t.status "
-        "FROM transactions t LEFT JOIN categories c ON c.id = t.category_id ORDER BY t.date DESC, t.id DESC").fetchall()
+        "FROM transactions t LEFT JOIN categories c ON c.id = t.category_id WHERE t.status != 'merged' "
+        "ORDER BY t.date DESC, t.id DESC").fetchall()
     rows = [[t["date"], "Thu" if t["kind"] == "income" else "Chi", t["amount"], t["description"],
              t["category"] or "Chưa phân loại", t["pay_account"] or "", SRC_LABEL.get(t["source"], t["source"]),
              "Có" if t["status"] == "ok" else "Không", device, t["id"]] for t in txs]

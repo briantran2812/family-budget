@@ -146,6 +146,9 @@ label.lbl { display: block; font-size: 13px; color: var(--text-2); font-weight: 
 .up { color: var(--bad); } .down { color: var(--good); }
 a.btn, a .btn { color: var(--text); }
 .pill.statement { background: #e3f4ee; color: #0f6b4c; }
+.dupbox { display: grid; gap: 6px; padding: 10px 12px; margin: 4px 0 10px; border-radius: 12px; background: var(--warn-soft); font-size: 13px; }
+.dupbox .dup-c { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
+.dupbox .dup-acts { display: flex; flex-wrap: wrap; gap: 8px; }
 .pill.telegram { background: #e2f1fb; color: #145e8c; }
 @media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) .pill.telegram { background: #123247; color: #9fd2f2; } }
 :root[data-theme="dark"] .pill.telegram { background: #123247; color: #9fd2f2; }
@@ -988,9 +991,17 @@ function renderPayFilter() {
     + '<option value="-">❔ Chưa ghi cách trả</option>';
   $('#fPay').value = state.pay;
 }
+// Shopee, TikTok and MoMo are everything to do with that company: its emails and what was paid with its wallet.
+const WALLET_OF = {momo: /momo/, shopee: /shopee ?pay/};
+function srcMatch(t, src) {
+  return t.source === src || (WALLET_OF[src]?.test(unaccent(t.pay_account || '')) ?? false);
+}
+const LINK = {momo: 'Email MoMo', shopee: 'Email Shopee', tiktok: 'Email TikTok', email: 'Email'};
 function txRow(t) {
   const sub = [`<span class="pill ${t.source}">${SRC[t.source] || t.source}</span>`, esc(t.category || 'Chưa phân loại')];
   if (t.pay_account) sub.push(payIcon(t.pay_account) + ' ' + esc(t.pay_account));
+  if (t.link_ref) sub.push(`<span class="pill good" title="Cùng một khoản với email, chỉ tính một lần">🔗 ${LINK[t.link_ref.split(':')[0]] || 'Email'}</span>`);
+  if (t.dup_state === 'open') sub.push('<span class="pill warn">⚠️ Có thể trùng</span>');
   if (t.status === 'cancelled') sub.push('<span class="pill bad">Không tính</span>');
   const d = t.date;
   return `<button class="txrow ${t.status === 'cancelled' ? 'cancelled' : ''}" data-id="${t.id}">
@@ -1002,7 +1013,7 @@ function txRow(t) {
 async function loadTx() { state.tx = await api('/api/transactions?month=' + state.month); renderPayFilter(); renderTx(); }
 function renderTx() {
   const q = $('#fText').value.trim().toLowerCase();
-  const rows = state.tx.filter(t => (!state.cat || String(t.category_id ?? '') === state.cat) && (!state.src || t.source === state.src)
+  const rows = state.tx.filter(t => (!state.cat || String(t.category_id ?? '') === state.cat) && (!state.src || srcMatch(t, state.src))
     && (!state.pay || (state.pay === '-' ? !t.pay_account : t.pay_account === state.pay))
     && (!q || t.description.toLowerCase().includes(q)));
   const spend = rows.filter(t => t.status === 'ok' && t.kind === 'expense').reduce((a, t) => a + t.amount, 0);
@@ -1039,6 +1050,7 @@ function txModal(t = null) {
     <h3>${edit ? 'Sửa giao dịch' : 'Thêm khoản thu/chi'}</h3>
     <p class="lead">${edit ? `${SRC[t.source] || t.source}${t.order_id && !t.order_id.startsWith('MSG-') ? ' · đơn #' + esc(t.order_id) : ''}` : 'Học phí, điện nước, đi chợ, lương…'}</p>
     <div class="kind-toggle"><button data-k="expense">Khoản chi</button><button data-k="income">Khoản thu</button></div>
+    ${edit && (t.dup_state === 'open' || t.link_ref) ? '<div class="dupbox" id="mDup"></div>' : ''}
     <label class="lbl">Số tiền</label>
     <input class="field amount-in num" id="mAmt" inputmode="decimal" placeholder="0" autofocus value="${t ? nf.format(t.amount) : ''}">
     <div class="amount-hint" id="mHint">Gõ 1.500.000 · 1,5tr · 200k đều được</div>
@@ -1101,13 +1113,15 @@ function txModal(t = null) {
           loadCats();
         } else toast('Đã lưu');
       } else {
-        await api('/api/transactions', {method: 'POST', body});
-        toast(`Đã thêm ${fmt(amount)}`);
+        const r = await api('/api/transactions', {method: 'POST', body});
+        toast(r.flagged ? `Đã thêm ${fmt(amount)} — ⚠️ có thể trùng với khoản đã ghi, xem 🔔` :
+          r.merged ? `Đã thêm ${fmt(amount)} — 🔗 gộp với email, chỉ tính một lần` : `Đã thêm ${fmt(amount)}`, !!r.flagged);
         if (body.date.slice(0, 7) !== state.month) setMonth(body.date.slice(0, 7));
       }
       m.close(); refresh();
     } catch (err) { toast(err.message, true); }
   });
+  if (edit && $('#mDup', el)) dupBox(t, $('#mDup', el), m);
   if (edit) {
     $('#mDel', el).onclick = async () => {
       if (!await confirmBox('Xoá giao dịch?', 'Giao dịch sẽ bị xoá hẳn.', 'Xoá', true)) return;
@@ -1118,6 +1132,29 @@ function txModal(t = null) {
       m.close(); refresh();
     };
   }
+}
+
+// A possible duplicate asks the user; a merged one can be split again (dedupe.py).
+async function dupBox(t, box, m) {
+  const act = async (action, other) => {
+    await api(`/api/transactions/${t.id}/dup`, {method: 'POST', body: {action, other}});
+    m.close(); refresh(); loadBell();
+    toast({keep: 'Đã giữ cả hai', drop: 'Đã bỏ khoản trùng', merge: 'Đã gộp, chỉ tính một lần', split: 'Đã tách, tính riêng hai khoản'}[action]);
+  };
+  if (t.link_ref) {
+    box.innerHTML = `<b>🔗 Đã gộp với ${esc(LINK[t.link_ref.split(':')[0]] || 'email')}</b>
+      <span>Cùng số tiền, cùng cách trả, ngày gần nhau nên chỉ tính một lần. Nếu là hai khoản khác nhau thì tách ra.</span>
+      <div class="dup-acts"><button class="btn" data-a="split">Tách ra</button></div>`;
+  } else {
+    const cands = await api(`/api/transactions/${t.id}/dup`).catch(() => []);
+    const email = !!LINK[t.source];
+    box.innerHTML = `<b>⚠️ Có thể trùng</b>
+      <span>${email ? 'Email này khớp với nhiều khoản đã ghi. Chọn khoản đúng, hoặc tính riêng.' : 'Đã có khoản giống vậy:'}</span>
+      ${cands.map(c => `<div class="dup-c">${esc(c.text)}${email ? `<button class="btn" data-a="merge" data-o="${c.id}">Là khoản này</button>` : ''}</div>`).join('')}
+      <div class="dup-acts">${email ? '<button class="btn" data-a="keep">Khoản khác — tính riêng</button><button class="btn" data-a="drop">Bỏ email này</button>'
+        : '<button class="btn" data-a="drop">Trùng — bỏ khoản này</button><button class="btn" data-a="keep">Khác khoản — giữ cả hai</button>'}</div>`;
+  }
+  box.onclick = e => { const b = e.target.closest('[data-a]'); if (b) act(b.dataset.a, b.dataset.o ? +b.dataset.o : undefined); };
 }
 
 // ---------------------------------------------------------------- Gmail
@@ -1763,6 +1800,7 @@ $('#bellList').onclick = async e => {
   await api('/api/notifications/read', {method: 'POST', body: {id: n.id}}).catch(() => {});
   loadBell();
   if (link.whatsnew) return whatsNew();
+  if (link.tx) return api('/api/transactions/' + link.tx).then(txModal).catch(() => toast('Giao dịch này đã bị xoá', true));
   if (link.piggy) return showTab('piggy');
   if (link.cat) return openCat(String(link.cat));
   if (link.src) {

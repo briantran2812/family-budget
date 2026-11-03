@@ -12,6 +12,7 @@ import keyring
 import keyring.errors
 
 import db
+import dedupe
 import parsers
 import rules
 
@@ -103,6 +104,8 @@ def process(conn, compiled, message_id, received, sender, subject, body) -> tupl
                                (source, r["order_id"])).fetchone()
             conn.execute("UPDATE transactions SET status = 'cancelled' WHERE source = ? AND order_id = ?",
                          (source, r["order_id"]))
+            conn.execute("UPDATE transactions SET status = 'cancelled' WHERE link_ref = ?",  # the typed entry it was merged into
+                         (f"{source}:{r['order_id']}",))
         return "cancelled", row["id"] if row else None
     if r["status"] == "no_amount":
         return "no_amount", None
@@ -121,9 +124,11 @@ def process(conn, compiled, message_id, received, sender, subject, body) -> tupl
                      (source, r["description"][:300], r["order_id"], cid, added["id"]))
         return "imported", added["id"]
     tx_id = conn.execute(
-        "INSERT INTO transactions(date, amount, kind, description, source, category_id, order_id) "
-        "VALUES (?, ?, ?, ?, ?, ?, ?)",
-        (received, r["amount"], kind, r["description"][:300], source, cid, r["order_id"])).lastrowid
+        "INSERT INTO transactions(date, amount, kind, description, source, category_id, order_id, pay_account) "
+        "VALUES (?, ?, ?, ?, ?, ?, ?, ?)",
+        (received, r["amount"], kind, r["description"][:300], source, cid, r["order_id"],
+         "Ví MoMo" if source == "momo" else None)).lastrowid
+    dedupe.check_email(conn, tx_id)  # the same payment typed on the iPhone, in Telegram or on the Mac
     return "imported", tx_id
 
 

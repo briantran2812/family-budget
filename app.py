@@ -17,6 +17,7 @@ from flask import Flask, Response, abort, g, got_request_exception, jsonify, req
 
 import alerts
 import db
+import dedupe
 import gmail_sync
 import notifications
 import parsers
@@ -211,22 +212,22 @@ def list_transactions():
     month = request.args.get("month") or date.today().strftime("%Y-%m")
     start, end = month_bounds(month)
     with conn() as c:
-        rows = c.execute(TX_SELECT + "WHERE t.date >= ? AND t.date < ? ORDER BY t.date DESC, t.id DESC",
-                         (start, end)).fetchall()
+        rows = c.execute(TX_SELECT + "WHERE t.date >= ? AND t.date < ? AND t.status != 'merged' "
+                         "ORDER BY t.date DESC, t.id DESC", (start, end)).fetchall()
     return jsonify([dict(r) for r in rows])
 
 
-def _insert(c, t: dict) -> int:
+def _insert(c, t: dict, by: str | None = None) -> int:
     kind = t.get("kind", "expense")
     amount = int(t["amount"])
     if amount <= 0:
         raise ValueError("Số tiền phải lớn hơn 0")
     cid = t.get("category_id") or rules.categorize(c, t.get("description", ""), kind)
     return c.execute(
-        "INSERT INTO transactions(date, amount, kind, description, source, category_id, pay_account) "
-        "VALUES (?, ?, ?, ?, ?, ?, ?)",
+        "INSERT INTO transactions(date, amount, kind, description, source, category_id, pay_account, entered_by) "
+        "VALUES (?, ?, ?, ?, ?, ?, ?, ?)",
         (t.get("date") or date.today().isoformat(), amount, kind, (t.get("description") or "").strip(),
-         t.get("source", "manual"), cid, (t.get("pay_account") or "").strip() or None)).lastrowid
+         t.get("source", "manual"), cid, (t.get("pay_account") or "").strip() or None, by)).lastrowid
 
 
 @app.post("/api/transactions")
@@ -235,10 +236,31 @@ def add_transactions():
     items = data if isinstance(data, list) else [data]
     try:
         with conn() as c:
-            ids = [_insert(c, t) for t in items]
+            by = phone_inbox.device_name(c)
+            ids = [_insert(c, t, by if t.get("source", "manual") == "manual" else None) for t in items]
+            checks = [dedupe.check_typed(c, i) for i in ids]
     except (KeyError, ValueError) as e:
         return jsonify(error=str(e)), 400
-    return jsonify(ok=True, ids=ids)
+    return jsonify(ok=True, ids=ids, merged=checks.count("merged"), flagged=checks.count("flagged"))
+
+
+@app.get("/api/transactions/<int:tid>/dup")
+def duplicate_candidates(tid):
+    with conn() as c:
+        return jsonify(dedupe.candidates(c, tid))
+
+
+@app.post("/api/transactions/<int:tid>/dup")
+def resolve_duplicate(tid):
+    data = request.get_json() or {}
+    if data.get("action") not in ("keep", "drop", "merge", "split"):
+        abort(400)
+    with conn() as c:
+        if data["action"] == "split":
+            dedupe.split(c, tid)
+        else:
+            dedupe.resolve(c, tid, data["action"], data.get("other"))
+    return jsonify(ok=True)
 
 
 @app.get("/api/transactions/<int:tid>")
@@ -266,6 +288,10 @@ def update_transaction(tid):
 @app.delete("/api/transactions/<int:tid>")
 def delete_transaction(tid):
     with conn() as c:
+        # An email folded into the deleted entry is still a real payment: it counts again on its own.
+        c.execute("UPDATE transactions SET status = 'ok', dup_state = 'kept' WHERE dup_with = ? AND status = 'merged'", (tid,))
+        c.execute("UPDATE transactions SET dup_with = NULL, dup_state = CASE dup_state WHEN 'open' THEN NULL "
+                  "ELSE dup_state END WHERE dup_with = ?", (tid,))
         c.execute("DELETE FROM transactions WHERE id = ?", (tid,))
     return jsonify(ok=True)
 
@@ -275,7 +301,8 @@ def export_csv():
     with conn() as c:
         rows = c.execute(
             "SELECT t.date, t.kind, t.amount, c.name AS category, t.description, t.source, t.order_id, t.status "
-            "FROM transactions t LEFT JOIN categories c ON c.id = t.category_id ORDER BY t.date").fetchall()
+            "FROM transactions t LEFT JOIN categories c ON c.id = t.category_id WHERE t.status != 'merged' "
+            "ORDER BY t.date").fetchall()
     buf = io.StringIO()
     buf.write("﻿")  # Excel needs the BOM to read Vietnamese as UTF-8
     w = csv.writer(buf)
