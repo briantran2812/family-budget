@@ -599,14 +599,19 @@ def test_ux42_whats_new_once_per_version_and_on_demand(page):
         db.set_setting(c, "seen_version", "1.3.0")   # someone updating from an older version
     reload(page)
     expect(page.get_by_text(f"Có gì mới trong {VERSION}")).to_be_visible()
-    expect(page.locator("#wnCur .wn-item")).to_have_count(3)
+    import json
+    from pathlib import Path
+    current = json.loads((Path(__file__).parents[2] / "static" / "whatsnew.json").read_text())["versions"][0]
+    assert current["version"] == VERSION
+    expect(page.locator("#wnCur .wn-item")).to_have_count(len(current["items"]))
     page.get_by_role("button", name="Đã hiểu").click()
     reload(page)
     page.wait_for_timeout(300)
     expect(page.locator(".modal")).to_have_count(0)       # shown once per version
     page.locator("#wnLink").click()                       # …and on demand from the sidebar
-    page.locator("#wnCur .wn-item", has_text="Đọc Gmail không cần App Password").get_by_role("button", name="Xem →").click()
-    expect(page.locator("#import")).to_be_visible()
+    item = next(i for i in current["items"] if i.get("goto"))
+    page.locator("#wnCur .wn-item", has_text=item["title"]).get_by_role("button", name="Xem →").click()
+    expect(page.locator("#" + item["goto"])).to_be_visible()
     page.locator("nav button[data-tab=settings]").click()
     page.locator("#aboutWn").click()
     expect(page.get_by_text(f"Có gì mới trong {VERSION}")).to_be_visible()

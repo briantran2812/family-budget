@@ -767,7 +767,9 @@ function guide_(chat) {
     'Cách trả: tm (tiền mặt), ck (chuyển khoản), visa hoặc thẻ, momo. Không gõ thì bot dùng cách trả lần trước của bạn.',
     'Nội dung có từ khoá của app trên Mac (phở bò, đi chợ, lương…) thì bot ghi ngay; không thì hỏi hạng mục bằng nút. ' +
     '💼 Lương, 💰 Thu nhập khác ghi thành khoản thu. Gõ đủ số: "45" thì bot hỏi lại.',
-    '✏️ Bấm Đổi hạng mục hoặc ↩️ Huỷ dưới tin "Đã ghi"; /huy huỷ khoản bạn ghi gần nhất (trong 24 giờ).',
+    'Chi hôm khác: thêm "hôm qua", "hôm kia" hoặc ngày, ví dụ 45k phở hôm qua, 500k học phí 01/11.',
+    '✏️ Đổi hạng mục, 📅 Đổi ngày hoặc ↩️ Huỷ: bấm dưới tin "Đã ghi"; /huy huỷ khoản bạn ghi gần nhất (trong 24 giờ).',
+    '⚠️ Hai người ghi cùng số tiền trong cùng ngày thì bot hỏi có trùng không: ai trả tiền thì người đó ghi.',
     '', '📊 Báo cáo: /homnay  /tuan  /thang (hoặc /thang 10)  /ngansach  /ongheo',
     'Số liệu tính tới lần app trên Mac đồng bộ gần nhất, cộng các khoản ghi qua Telegram/iPhone sau đó.',
     'Tối Chủ nhật 20:00 có báo cáo tuần; ngày 1 lúc 8:00 có báo cáo tháng trước.',

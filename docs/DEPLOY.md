@@ -484,6 +484,29 @@ Nâng cấp (TEST trước, rồi PRODUCTION như mục E):
    Hidden sheets) có danh sách. Trước lần đẩy đó bot vẫn hỏi hạng mục bằng nút như bản 4.
 4. Thử: `45k phở bò` → "✓ Đã ghi …" trong vài giây nếu vừa có tin khác, hoặc ≤ 1 phút nếu nhóm đang im.
 
+### H7. Code.gs bản 6: ngày chi và chống ghi trùng (app 1.5.1)
+
+- **Ngày chi:** bot và phím tắt iPhone hiểu `hôm qua`, `hqua`, `tối qua`, `hôm kia`, `01/11`, `ngày 1/11/2026` trong
+  nội dung (tối đa 60 ngày trước, không nhận ngày tương lai) và bỏ chữ đó khỏi mô tả. Cột mới **Ngày chi** ở cuối Hộp
+  thư đến; app 1.5.1 lấy ngày từ cột này. Tin "Đã ghi" có thêm nút **📅 Đổi ngày** (7 ngày gần nhất). Phím tắt **không
+  phải cài lại**.
+- **Gửi lặp:** cùng người gửi cùng nội dung trong 3 phút (bot chậm, bấm gửi lại) thì bot hỏi "➕ Vẫn ghi / ✖️ Không".
+- **Hai người cùng ghi:** cùng số tiền, cùng ngày chi, khác người ghi hoặc khác kênh (kể cả khoản nhập tay trên Mac,
+  lấy từ tab Giao dịch) thì tin "Đã ghi" có dòng ⚠️ và nút **↩️ Trùng — huỷ khoản này / ✔ Khác khoản** (ghi `khác` vào
+  Trạng thái). Không bao giờ tự xoá. App trên Mac cũng tự đánh dấu "⚠️ Có thể trùng" và hỏi trong cửa sổ giao dịch.
+- **Khoản ghi qua iPhone hiện trong nhóm** (khi đã bật bot) kèm các nút như khoản gõ trong nhóm, để cả nhà thấy cùng một sổ.
+- **Email và khoản ghi tay** (trên Mac, không cần Code.gs 6): email MoMo/Shopee/TikTok khớp đúng một khoản đã ghi (cùng
+  số tiền, cách trả không mâu thuẫn, ghi tay từ 1 ngày trước tới 3 ngày sau ngày trong email) thì gộp, chỉ tính một lần.
+  Quy tắc: `docs/DEDUPE.md`.
+
+Nâng cấp (TEST trước, rồi PRODUCTION như mục E):
+
+1. Apps Script của sheet → xoá hết, dán `phone/Code.gs` → ⌘S. Thấy `var SCRIPT_VERSION = 6;`. Bản 6 không xin thêm quyền.
+2. **Deploy → Manage deployments → ✏️ → Version: New version → Deploy.** Không chọn "New deployment", không archive bản
+   đang chạy: địa chỉ đổi thì phím tắt iPhone (mã kết nối = địa chỉ) ngừng ghi được.
+3. Thử: `45k phở hôm qua` trong nhóm → "✓ Đã ghi … · 🗓 <hôm qua>"; phím tắt iPhone gõ mô tả `Gửi xe` → tin 📱 hiện
+   trong nhóm.
+
 ### Số liệu báo cáo lấy từ đâu
 
 - Tab **Giao dịch** (bản sao app Mac đẩy lên) của **máy đẩy gần nhất**: mỗi lần đẩy, script ghi giờ đẩy và giờ máy đó

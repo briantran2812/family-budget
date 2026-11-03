@@ -2,6 +2,32 @@
   "current_note": "Bản dùng thử: hãy ghi lại chỗ nào khó dùng hoặc sai để bản sau sửa.",
   "versions": [
     {
+      "version": "1.5.1",
+      "date": "03/11/2026",
+      "status": "bản dùng thử",
+      "title": "Không tính một khoản hai lần",
+      "items": [
+        {
+          "icon": "🔗",
+          "title": "Email và khoản đã ghi chỉ tính một lần",
+          "text": "Đã ghi \"Tiền điện\" trả bằng Ví MoMo, rồi email MoMo về: app gộp lại, giữ mô tả và hạng mục của bạn, có nhãn 🔗 Email MoMo. Gộp nhầm thì mở giao dịch, bấm Tách ra.",
+          "goto": "tx"
+        },
+        {
+          "icon": "⚠️",
+          "title": "Hai người cùng ghi một khoản",
+          "text": "Cùng số tiền, cùng ngày mà hai người cùng ghi thì app và bot Telegram hỏi có trùng không. App không tự xoá: bạn chọn bỏ một khoản hoặc giữ cả hai.",
+          "goto": "tx"
+        },
+        {
+          "icon": "🗓",
+          "title": "Ghi khoản của hôm qua",
+          "text": "Trên Telegram hoặc phím tắt iPhone, thêm \"hôm qua\", \"hôm kia\" hoặc ngày như 01/11 vào nội dung: khoản được ghi đúng ngày chi. Nút 📅 Đổi ngày dưới tin \"Đã ghi\". Chip MoMo nay gồm cả khoản trả bằng Ví MoMo.",
+          "goto": "tx"
+        }
+      ]
+    },
+    {
       "version": "1.5.0",
       "date": "03/11/2026",
       "status": "bản dùng thử",

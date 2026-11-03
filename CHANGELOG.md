@@ -1,5 +1,26 @@
 # Changelog
 
+## 1.5.1 — không tính trùng, ngày chi
+
+Release note cho người dùng: `docs/RELEASE-NOTES-1.5.1.md`. Quy tắc chống trùng: `docs/DEDUPE.md`.
+
+- **Một quy tắc chống trùng cho mọi đường nhập** (`dedupe.py`): email, iPhone, Telegram, ảnh chụp, form trên Mac.
+  Email MoMo/Shopee/TikTok khớp **đúng một** khoản ghi tay (cùng loại, số tiền khớp chính xác, cách trả không mâu thuẫn —
+  email MoMo không bao giờ khớp khoản "Tiền mặt" —, ngày ghi tay từ 1 ngày trước tới 3 ngày sau ngày trong email) thì
+  **gộp**: giữ mô tả và hạng mục người dùng chọn, nhãn **🔗 Email MoMo**, nút **Tách ra** để gỡ. Dòng email vẫn còn
+  (`status = 'merged'`, không tính, không hiện, không lên bản sao Sheet). Khớp từ hai khoản trở lên thì không đoán: dòng
+  email vào "Không tính" + 🔔 "Có thể trùng", người dùng chọn khoản đúng. Khoản nào về trước cũng được.
+- **Hai khoản do người ghi không bao giờ tự gộp**: cùng số tiền, cùng ngày, khác người ghi hoặc khác kênh thì cả hai
+  được đánh dấu **⚠️ Có thể trùng** (vẫn tính) và có 🔔; cửa sổ giao dịch có **Trùng — bỏ khoản này / Khác khoản — giữ
+  cả hai**. Một người ghi hai lần cùng kênh (hai bữa trưa 45k) thì không hỏi.
+- Email MoMo tự ghi cách trả **Ví MoMo**. Chip **Shopee / TikTok / MoMo** ở Giao dịch gồm cả khoản trả bằng ví đó (trước
+  đây chỉ khoản đến từ email). Xoá khoản ghi tay đã gộp thì email tính lại.
+- Cột mới trong `transactions`: `entered_by`, `link_ref`, `dup_with`, `dup_state` (migration trong `db.init`).
+- **Code.gs bản 6** (app vẫn chỉ cần bản 2): cột **Ngày chi** đọc từ `hôm qua`, `hôm kia`, `01/11`… trong nội dung (bot
+  và phím tắt, không cần cài lại phím tắt), nút **📅 Đổi ngày**; cùng người gửi lặp trong 3 phút thì hỏi "➕ Vẫn ghi";
+  hai người ghi cùng khoản thì cảnh báo trong nhóm với **↩️ Trùng — huỷ / ✔ Khác khoản** (`khác` trong Trạng thái, gửi
+  cho Mac là `kept`); khoản ghi qua iPhone được đăng vào nhóm Telegram. Cài: `docs/DEPLOY.md` mục H7.
+
 ## 1.5.0 — bot Telegram, Gmail qua Google Sheet, thống kê sử dụng (beta)
 
 Release note cho người dùng: `docs/RELEASE-NOTES-1.5.0.md`.
