@@ -209,6 +209,11 @@ sau này là `develop`). `release.py rc` chỉ chạy trên `develop` hoặc `re
     tab **Giao dịch** của sheet PRODUCTION có dòng đó với cột Máy = `MacBook Lan`. Sheet **TEST** không có gì mới.
 11. Quay lại C7 khi mọi P1 đã PASS.
 
+**Xem vợ dùng app thế nào:** mở sheet PRODUCTION → tab **Tổng hợp** → Data → Create a filter → lọc cột **Nhóm** =
+`Hoạt động` (lần mở gần nhất, số lần mở, số lần dùng từng việc trong 30 ngày, phiên bản) hoặc `Lỗi` (10 lỗi gần nhất,
+chỗ vợ bị vướng), và cột **Máy** = tên máy vợ (bước 6). Các dòng này cập nhật vài giây sau mỗi lần vợ mở app; vợ tắt
+"Gửi thống kê sử dụng" trong Cài đặt thì chúng biến mất ở lần đẩy sau. Không cần sửa Code.gs (vẫn `SCRIPT_VERSION` 2).
+
 ---
 
 ## E. Vòng sửa lỗi: sửa → TEST → PRODUCTION

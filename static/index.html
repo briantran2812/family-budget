@@ -316,6 +316,13 @@ details pre { white-space: pre-wrap; font-size: 12px; background: var(--surface-
 .newkw:focus { border-color: var(--accent); }
 .row-form { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; }
 .row-form .field { width: auto; flex: 1; min-width: 160px; }
+.usage-lists { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 280px), 1fr)); gap: 12px; margin: 12px 0; }
+.usage-lists > div { background: var(--surface-2); border-radius: 12px; padding: 10px 14px; font-size: 13.5px; }
+.usage-lists ul { margin: 6px 0 0; padding-left: 18px; color: var(--text-2); line-height: 1.5; }
+.usage-rows { width: 100%; min-width: 640px; border-collapse: collapse; font-size: 13px; margin-top: 12px; }
+.usage-rows th, .usage-rows td { text-align: left; padding: 6px 8px; border-bottom: 1px solid var(--border); vertical-align: top; overflow-wrap: anywhere; }
+.usage-rows th { color: var(--text-2); font-weight: 600; }
+.usage-rows th, .usage-rows td:nth-child(-n+3) { white-space: nowrap; overflow-wrap: normal; }
 
 /* ---------- modal & toast ---------- */
 .backdrop { position: fixed; top: 0; right: 0; bottom: 0; left: 0; background: rgba(10, 12, 25, .45); -webkit-backdrop-filter: blur(4px); backdrop-filter: blur(4px);
@@ -620,6 +627,30 @@ ol.howto li { margin: 5px 0; }
             <button class="seg" data-theme-pick="dark" type="button">🌙 Tối</button>
             <button class="seg" data-theme-pick="system" type="button">💻 Theo máy</button>
           </div>
+        </div>
+        <div class="card" id="usageCard">
+          <h2>Thống kê sử dụng</h2>
+          <p class="hint">Để người cài app cho bạn biết app có được dùng không và chỗ nào hay bị lỗi, rồi sửa cho dễ dùng hơn.
+            Thống kê được ghi vào Google Sheet của gia đình (tab <b>Tổng hợp</b>, nhóm <b>Hoạt động</b> và <b>Lỗi</b>) cùng lúc với
+            bản sao giao dịch. Ai mở được Sheet đó thì xem được.</p>
+          <label style="display:flex;gap:8px;align-items:center;font-size:14px"><input type="checkbox" id="usageOn">
+            Gửi thống kê sử dụng cho người cài đặt</label>
+          <div class="usage-lists">
+            <div><b>✅ Có gửi</b><ul>
+              <li>Phiên bản app, lần mở app gần nhất, số lần mở trong 7 và 30 ngày</li>
+              <li>Số lần dùng từng việc trong 30 ngày: đọc ảnh, khoản từ iPhone, đơn từ Gmail, nhập sao kê, nhập tay, đặt
+                ngân sách, xem ống heo, xem Có gì mới; giao diện đang chọn</li>
+              <li>10 lỗi gần nhất: câu báo lỗi app hiện ra (có thể có địa chỉ Gmail; số thẻ, số tài khoản được che)</li>
+            </ul></div>
+            <div><b>🚫 Không gửi</b><ul>
+              <li>Phím bạn gõ, các app khác, hình ảnh màn hình</li>
+              <li>Nội dung giao dịch, số tiền, ảnh chụp. Bản sao giao dịch là cài đặt riêng ở mục iPhone phía trên</li>
+              <li>Không gửi tới nơi nào khác ngoài Google Sheet của gia đình</li>
+            </ul></div>
+          </div>
+          <p class="hint" id="usageState"></p>
+          <button class="btn" id="usagePreviewBtn" type="button">👀 Xem dữ liệu sẽ gửi</button>
+          <div id="usagePreview" hidden></div>
         </div>
         <div class="card">
           <div class="card-head"><h2>Về ứng dụng</h2><span class="row-form" style="gap:6px"><button class="btn sm" type="button" id="aboutWn">✨ Có gì mới</button><button class="btn sm" type="button" id="aboutLog">📜 Nhật ký thay đổi</button></span></div>
@@ -1577,7 +1608,7 @@ $('#syncAllBtn').onclick = () => busy($('#syncAllBtn'), () => syncAll(false));
 // ---------------------------------------------------------------- settings
 const EMOJIS = '🎓📚💡💧🔥📶📱💄🧴💅🛒🍚🥬🍜☕️🏠🧺🧹🛋️👗👟👜🍼🧸👶💊🏥🦷🚗⛽️🛵✈️🎬🎮🏖️🎁💝🐶🐱🌿💼💰🏦📈🧾📦❤️⭐️'.match(/\p{Extended_Pictographic}️?/gu);
 function renderSettings() {
-  renderPhone(); renderSheetMail();
+  renderPhone(); renderSheetMail(); renderUsage();
   $('#profileForm').user_name.value = state.info.user_name || '';
   $('#queryForm').gmail_query.value = state.info.gmail_query || '';
   $('#dataDir').textContent = state.info.data_dir || '';
@@ -1656,6 +1687,26 @@ $('#revealBtn').onclick = () => api('/api/reveal-data', {method: 'POST'});
 $('#aboutWn').onclick = () => whatsNew();
 $('#aboutLog').onclick = () => changelog();
 
+// ---------------------------------------------------------------- Thống kê sử dụng (Cài đặt), usage.py
+async function renderUsage() {
+  let r;
+  try { r = await api('/api/usage/preview'); } catch { return; }
+  $('#usageOn').checked = r.share;
+  $('#usageState').textContent = !r.share ? 'Đang tắt: app không ghi và không gửi gì. Các dòng cũ của máy này trên Sheet bị xoá ở lần ghi kế tiếp.'
+    : !r.connected ? 'Máy này chưa kết nối Google Sheet nên hiện chưa gửi gì.'
+    : !r.push ? 'Bản sao trên Google Sheet (mục iPhone) đang tắt nên hiện chưa gửi gì.'
+    : 'Đang gửi vài giây sau mỗi lần mở app và mỗi thay đổi.';
+  if (!$('#usagePreview').hidden) $('#usagePreview').innerHTML = r.rows.length
+    ? `<div style="overflow-x:auto"><table class="usage-rows"><thead><tr><th>Máy</th><th>Tháng</th><th>Nhóm</th><th>Tên</th><th>Giá trị</th></tr></thead><tbody>
+      ${r.rows.map(x => `<tr>${x.slice(0, 5).map(v => `<td>${esc(String(v))}</td>`).join('')}</tr>`).join('')}</tbody></table></div>`
+    : '<div class="result">Không có dòng nào sẽ được gửi.</div>';
+}
+$('#usageOn').onchange = async e => {
+  await api('/api/profile', {method: 'POST', body: {share_usage: e.target.checked ? '1' : '0'}});
+  await renderUsage(); toast(e.target.checked ? 'Đã bật gửi thống kê sử dụng' : 'Đã tắt gửi thống kê sử dụng');
+};
+$('#usagePreviewBtn').onclick = () => { $('#usagePreview').hidden = !$('#usagePreview').hidden; renderUsage(); };
+
 // ---------------------------------------------------------------- theme (Cài đặt → Giao diện)
 function applyTheme(t) {
   if (t === 'light' || t === 'dark') document.documentElement.dataset.theme = t;
@@ -1676,10 +1727,12 @@ const ago = s => {
   return mins < 1 ? 'vừa xong' : mins < 60 ? `${mins} phút trước` : mins < 1440 ? `${Math.round(mins / 60)} giờ trước`
     : `${s.slice(8, 10)}/${s.slice(5, 7)}`;
 };
-let bellItems = [];
+let bellItems = [], bellSeq = 0;
 async function loadBell() {
+  const seq = ++bellSeq;
   let r;
   try { r = await api('/api/notifications'); } catch { return; }
+  if (seq !== bellSeq) return;  // an older request answered last: its count is stale (flaky UX-45)
   bellItems = r.items;
   $('#bellBadge').hidden = !r.unread;
   $('#bellBadge').textContent = r.unread > 9 ? '9+' : r.unread;
@@ -1775,6 +1828,7 @@ function welcome() {
 // ---------------------------------------------------------------- start
 (async () => {
   await Promise.all([loadInfo(), loadCats(), loadAccounts()]);
+  api('/api/usage/open', {method: 'POST'}).catch(() => {});  // Cài đặt → Thống kê sử dụng
   let tab = 'overview'; try { tab = localStorage.getItem('tab') || tab; } catch {}
   const hash = location.hash.slice(1);
   if (['overview', 'tx', 'import', 'recon', 'piggy', 'settings'].includes(hash)) tab = hash;

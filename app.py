@@ -13,7 +13,7 @@ import threading
 from datetime import date
 from pathlib import Path
 
-from flask import Flask, Response, abort, jsonify, request, send_from_directory
+from flask import Flask, Response, abort, g, got_request_exception, jsonify, request, send_from_directory
 
 import alerts
 import db
@@ -26,6 +26,7 @@ import reconcile
 import rules
 import sheet_email
 import statements
+import usage
 
 VERSION = "1.4.0"
 RESOURCES = Path(getattr(sys, "_MEIPASS", Path(__file__).parent))  # PyInstaller unpacks data files here
@@ -107,7 +108,7 @@ def read_notifications():
 def profile():
     data = request.get_json()
     with conn() as c:
-        for key in ("user_name", "onboarded", "gmail_query", "phone_push", "device_name", "seen_version", "theme"):
+        for key in ("user_name", "onboarded", "gmail_query", "phone_push", "device_name", "seen_version", "theme", "share_usage"):
             if key in data:
                 db.set_setting(c, key, str(data[key]).strip())
     return jsonify(ok=True)
@@ -480,6 +481,11 @@ def _push_now():
                 phone_inbox.push(c)
     except Exception as e:  # noqa: BLE001 — a background upload must never take the app down; the error is shown in Cài đặt
         print(f"push to Sheet failed: {e}", file=sys.stderr)
+        try:
+            with conn() as c:
+                usage.record_error(c, "push", str(e))
+        except Exception:  # noqa: BLE001
+            pass
 
 
 def schedule_push(delay: float | None = None) -> None:
@@ -512,6 +518,45 @@ def alert_after_write(resp):
                 alerts.notify_crossings(c, desktop=app.config["DESKTOP"])
         except Exception as e:  # noqa: BLE001 — a notification must never fail the write it follows
             print(f"budget alert failed: {e}", file=sys.stderr)
+    return resp
+
+
+# ---------------------------------------------------------------- Thống kê sử dụng (usage.py, Cài đặt)
+
+@app.post("/api/usage/open")
+def usage_open():
+    with conn() as c:
+        usage.record(c, "open", VERSION)
+        if usage.sharing(c) and phone_inbox.push_enabled(c):
+            schedule_push()  # "Mở app gần nhất" reaches the Sheet even when nothing else changes
+    return jsonify(ok=True)
+
+
+@app.get("/api/usage/preview")
+def usage_preview():
+    with conn() as c:
+        return jsonify(share=usage.sharing(c), connected=phone_inbox.connected(c), push=phone_inbox.push_enabled(c),
+                       rows=usage.rows(c, phone_inbox.device_name(c)))
+
+
+@got_request_exception.connect_via(app)
+def _remember_exception(sender, exception, **extra):
+    g.usage_exc = f"{type(exception).__name__}: {exception}"
+
+
+@app.after_request
+def usage_after_request(resp):
+    if request.method == "GET" and request.path != "/api/piggy" and resp.status_code < 400:
+        return resp
+    try:
+        sent = request.get_json(silent=True)
+        with conn() as c:
+            usage.observe(c, request.method, request.path, resp.status_code, sent,
+                          resp.get_json(silent=True) if resp.is_json else None, request.form, g.get("usage_exc", ""))
+            if request.path == "/api/profile" and "share_usage" in (sent or {}) and phone_inbox.push_enabled(c):
+                schedule_push()  # turning it off removes this Mac's rows from the Sheet at the next push
+    except Exception as e:  # noqa: BLE001 — statistics must never fail the request they describe
+        print(f"usage record failed: {e}", file=sys.stderr)
     return resp
 
 

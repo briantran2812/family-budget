@@ -84,6 +84,13 @@ CREATE TABLE IF NOT EXISTS piggy (                -- 🐷 Ống heo: one snapsho
     recorded_at TEXT NOT NULL DEFAULT (datetime('now', 'localtime')),
     note        TEXT
 );
+CREATE TABLE IF NOT EXISTS usage_events (         -- Thống kê sử dụng (usage.py), kept 60 days
+    id     INTEGER PRIMARY KEY,
+    at     TEXT NOT NULL,                        -- local time, YYYY-MM-DD HH:MM:SS
+    kind   TEXT NOT NULL,                        -- open | screenshot | phone_sync | tx_add | error | …
+    detail TEXT NOT NULL DEFAULT ''
+);
+CREATE INDEX IF NOT EXISTS ix_usage_kind_at ON usage_events(kind, at);
 """
 
 DEFAULT_CATEGORIES = [
