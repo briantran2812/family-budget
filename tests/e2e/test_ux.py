@@ -8,6 +8,7 @@ import db
 import rules
 from samples import momo_receipt, shopee_email
 import parsers
+from app import VERSION
 
 
 def add_tx(date, amount, desc, kind="expense", source="manual", status="ok"):
@@ -597,18 +598,18 @@ def test_ux42_whats_new_once_per_version_and_on_demand(page):
         db.set_setting(c, "onboarded", "1")
         db.set_setting(c, "seen_version", "1.3.0")   # someone updating from an older version
     reload(page)
-    expect(page.get_by_text("Có gì mới trong 1.4.0")).to_be_visible()
-    expect(page.locator("#wnCur .wn-item")).to_have_count(10)
+    expect(page.get_by_text(f"Có gì mới trong {VERSION}")).to_be_visible()
+    expect(page.locator("#wnCur .wn-item")).to_have_count(3)
     page.get_by_role("button", name="Đã hiểu").click()
     reload(page)
     page.wait_for_timeout(300)
     expect(page.locator(".modal")).to_have_count(0)       # shown once per version
     page.locator("#wnLink").click()                       # …and on demand from the sidebar
-    page.locator(".wn-item", has_text="Đối chiếu sao kê").get_by_role("button", name="Xem →").click()
-    expect(page.locator("#recon")).to_be_visible()
+    page.locator("#wnCur .wn-item", has_text="Đọc Gmail không cần App Password").get_by_role("button", name="Xem →").click()
+    expect(page.locator("#import")).to_be_visible()
     page.locator("nav button[data-tab=settings]").click()
     page.locator("#aboutWn").click()
-    expect(page.get_by_text("Có gì mới trong 1.4.0")).to_be_visible()
+    expect(page.get_by_text(f"Có gì mới trong {VERSION}")).to_be_visible()
 
 
 def test_ux42b_new_user_gets_welcome_not_whats_new(page):
@@ -684,7 +685,7 @@ def test_ux45_bell_lists_notifications_and_opens_them(onboarded, page):
     page.locator("#bellBtn").click()
     items = page.locator("#bellList .bell-item")
     expect(items.first).to_contain_text("Học phí đã dùng 87% ngân sách tháng")
-    expect(items.nth(1)).to_contain_text("Phiên bản 1.4.0")
+    expect(items.nth(1)).to_contain_text(f"Phiên bản {VERSION}")
     items.first.click()
     expect(page.locator("#tx")).to_be_visible()
     expect(page.locator("#fCat option:checked")).to_contain_text("Học phí")
@@ -694,8 +695,11 @@ def test_ux45_bell_lists_notifications_and_opens_them(onboarded, page):
     expect(page.locator("#bellBadge")).to_be_hidden()
     page.locator("#bellChangelog").click()
     expect(page.locator(".modal h3")).to_have_text("📜 Nhật ký thay đổi")
-    expect(page.locator(".cl-ver")).to_have_count(3)
-    expect(page.locator(".cl-ver").nth(1)).to_contain_text("1.3.0 — Đối chiếu sao kê")
+    import json
+    from pathlib import Path
+    versions = json.loads((Path(__file__).parents[2] / "static" / "whatsnew.json").read_text())["versions"]
+    expect(page.locator(".cl-ver")).to_have_count(len(versions))              # every version, newest first
+    expect(page.locator(".cl-ver", has_text="1.3.0 — Đối chiếu sao kê")).to_have_count(1)
 
 
 def test_ux46_theme_choice_overrides_macos_and_survives_reload(onboarded, open_page):

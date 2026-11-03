@@ -1,6 +1,8 @@
 # Changelog
 
-## Chưa phát hành (1.5.0)
+## 1.5.0 — bot Telegram, Gmail qua Google Sheet, thống kê sử dụng (beta)
+
+Release note cho người dùng: `docs/RELEASE-NOTES-1.5.0.md`.
 
 - **Gmail qua Google Sheet, không cần App Password** (cho tài khoản Google không hiện trang Mật khẩu ứng dụng: chỉ
   dùng passkey/khoá bảo mật, Advanced Protection…). `Code.gs` bản 3 có `batQuetEmail`: cứ 30 phút chép email

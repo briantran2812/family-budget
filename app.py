@@ -28,7 +28,7 @@ import sheet_email
 import statements
 import usage
 
-VERSION = "1.4.0"
+VERSION = "1.5.0"
 RESOURCES = Path(getattr(sys, "_MEIPASS", Path(__file__).parent))  # PyInstaller unpacks data files here
 app = Flask(__name__, static_folder=str(RESOURCES / "static"))
 app.config["DESKTOP"] = False

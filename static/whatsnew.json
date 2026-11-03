@@ -2,6 +2,34 @@
   "current_note": "Bản dùng thử: hãy ghi lại chỗ nào khó dùng hoặc sai để bản sau sửa.",
   "versions": [
     {
+      "version": "1.5.0",
+      "date": "03/11/2026",
+      "status": "bản dùng thử",
+      "title": "Ghi chi tiêu và xem báo cáo qua Telegram",
+      "items": [
+        {
+          "icon": "💬",
+          "title": "Bot Telegram cho nhóm gia đình",
+          "text": "Nhắn \"45k phở\" trong nhóm: bot tự xếp hạng mục và ghi, có nút Đổi hạng mục và Huỷ. Lệnh /homnay, /thang, /ngansach, /ongheo để xem báo cáo; bot tự nhắn cảnh báo ngân sách và báo cáo tuần, tháng.",
+          "goto": "tx"
+        },
+        {
+          "icon": "✉️",
+          "title": "Đọc Gmail không cần App Password",
+          "text": "Email đơn hàng Shopee, TikTok, MoMo được chép cả nội dung vào Google Sheet mỗi 30 phút; app đọc ra mặt hàng và số tiền khi đồng bộ. Thư của người nhà tới bằng bộ lọc chuyển tiếp.",
+          "goto": "import",
+          "focus": "#sheetMail"
+        },
+        {
+          "icon": "📊",
+          "title": "Thống kê sử dụng",
+          "text": "Số lần mở app, tính năng hay dùng và lỗi gặp phải được gửi vào Google Sheet của gia đình để người cài app hỗ trợ. Xem chi tiết và tắt trong Cài đặt.",
+          "goto": "settings",
+          "focus": "#usageCard"
+        }
+      ]
+    },
+    {
       "version": "1.4.0",
       "title": "Ghi chi tiêu ngay trên iPhone",
       "items": [
@@ -82,7 +110,7 @@
         "Hạng mục mới thêm trong app chưa tự có trên iPhone."
       ],
       "date": "02/11/2026",
-      "status": "bản dùng thử"
+      "status": "đã phát hành bản dùng thử"
     },
     {
       "version": "1.3.0",
