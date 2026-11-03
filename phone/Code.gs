@@ -437,6 +437,27 @@ function batTelegram() {
   Logger.log('Nhớ Deploy → Manage deployments → ✏️ → Version: New version → Deploy (app Mac cần a=list mới).');
 }
 
+/** Run from the editor when the bot does not answer: logs each thing that must be true, then polls once. */
+function kiemTraTelegram() {
+  var tok = String(props.getProperty('TELEGRAM_TOKEN') || '').trim();
+  Logger.log('1. TELEGRAM_TOKEN: %s', tok ? 'có (' + tok.length + ' ký tự)' : 'THIẾU — Project Settings → Script properties');
+  var me = tg_('getMe', {});
+  Logger.log('2. getMe: %s', me.ok ? '@' + me.result.username + (me.result.can_read_all_group_messages
+      ? ', đọc được mọi tin nhắn nhóm' : ', ⚠️ privacy mode còn bật') : 'LỖI ' + me.description);
+  var wh = tg_('getWebhookInfo', {});
+  Logger.log('3. Webhook: %s · tin nhắn đang chờ: %s', wh.ok ? (wh.result.url || 'không có (đúng)') : 'LỖI ' + wh.description,
+      wh.ok ? wh.result.pending_update_count : '?');
+  var trig = ScriptApp.getProjectTriggers().filter(function (t) { return t.getHandlerFunction() === 'pollTelegram'; });
+  Logger.log('4. Lịch chạy mỗi phút (pollTelegram): %s', trig.length ? 'có' : 'THIẾU — chạy batTelegram');
+  Logger.log('5. Mã ghép đôi: %s · cuộc trò chuyện đã kết nối: %s', props.getProperty('TG_PAIR_CODE') || '(chưa có)',
+      JSON.stringify(chats_().map(function (c) { return c.type + ' ' + (c.title || c.id); })));
+  Logger.log('6. Lỗi gần nhất: %s', props.getProperty('TG_LAST_ERROR') || '(không có)');
+  Logger.log('7. Đọc tin nhắn một lượt…');
+  pollTelegram();
+  Logger.log('   xong · offset %s · cuộc trò chuyện đã kết nối: %s', props.getProperty('TG_OFFSET') || 0,
+      JSON.stringify(chats_().map(function (c) { return c.type + ' ' + (c.title || c.id); })));
+}
+
 function tatTelegram() {
   ScriptApp.getProjectTriggers().forEach(function (t) {
     if (t.getHandlerFunction() === 'pollTelegram') ScriptApp.deleteTrigger(t);
@@ -480,6 +501,8 @@ function pollTelegram() {
       });
     } else if (r.error_code === 409) {
       tg_('deleteWebhook', {});
+    } else if (!r.ok) {
+      logError_('getUpdates: ' + (r.description || 'không rõ'));  // was silent: the bot just never answered
     }
     sendScheduled_();
   } catch (e) {

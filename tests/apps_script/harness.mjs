@@ -942,6 +942,20 @@ Object.assign(tests, {
   },
 });
 
+Object.assign(tests, {
+  kiem_tra_telegram_runs_without_throwing() {
+    const {ctx, store, logs} = load();
+    const text = () => logs.map(a => a.join(' '));
+    ctx.kiemTraTelegram();                                   // no token: says so, does not throw
+    assert.ok(text().some(l => /THIẾU/.test(l)));
+    store.TELEGRAM_TOKEN = '123:abc';
+    ctx.UrlFetchApp = {fetch: () => ({getContentText: () => JSON.stringify({ok: false, error_code: 401, description: 'Unauthorized'})})};
+    ctx.kiemTraTelegram();
+    assert.ok(text().some(l => /LỖI Unauthorized/.test(l)));
+    assert.match(store.TG_LAST_ERROR || '', /getUpdates: Unauthorized/);  // a failing poll is no longer silent
+  },
+});
+
 const only = process.argv[2];
 const NOW = Date.now;  // Telegram tests move the clock; each test starts from the same instant
 let failed = 0;
