@@ -285,7 +285,14 @@ def mirror_payload(conn: sqlite3.Connection) -> dict:
         "SELECT name, budget FROM categories WHERE budget > 0 AND kind = 'expense' ORDER BY sort, id")]
     import usage
     summary += usage.rows(conn, device)  # groups "Hoạt động" and "Lỗi"; none while share_usage is off
-    return {"a": "mirror", "device": device, "rows": rows, "summary": summary}
+    return {"a": "mirror", "device": device, "rows": rows, "summary": summary, "rules": keyword_rules(conn)}
+
+
+def keyword_rules(conn: sqlite3.Connection) -> list[list[str]]:
+    """[keyword, category, kind, icon] in rules.load order, so the Telegram bot (Code.gs 5) picks what the Mac would.
+    Code.gs before 5 ignores the field."""
+    cats = {r["id"]: r for r in conn.execute("SELECT id, name, kind, icon FROM categories")}
+    return [[kw, cats[cid]["name"], cats[cid]["kind"], cats[cid]["icon"]] for _p, kw, cid in rules.load(conn) if cid in cats]
 
 
 def push(conn: sqlite3.Connection) -> dict:

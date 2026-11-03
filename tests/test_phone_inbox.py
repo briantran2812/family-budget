@@ -1,4 +1,6 @@
 """iPhone → Google Sheet → app. The Apps Script side is tested in test_apps_script.py; here it is faked."""
+import json
+
 import pytest
 
 import phone_inbox
@@ -367,6 +369,19 @@ def test_mirror_payload_sends_budgets_for_the_bot(conn, fake_sheet):
     month = datetime.now().strftime("%Y-%m")
     assert budgets == [["MacBook Lan", month, "Ngân sách", "Học phí", 1_500_000, ""],
                        ["MacBook Lan", month, "Ngân sách", "Ăn uống & đi chợ", 2_000_000, ""]]
+
+
+def test_mirror_payload_sends_keywords_for_the_bot(conn, fake_sheet):
+    """Code.gs 5 categorises Telegram entries with these: every rule, both kinds, longest keyword first as rules.load."""
+    conn.execute("INSERT INTO categories(name, kind, sort, icon) VALUES ('Nuôi mèo', 'expense', 99, '🐱')")
+    conn.execute("INSERT INTO rules(keyword, category_id) SELECT 'pate meo', id FROM categories WHERE name = 'Nuôi mèo'")
+    kws = phone_inbox.mirror_payload(conn)["rules"]
+    assert ["pho bo", "Ăn uống & đi chợ", "expense", "🛒"] in kws
+    assert ["luong", "Lương", "income", "💼"] in kws
+    assert ["pate meo", "Nuôi mèo", "expense", "🐱"] in kws
+    assert len(kws) == conn.execute("SELECT COUNT(*) FROM rules").fetchone()[0]
+    assert [len(k[0]) for k in kws] == sorted((len(k[0]) for k in kws), reverse=True)
+    assert len(json.dumps(kws, ensure_ascii=False).encode()) < 100_000, "fits one CacheService value"
 
 
 def test_sync_notification_names_telegram(api, fake_sheet):

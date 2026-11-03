@@ -24,7 +24,8 @@
 
 // Bump when the Mac app needs something new from this script; the app warns when the deployed copy is older
 // (phone_inbox.REQUIRED_SCRIPT_VERSION). Promote Code.gs test → production like the app itself.
-var SCRIPT_VERSION = 4;  // 3: tab "Email" (quetEmail) and a=emails; 4: Telegram bot, columns Kênh/Trạng thái
+var SCRIPT_VERSION = 5;  // 3: tab "Email" (quetEmail) and a=emails; 4: Telegram bot, columns Kênh/Trạng thái;
+                         // 5: keywords from the Mac (tab "Từ khoá"), fast bot replies while a conversation is active
 
 var SHEET = 'Hộp thư đến';
 var HEADERS = ['Mã', 'Thời gian', 'Số tiền', 'Mô tả', 'Trả bằng', 'Người nhập', 'Hạng mục', 'Kênh', 'Trạng thái'];  // add columns at the end only
@@ -337,7 +338,10 @@ var TX_HEADERS = ['Ngày', 'Loại', 'Số tiền', 'Mô tả', 'Hạng mục', 
 var SUM_SHEET = 'Tổng hợp';
 var SUM_HEADERS = ['Máy', 'Tháng', 'Nhóm', 'Tên', 'Số tiền', '% tổng chi'];
 
-/** Body {a: "mirror", device, rows, summary}: replaces that Mac's rows in both tabs, leaves other Macs' rows alone. */
+/**
+ * Body {a: "mirror", device, rows, summary, rules}: replaces that Mac's rows in both tabs, leaves other Macs' rows alone.
+ * `rules` (app 1.5.0) are the Mac's keywords for the bot; a push without them keeps the ones already stored.
+ */
 function doPost(e) {
   var p = (e && e.parameter) || {};
   if (!props.getProperty('SECRET') || p.k !== props.getProperty('SECRET')) return json_({ok: false, error: 'Mã kết nối sai'});
@@ -362,6 +366,7 @@ function doPost(e) {
     pushes[device] = {at: stamp_(now_(), tz), listed: props.getProperty('LAST_LIST') || ''};
     setJson_('MIRROR_PUSHES', pushes);
     props.setProperty('SHEET_TZ', tz);
+    if (Array.isArray(body.rules)) saveRules_(ss, device, body.rules);
   } finally {
     lock.releaseLock();
   }
@@ -390,6 +395,112 @@ function replaceRows_(ss, name, headers, deviceCol, device, rows, sortCol, forma
   if (all.length) sh.getRange(2, 1, all.length, headers.length).setValues(all);
 }
 
+// ---------------------------------------------------------------- keywords from the Mac, for the bot
+
+var RULES_SHEET = 'Từ khoá';
+var RULES_HEADERS = ['Từ khoá', 'Hạng mục', 'Loại', 'Biểu tượng'];
+var rulesMemo_ = null;  // read once per execution: a run sees a push made during its own ~50 s only at the next run
+
+/** The last pushing Mac's keywords, [keyword, category, kind, icon]. The tab is rewritten only when they changed. */
+function saveRules_(ss, device, list) {
+  var rules = list.filter(function (r) { return r && r[0] && r[1]; }).map(function (r) {
+    return [String(r[0]), String(r[1]), r[2] === 'income' ? 'income' : 'expense', String(r[3] || '')];
+  });
+  var json = JSON.stringify(rules);
+  var sig = json.length + ':' + hash_(json);
+  var sh = ss.getSheetByName(RULES_SHEET);
+  if (jsonProp_('TG_RULES', {}).sig !== sig || !sh) {
+    if (!sh) {
+      sh = ss.insertSheet(RULES_SHEET);
+      sh.hideSheet();
+    }
+    sh.getRange('A:D').setNumberFormat('@');
+    if (sh.getLastRow() > 0) sh.getRange(1, 1, sh.getLastRow(), RULES_HEADERS.length).clearContent();
+    sh.getRange(1, 1, rules.length + 1, RULES_HEADERS.length).setValues([RULES_HEADERS].concat(rules.map(function (r) {
+      return r.map(textCell_);
+    })));
+    cachePut_('rules', json);
+    rulesMemo_ = null;
+  }
+  setJson_('TG_RULES', {sig: sig, device: device, at: stamp_(now_(), ss.getSpreadsheetTimeZone()), n: rules.length});
+}
+
+function rules_() {
+  if (rulesMemo_) return rulesMemo_.rules;
+  var rules = null;
+  try {
+    rules = JSON.parse(CacheService.getScriptCache().get('rules') || 'null');
+  } catch (e) {
+  }
+  if (!Array.isArray(rules)) {
+    var sh = sheet_().getParent().getSheetByName(RULES_SHEET);
+    rules = !sh || sh.getLastRow() < 2 ? [] : sh.getRange(2, 1, sh.getLastRow() - 1, RULES_HEADERS.length).getValues()
+        .filter(function (r) { return r[0] !== '' && r[1] !== ''; })
+        .map(function (r) { return [String(r[0]), String(r[1]), r[2] === 'income' ? 'income' : 'expense', String(r[3])]; });
+    cachePut_('rules', JSON.stringify(rules));
+  }
+  rulesMemo_ = {rules: rules, cats: null};
+  return rules;
+}
+
+/** Categories the Mac's keywords point to, by unaccented name: [icon, name, kind] like CATS. */
+function ruleCats_() {
+  rules_();
+  if (!rulesMemo_.cats) {
+    rulesMemo_.cats = {};
+    rulesMemo_.rules.forEach(function (r) { rulesMemo_.cats[unaccent_(r[1])] = [r[3] || '📦', r[1], r[2]]; });
+  }
+  return rulesMemo_.cats;
+}
+
+function cachePut_(key, value) {
+  try {
+    CacheService.getScriptCache().put(key, value, TG_PENDING_SECONDS);
+  } catch (e) {  // over 100 KB: drop the stale copy, rules_ reads the tab instead
+    try {
+      CacheService.getScriptCache().remove(key);
+    } catch (ignored) {
+    }
+  }
+}
+
+function hash_(s) {
+  var h = 5381;
+  for (var i = 0; i < s.length; i++) h = (h * 33 + s.charCodeAt(i)) | 0;
+  return (h >>> 0).toString(36);
+}
+
+// Port of rules.normalize and rules.categorize on the Mac; a test runs both on the same descriptions.
+var WS_ = new RegExp('[\\t\\n\\v\\f\\r \\x1c-\\x1f\\x85\\xa0\\u1680\\u2000-\\u200a\\u2028\\u2029\\u202f\\u205f\\u3000]+', 'g');
+var WORD_ = /^[\p{L}\p{N}_]/u;  // Python's \w
+
+function normalize_(s) {
+  return String(s === undefined || s === null ? '' : s).replace(/đ/g, 'd').replace(/Đ/g, 'D').normalize('NFD')
+      .replace(/\p{Mn}/gu, '').toLowerCase().replace(WS_, ' ').replace(/^ | $/g, '');
+}
+
+/** The category ([icon, name, kind]) of the longest whole-word keyword of `kind` in `text`; null instead of a fallback. */
+function categorize_(text, kind, rules) {
+  var norm = normalize_(text);
+  var len = function (s) { return Array.from(s).length; };  // code points, as Python counts
+  var sorted = rules.map(function (r, i) { return [r, i]; })
+      .sort(function (a, b) { return len(b[0][0]) - len(a[0][0]) || a[1] - b[1]; });
+  for (var i = 0; i < sorted.length; i++) {
+    var r = sorted[i][0];
+    if (r[2] === kind && r[0] && wholeWord_(norm, r[0])) return [r[3] || '📦', r[1], r[2]];
+  }
+  return null;
+}
+
+/** (?<!\w)kw(?!\w) on code points: a letter outside the BMP before or after counts as a word character. */
+function wholeWord_(text, kw) {
+  for (var at = text.indexOf(kw); at >= 0; at = text.indexOf(kw, at + 1)) {
+    var before = at > 1 && /[\udc00-\udfff]/.test(text[at - 1]) ? text.slice(at - 2, at) : text.slice(Math.max(at - 1, 0), at);
+    if (!WORD_.test(before) && !WORD_.test(text.slice(at + kw.length, at + kw.length + 2))) return true;
+  }
+  return false;
+}
+
 // ---------------------------------------------------------------- Telegram bot for the family group
 
 // Same names, icons and order as db.DEFAULT_CATEGORIES (a test compares them); income last, as on the iPhone.
@@ -407,6 +518,11 @@ var PAY_WORDS = {'tm': 'Tiền mặt', 'tien mat': 'Tiền mặt', 'ck': 'Chuy�
 var TG_PENDING_SECONDS = 21600;  // CacheService keeps at most 6 hours
 var TG_UNDO_MS = 24 * 3600e3;    // /huy reaches back this far
 var TG_PAIR_TRIES = 10;          // wrong /ketnoi codes accepted per day, across all chats
+// Fast replies: after an update the run keeps long polling. It all counts toward the 90 min/day of trigger time.
+var TG_FAST_MINUTES = 40;        // per day; Script property TG_FAST_MINUTES overrides it, 0 turns fast replies off
+var TG_ACTIVE_MS = 120e3;        // long poll while the last update is newer than this
+var TG_RUN_MS = 50e3;            // stop before the next minute's trigger, which skips while this run holds the lock
+var TG_LONG_POLL = 25;           // seconds per getUpdates: UrlFetchApp has no timeout option and gives up at about 60 s
 
 function batTelegram() {
   if (!props.getProperty('TELEGRAM_TOKEN')) {
@@ -452,10 +568,30 @@ function kiemTraTelegram() {
   Logger.log('5. Mã ghép đôi: %s · cuộc trò chuyện đã kết nối: %s', props.getProperty('TG_PAIR_CODE') || '(chưa có)',
       JSON.stringify(chats_().map(function (c) { return c.type + ' ' + (c.title || c.id); })));
   Logger.log('6. Lỗi gần nhất: %s', props.getProperty('TG_LAST_ERROR') || '(không có)');
-  Logger.log('7. Đọc tin nhắn một lượt…');
-  pollTelegram();
+  var kw = jsonProp_('TG_RULES', null);
+  Logger.log('7. Từ khoá từ Mac: %s', kw ? kw.n + ' (máy ' + kw.device + ', ' + kw.at + ')'
+      : 'chưa có: mở app 1.5.0 trên Mac một lần để gửi (chưa có thì bot luôn hỏi hạng mục bằng nút)');
+  Logger.log('8. %s', fastStatus_());
+  Logger.log('9. Đọc tin nhắn một lượt…');
+  poll_(true);
   Logger.log('   xong · offset %s · cuộc trò chuyện đã kết nối: %s', props.getProperty('TG_OFFSET') || 0,
       JSON.stringify(chats_().map(function (c) { return c.type + ' ' + (c.title || c.id); })));
+}
+
+function fastStatus_() {
+  var cap = fastCap_();
+  var used = jsonProp_('TG_FAST', {});
+  var ms = used.day === today_() ? used.ms || 0 : 0;
+  var mode = !cap ? 'tắt (TG_FAST_MINUTES = 0): đọc tin mỗi phút'
+      : ms >= cap * 6e4 ? 'hết hạn mức hôm nay: đọc tin mỗi phút tới 0 giờ'
+      : Date.now() - Number(props.getProperty('TG_ACTIVE_AT') || 0) < TG_ACTIVE_MS ? 'nhanh (vừa có tin nhắn)'
+      : 'chờ: đọc tin mỗi phút, có tin thì trả lời nhanh trong 2 phút';
+  return 'Trả lời nhanh hôm nay: ' + Math.round(ms / 6e4) + '/' + cap + ' phút · ' + mode;
+}
+
+function fastCap_() {
+  var v = props.getProperty('TG_FAST_MINUTES');
+  return v === null || v === '' || isNaN(+v) ? TG_FAST_MINUTES : Math.max(+v, 0);
 }
 
 function tatTelegram() {
@@ -478,6 +614,11 @@ function newPairCode_() {
 
 /** The minute trigger: reads new messages and button taps, then sends the weekly/monthly report when due. Never throws. */
 function pollTelegram() {
+  poll_(false);
+}
+
+/** One quick getUpdates; then, unless `quick`, long polls while a conversation is active (longPoll_). */
+function poll_(quick) {
   var lock;
   try {
     // A user lock, not the script lock: holding that through Telegram calls would make the iPhone's add_ wait.
@@ -488,27 +629,62 @@ function pollTelegram() {
   }
   try {
     if (!props.getProperty('TELEGRAM_TOKEN')) return;
-    var r = tg_('getUpdates', {offset: Number(props.getProperty('TG_OFFSET') || 0), timeout: 0,
-                               allowed_updates: ['message', 'callback_query']});
-    if (r.ok && r.result) {
-      r.result.forEach(function (u) {
-        try {
-          handleUpdate_(u);
-        } catch (e) {
-          logError_(e);
-        }
-        props.setProperty('TG_OFFSET', String(u.update_id + 1));  // one bad update must not block the rest forever
-      });
-    } else if (r.error_code === 409) {
-      tg_('deleteWebhook', {});
-    } else if (!r.ok) {
-      logError_('getUpdates: ' + (r.description || 'không rõ'));  // was silent: the bot just never answered
-    }
+    var start = Date.now();
+    if (fetchUpdates_(0) !== false && !quick) longPoll_(start);
     sendScheduled_();
   } catch (e) {
     logError_(e);
   } finally {
     lock.releaseLock();
+  }
+}
+
+/** Handles what getUpdates returns; the number of updates, or false when Telegram failed. */
+function fetchUpdates_(timeout) {
+  var r = tg_('getUpdates', {offset: Number(props.getProperty('TG_OFFSET') || 0), timeout: timeout,
+                             allowed_updates: ['message', 'callback_query']});
+  if (r.ok && r.result) {
+    r.result.forEach(function (u) {
+      try {
+        handleUpdate_(u);
+      } catch (e) {
+        logError_(e);
+      }
+      props.setProperty('TG_OFFSET', String(u.update_id + 1));  // one bad update must not block the rest forever
+    });
+    if (r.result.length) props.setProperty('TG_ACTIVE_AT', String(Date.now()));
+    return r.result.length;
+  }
+  if (r.error_code === 409) {
+    tg_('deleteWebhook', {});
+  } else {
+    logError_('getUpdates: ' + (r.description || 'không rõ'));  // was silent: the bot just never answered
+  }
+  return false;
+}
+
+/**
+ * While the last update is under TG_ACTIVE_MS old: getUpdates with a timeout, which Telegram answers the moment a message
+ * or tap arrives, until the run has lasted TG_RUN_MS. Time spent here is counted per day against fastCap_().
+ */
+function longPoll_(start) {
+  var cap = fastCap_() * 6e4;
+  var last = Number(props.getProperty('TG_ACTIVE_AT') || 0);
+  if (!cap || Date.now() - last >= TG_ACTIVE_MS) return;
+  var day = today_();
+  var used = jsonProp_('TG_FAST', {});
+  if (used.day !== day) used = {day: day, ms: 0};
+  var base = used.ms, from = Date.now();
+  for (;;) {
+    var now = Date.now();
+    var left = Math.min(start + TG_RUN_MS - now, last + TG_ACTIVE_MS - now, cap - base - (now - from));
+    var wait = Math.min(TG_LONG_POLL, Math.ceil(left / 1000));
+    if (wait < 1) break;
+    var n = fetchUpdates_(wait);
+    used.ms = base + Date.now() - from;
+    setJson_('TG_FAST', used);
+    if (n === false) break;  // network or Telegram error: the next minute tries again
+    if (n) last = Number(props.getProperty('TG_ACTIVE_AT'));
   }
 }
 
@@ -558,13 +734,14 @@ function onCommand_(m, chat, cmd) {
 function guide_(chat) {
   var lines = ['📒 Ghi khoản chi: gõ số tiền, nội dung, rồi cách trả nếu muốn',
     '  45k phở', '  45.000 phở tm', '  1tr5 học phí ck', '  120000 cà phê visa',
-    'Cách trả: tm (tiền mặt), ck (chuyển khoản), visa hoặc thẻ, momo. Không gõ thì bot hỏi.',
-    'Bot hỏi hạng mục bằng nút; 💼 Lương, 💰 Thu nhập khác ghi thành khoản thu. Gõ đủ số: "45" thì bot hỏi lại.',
-    '↩️ Bấm Huỷ dưới tin "Đã ghi", hoặc /huy để huỷ khoản bạn ghi gần nhất (trong 24 giờ).',
+    'Cách trả: tm (tiền mặt), ck (chuyển khoản), visa hoặc thẻ, momo. Không gõ thì bot dùng cách trả lần trước của bạn.',
+    'Nội dung có từ khoá của app trên Mac (phở bò, đi chợ, lương…) thì bot ghi ngay; không thì hỏi hạng mục bằng nút. ' +
+    '💼 Lương, 💰 Thu nhập khác ghi thành khoản thu. Gõ đủ số: "45" thì bot hỏi lại.',
+    '✏️ Bấm Đổi hạng mục hoặc ↩️ Huỷ dưới tin "Đã ghi"; /huy huỷ khoản bạn ghi gần nhất (trong 24 giờ).',
     '', '📊 Báo cáo: /homnay  /tuan  /thang (hoặc /thang 10)  /ngansach  /ongheo',
     'Số liệu tính tới lần app trên Mac đồng bộ gần nhất, cộng các khoản ghi qua Telegram/iPhone sau đó.',
     'Tối Chủ nhật 20:00 có báo cáo tuần; ngày 1 lúc 8:00 có báo cáo tháng trước.',
-    'Bot trả lời chậm tối đa khoảng 1 phút.'];
+    'Tin đầu tiên có thể chậm tới 1 phút; sau đó bot trả lời ngay trong khoảng 2 phút.'];
   if (chat.type === 'group' || chat.type === 'supergroup') {
     var me = tg_('getMe', {});
     if ((me.ok && !me.result.can_read_all_group_messages) || !chat.text) {
@@ -663,12 +840,35 @@ function onText_(m, text) {
     return;
   }
   if (e.tooBig) return reply_(m, '✗ ' + vnd_(e.amount) + ' quá lớn — kiểm tra lại số 0.');
-  var p = {a: e.amount || e.small, d: e.desc, t: e.account, small: !!e.small, by: m.from.first_name || '',
-           uid: m.from.id};
+  var p = {a: e.amount || e.small, d: e.desc, t: e.account || lastPay_(m.from.id), small: !!e.small,
+           by: m.from.first_name || '', uid: m.from.id};
+  var c = autoCat_(p.d);
+  if (c !== null) p.c = c;
   var key = String(m.message_id);
+  if (!p.small && p.c !== undefined && p.t) return record_(m.chat.id, null, key, p, m.message_id);
   putPending_(m.chat.id, key, p);
   var ask = step_(p, key);
   send_(m.chat.id, ask.text, ask.keyboard, m.message_id);
+}
+
+/** The Mac's keyword match: an expense category first, so "ăn trưa công ty" is not read as salary; null if none. */
+function autoCat_(desc) {
+  if (!desc) return null;
+  var rules = rules_();
+  var hit = categorize_(desc, 'expense', rules) || categorize_(desc, 'income', rules);
+  if (!hit) return null;
+  var i = catIndex_(hit[1]);
+  return i >= 0 ? i : {n: hit[1], i: hit[0], k: hit[2]};
+}
+
+function catIndex_(name) {
+  var k = unaccent_(name);
+  for (var i = 0; i < CATS.length; i++) if (unaccent_(CATS[i][1]) === k) return i;
+  return -1;
+}
+
+function lastPay_(uid) {
+  return jsonProp_('TG_PAY', {})[uid] || '';
 }
 
 function addressed_(m, bot) {
@@ -685,15 +885,17 @@ function step_(p, key) {
             keyboard: [[button_(vnd_(p.a * 1000), 'k|' + key), button_('Huỷ', 'x|' + key)]]};
   }
   if (p.c === undefined) {
-    var all = [button_(AUTO, 'c|' + key + '|a')].concat(CATS.map(function (c, i) {
-      return button_(c[0] + ' ' + c[1], 'c|' + key + '|' + i);
-    }));
-    return {text: summary_(p) + ' — hạng mục?', keyboard: rows_(all, 2).concat([[button_('✖️ Huỷ', 'x|' + key)]])};
+    return {text: summary_(p) + ' — hạng mục?', keyboard: catGrid_('c|' + key + '|').concat([[button_('✖️ Huỷ', 'x|' + key)]])};
   }
-  var income = p.c !== 'a' && CATS[p.c][2] === 'income';
-  return {text: summary_(p) + (income ? ' — nhận vào đâu?' : ' — trả bằng gì?'),
+  return {text: summary_(p) + (isIncome_(p.c) ? ' — nhận vào đâu?' : ' — trả bằng gì?'),
           keyboard: rows_(ACCOUNTS.map(function (a, i) { return button_(payIcon_(a) + ' ' + a, 'p|' + key + '|' + i); }), 2)
               .concat([[button_('✖️ Huỷ', 'x|' + key)]])};
+}
+
+function catGrid_(prefix) {
+  return rows_([button_(AUTO, prefix + 'a')].concat(CATS.map(function (c, i) {
+    return button_(c[0] + ' ' + c[1], prefix + i);
+  })), 2);
 }
 
 function summary_(p) {
@@ -704,8 +906,32 @@ function summary_(p) {
   return parts.join(' · ');
 }
 
+/** A category is 'a' (✨ Tự động), an index into CATS, or {n, i, k} for one the user made on the Mac. */
+function catOf_(c) {
+  if (c === 'a' || c === undefined || c === null) return null;
+  if (typeof c === 'object') return [c.i || '📦', c.n, c.k === 'income' ? 'income' : 'expense'];
+  return CATS[c] || null;
+}
+
 function catLabel_(c) {
-  return c === 'a' ? AUTO : CATS[c][0] + ' ' + CATS[c][1];
+  var x = catOf_(c);
+  return x ? x[0] + ' ' + x[1] : AUTO;
+}
+
+function isIncome_(c) {
+  var x = catOf_(c);
+  return !!x && x[2] === 'income';
+}
+
+/** "🍼 Mẹ & bé" in the Hạng mục column back to a category. */
+function catFromLabel_(label) {
+  var s = String(label || '').trim();
+  var name = s.replace(/^[^\wÀ-ỹ]+/, '').trim();
+  if (!name || unaccent_(name) === 'tu dong') return 'a';
+  var i = catIndex_(name);
+  if (i >= 0) return i;
+  var known = ruleCats_()[unaccent_(name)];
+  return {n: name, i: s.slice(0, s.length - name.length).trim() || (known ? known[0] : '📦'), k: known ? known[2] : 'expense'};
 }
 
 function onButton_(q) {
@@ -713,14 +939,28 @@ function onButton_(q) {
   var msgId = q.message && q.message.message_id;
   if (!chat_(chatId)) return answer_(q, '');
   var part = String(q.data || '').split('|');
-  if (part[0] === 'u') return undoButton_(q, chatId, msgId, part[1]);
+  // Answered before any Sheet work: until then the Telegram app shows a spinner, and after ~15 s the answer is refused.
+  if (part[0] === 'u') {
+    answer_(q, '');
+    return undoButton_(q, chatId, msgId, part[1]);
+  }
+  if (part[0] === 'e' || part[0] === 'r' || part[0] === 'g') {
+    answer_(q, '');
+    return changeButton_(q, chatId, msgId, part);
+  }
   var key = part[1];
   var p = getPending_(chatId, key);
-  if (!p) return answer_(q, 'Khoản này đã ghi, đã huỷ hoặc quá 6 giờ. Chưa ghi thì gõ lại.');
+  if (!p) {
+    answer_(q, 'Khoản này chưa ghi: bot chỉ nhớ câu hỏi 6 giờ. Gõ lại nếu cần.');
+    return edit_(chatId, msgId, '⌛ Chưa ghi: ' + firstLine_(q).replace(/ — [^—]*$/, '') +
+        '\nBot chỉ nhớ câu hỏi trong 6 giờ. Gõ lại nếu cần.');
+  }
+  if (p.done) return answer_(q, 'Đã ghi rồi');  // a second tap, or a tap that waited for the previous poll
+  if (p.skipped) return answer_(q, 'Đã bỏ qua rồi');
+  answer_(q, '');
   if (part[0] === 'x') {
-    dropPending_(chatId, key);
-    edit_(chatId, msgId, '✖️ Bỏ qua: ' + summary_(p));
-    return answer_(q, 'Đã bỏ qua');
+    putPending_(chatId, key, {skipped: true});
+    return edit_(chatId, msgId, '✖️ Bỏ qua: ' + summary_(p));
   }
   if (part[0] === 'k' && p.small) { p.a *= 1000; p.small = false; }
   if (part[0] === 'c' && !p.small) p.c = part[2] === 'a' ? 'a' : Math.min(Math.max(+part[2] || 0, 0), CATS.length - 1);
@@ -728,32 +968,114 @@ function onButton_(q) {
   if (p.small || p.c === undefined || !p.t) {
     putPending_(chatId, key, p);
     var ask = step_(p, key);
-    edit_(chatId, msgId, ask.text, ask.keyboard);
-    return answer_(q, '');
+    return edit_(chatId, msgId, ask.text, ask.keyboard);
   }
-  record_(q, chatId, msgId, key, p);
+  record_(chatId, msgId, key, p);
 }
 
-function record_(q, chatId, msgId, key, p) {
+function firstLine_(q) {
+  return String(q.message && q.message.text || '').split('\n')[0];
+}
+
+/** Appends the row, then edits the question `msgId` into the confirmation, or (no question was asked) replies to `replyTo`. */
+function record_(chatId, msgId, key, p, replyTo) {
   var id = newId_();
   appendInbox_([id, now_(), p.a, p.d, p.t, 'Telegram · ' + p.by, catLabel_(p.c), 'telegram', '']);
-  dropPending_(chatId, key);
-  var income = p.c !== 'a' && CATS[p.c][2] === 'income';
-  var done = '✓ Đã ghi ' + (income ? 'khoản thu ' : '') + summary_(p) + (p.by ? ' — ' + p.by : '');
+  putPending_(chatId, key, {done: id});
+  var pay = jsonProp_('TG_PAY', {});
+  if (pay[p.uid] !== p.t) {
+    pay[p.uid] = p.t;
+    setJson_('TG_PAY', pay);
+  }
+  var text = doneText_(p) + warning_(p.c);
+  if (msgId) {
+    edit_(chatId, msgId, text, doneKeyboard_(id));
+  } else {
+    var sent = send_(chatId, text, doneKeyboard_(id), replyTo);
+    msgId = sent.ok && sent.result ? sent.result.message_id : null;
+  }
   setJson_('TG_LAST_' + p.uid, {id: id, at: Date.now(), chat: chatId, msg: msgId, text: summary_(p)});
-  var warning = !income && p.c !== 'a' ? budgetWarning_(CATS[p.c][1]) : '';
-  edit_(chatId, msgId, done + (warning ? '\n' + warning : ''), [[button_('↩️ Huỷ', 'u|' + id)]]);
-  answer_(q, 'Đã ghi');
+}
+
+function doneText_(p) {
+  return '✓ Đã ghi ' + (isIncome_(p.c) ? 'khoản thu ' : '') + summary_(p) + (p.by ? ' — ' + p.by : '');
+}
+
+function doneKeyboard_(id) {
+  return [[button_('✏️ Đổi hạng mục', 'e|' + id), button_('↩️ Huỷ', 'u|' + id)]];
+}
+
+function warning_(c) {
+  var x = catOf_(c);
+  var w = x && x[2] === 'expense' ? budgetWarning_(x[1]) : '';
+  return w ? '\n' + w : '';
 }
 
 /** Anyone in a paired chat may undo an entry from its button: it is the family's shared book, and the reply says who. */
 function undoButton_(q, chatId, msgId, id) {
+  var text = firstLine_(q);
+  if (/^↩️/.test(text)) return;  // a double tap after the first one went through
   var r = cancelRow_(id);
-  if (r === 'missing') return answer_(q, 'Không thấy dòng này trong sheet (đã xoá?).');
-  if (r === 'already') return answer_(q, 'Khoản này đã huỷ rồi.');
-  var text = String(q.message.text || '').split('\n')[0].replace(/^✓ Đã ghi /, '');
-  edit_(chatId, msgId, '↩️ Đã huỷ: ' + text + (q.from && q.from.first_name ? ' (' + q.from.first_name + ' huỷ)' : ''));
-  answer_(q, 'Đã huỷ');
+  text = text.replace(/^✓ Đã ghi /, '');
+  if (r === 'missing') return edit_(chatId, msgId, '✓ Đã ghi ' + text + '\n⚠️ Không thấy dòng này trong sheet (đã xoá?).');
+  edit_(chatId, msgId, '↩️ Đã huỷ: ' + text + (r === 'ok' && q.from && q.from.first_name ? ' (' + q.from.first_name + ' huỷ)' : ''));
+}
+
+/** ✏️ Đổi hạng mục (e) opens the grid, a category (r) is written to the row, Giữ nguyên (g) goes back. */
+function changeButton_(q, chatId, msgId, part) {
+  var id = part[1];
+  var c = part[0] !== 'r' ? undefined : part[2] === 'a' ? 'a' : Math.min(Math.max(+part[2] || 0, 0), CATS.length - 1);
+  var row = inboxEntry_(id, c === undefined ? undefined : catLabel_(c));
+  if (!row) return edit_(chatId, msgId, firstLine_(q) + '\n⚠️ Không thấy dòng này trong sheet (đã xoá?).');
+  var v = row.v;
+  var p = {a: parseAmount(v[2]), d: String(v[3]).trim(), t: String(v[4]).trim(),
+           by: String(v[5]).replace(/^Telegram · /, '').trim(), c: catFromLabel_(v[6])};
+  if (row.cancelled) return edit_(chatId, msgId, '↩️ Đã huỷ: ' + doneText_(p).replace(/^✓ Đã ghi /, ''));
+  if (row.imported) {
+    return edit_(chatId, msgId, doneText_(p) + '\nMac đã lấy khoản này rồi: đổi hạng mục trong app trên Mac.',
+        [[button_('↩️ Huỷ', 'u|' + id)]]);
+  }
+  if (part[0] === 'e') {
+    return edit_(chatId, msgId, doneText_(p) + '\nĐổi sang hạng mục nào?',
+        catGrid_('r|' + id + '|').concat([[button_('Giữ nguyên', 'g|' + id)]]));
+  }
+  edit_(chatId, msgId, doneText_(p) + (part[0] === 'r' ? warning_(p.c) : ''), doneKeyboard_(id));
+  var uid = q.from && q.from.id;
+  var last = uid ? jsonProp_('TG_LAST_' + uid, null) : null;
+  if (last && last.id === id) {
+    last.text = summary_(p);
+    setJson_('TG_LAST_' + uid, last);
+  }
+}
+
+/**
+ * Inbox row `id` read under the script lock: {v, cancelled, imported}, or null. With `category` it is written to Hạng mục,
+ * unless the Mac has listed the row since: it imported the row then, and never reads it again.
+ */
+function inboxEntry_(id, category) {
+  var lock = LockService.getScriptLock();
+  lock.waitLock(10000);
+  try {
+    var sh = sheet_();
+    var n = sh.getLastRow() - 1;
+    var values = n > 0 ? sh.getRange(2, 1, n, HEADERS.length).getValues() : [];
+    var tz = sh.getParent().getSpreadsheetTimeZone();
+    var listed = props.getProperty('LAST_LIST') || '';
+    for (var i = 0; i < values.length; i++) {
+      var v = values[i];
+      if (String(v[0]) !== String(id)) continue;
+      var when = v[1] instanceof Date ? stamp_(v[1], tz) : parseDate(v[1]);
+      var out = {v: v, cancelled: isCancelled_(v[8]), imported: !!listed && !!when && when <= listed};
+      if (category !== undefined && !out.cancelled && !out.imported) {
+        sh.getRange(i + 2, 7, 1, 1).setValues([[category]]);
+        v[6] = category;
+      }
+      return out;
+    }
+    return null;
+  } finally {
+    lock.releaseLock();
+  }
 }
 
 function undoLast_(m) {
@@ -795,10 +1117,6 @@ function putPending_(chatId, key, p) {
 function getPending_(chatId, key) {
   var v = CacheService.getScriptCache().get('tg:' + chatId + ':' + key);
   return v ? JSON.parse(v) : null;
-}
-
-function dropPending_(chatId, key) {
-  CacheService.getScriptCache().remove('tg:' + chatId + ':' + key);
 }
 
 // ---- reports
@@ -848,9 +1166,10 @@ function lastPush_() {
   return last;
 }
 
+/** A default category, else one the Mac's keywords point to (so a category made on the Mac keeps its kind and icon). */
 function catByName_(name) {
   var k = unaccent_(name);
-  return CATS.filter(function (c) { return unaccent_(c[1]) === k; })[0] || null;
+  return CATS.filter(function (c) { return unaccent_(c[1]) === k; })[0] || (k ? ruleCats_()[k] : null) || null;
 }
 
 function catIcon_(name) {
