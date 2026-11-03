@@ -10,12 +10,16 @@
  *
  * App Mac còn ghi bản sao giao dịch vào tab "Giao dịch" và số tổng theo tháng vào tab "Tổng hợp" (doPost).
  *
+ * Gmail qua Google Sheet (khi không tạo được App Password), docs/DEPLOY.md mục G:
+ *   batQuetEmail() chạy một lần: cứ 30 phút chép email Shopee/TikTok/MoMo trong Gmail của bạn vào tab "Email"
+ *   tatQuetEmail() tắt việc quét
+ *
  * Mỗi môi trường (PRODUCTION, TEST) là một Google Sheet riêng với bản Code.gs riêng: docs/DEPLOY.md.
  */
 
 // Bump when the Mac app needs something new from this script; the app warns when the deployed copy is older
 // (phone_inbox.REQUIRED_SCRIPT_VERSION). Promote Code.gs test → production like the app itself.
-var SCRIPT_VERSION = 2;
+var SCRIPT_VERSION = 3;  // 3: tab "Email" (quetEmail) and a=emails
 
 var SHEET = 'Hộp thư đến';
 var HEADERS = ['Mã', 'Thời gian', 'Số tiền', 'Mô tả', 'Trả bằng', 'Người nhập', 'Hạng mục'];  // add columns at the end only
@@ -77,6 +81,7 @@ function doGet(e) {
     var ss = sheet_().getParent();
     return json_({ok: true, sheet: ss.getUrl(), name: ss.getName(), version: SCRIPT_VERSION});
   }
+  if (action === 'emails') return json_(emails_(String(p.since || '')));
   return json_({ok: false, error: 'Thiếu tham số a'});
 }
 
@@ -146,6 +151,158 @@ function sheet_() {
 
 function newId_() {
   return Utilities.getUuid().slice(0, 8);
+}
+
+// ---------------------------------------------------------------- Gmail → tab "Email"
+
+var EMAIL_SHEET = 'Email';
+var EMAIL_HEADERS = ['Mã thư', 'Ngày', 'Người gửi', 'Tiêu đề', 'Nội dung', 'Ghi chú', 'Message-ID'];
+// Change it in Project Settings → Script properties → EMAIL_QUERY.
+var EMAIL_QUERY = 'from:(shopee OR tiktok OR momo) newer_than:30d -in:spam -in:trash';
+var EMAIL_BODY_MAX = 45000;    // a Sheets cell holds at most 50 000 characters
+var EMAIL_KEEP_DAYS = 90;      // older rows are deleted, and never more than EMAIL_KEEP_ROWS
+var EMAIL_KEEP_ROWS = 1000;
+var EMAIL_PER_RUN = 200;       // the rest waits for the next run: one execution may last 6 minutes
+var EMAIL_PAGE = 100;          // a=emails returns at most this many rows…
+var EMAIL_PAGE_CHARS = 2000000;  // …or about this much body text, whichever comes first
+
+function batQuetEmail() {
+  var have = ScriptApp.getProjectTriggers().filter(function (t) { return t.getHandlerFunction() === 'quetEmail'; });
+  if (!have.length) ScriptApp.newTrigger('quetEmail').timeBased().everyMinutes(30).create();
+  var n = quetEmail();
+  Logger.log('Đã bật quét Gmail mỗi 30 phút. Lần này lưu %s email mới vào tab "%s". Tìm theo: %s',
+      n, EMAIL_SHEET, props.getProperty('EMAIL_QUERY') || EMAIL_QUERY);
+  Logger.log('Nhớ Deploy → Manage deployments → ✏️ → Version: New version → Deploy để app Mac lấy được email.');
+}
+
+function tatQuetEmail() {
+  ScriptApp.getProjectTriggers().forEach(function (t) {
+    if (t.getHandlerFunction() === 'quetEmail') ScriptApp.deleteTrigger(t);
+  });
+  Logger.log('Đã tắt quét Gmail. Các email đã lưu trong tab "%s" vẫn giữ.', EMAIL_SHEET);
+}
+
+/** Appends matching Gmail messages not yet in the "Email" tab, oldest first. Returns how many were added. */
+function quetEmail() {
+  var ss = sheet_().getParent();
+  var known = {};
+  var existing = ss.getSheetByName(EMAIL_SHEET);
+  if (existing) emailIds_(existing).forEach(function (id) { known[id] = true; });
+  var query = props.getProperty('EMAIL_QUERY') || EMAIL_QUERY;
+  var cutoff = new Date(Date.now() - EMAIL_KEEP_DAYS * 864e5);  // or a wide EMAIL_QUERY re-adds what pruning removed
+  var fresh = [];
+  for (var start = 0; start < 500; start += 100) {
+    var threads = GmailApp.search(query, start, 100);
+    threads.forEach(function (t) {
+      t.getMessages().forEach(function (m) {
+        var id = String(m.getId());
+        if (!known[id] && !m.isInTrash() && m.getDate() >= cutoff) { known[id] = true; fresh.push(m); }
+      });
+    });
+    if (threads.length < 100) break;
+  }
+  fresh.sort(function (a, b) { return a.getDate() - b.getDate(); });
+  var rows = fresh.slice(0, EMAIL_PER_RUN).map(emailRow_);
+  // Gmail is read without the lock: the iPhone's add_ waits on the same lock, and a scan can take minutes.
+  var lock = LockService.getScriptLock();
+  lock.waitLock(20000);
+  try {
+    var sh = emailSheet_();
+    var have = {};
+    emailIds_(sh).forEach(function (id) { have[id] = true; });
+    rows = rows.filter(function (r) { return !have[r[0]]; });  // a run started by hand meanwhile stored them
+    if (rows.length) sh.getRange(sh.getLastRow() + 1, 1, rows.length, EMAIL_HEADERS.length).setValues(rows);
+    pruneEmails_(sh);
+    props.setProperty('EMAIL_LAST_RUN', Utilities.formatDate(new Date(), ss.getSpreadsheetTimeZone(),
+        "yyyy-MM-dd'T'HH:mm:ss"));
+  } finally {
+    lock.releaseLock();
+  }
+  return rows.length;
+}
+
+function emailRow_(m) {
+  var html = m.getBody() || '';
+  // Same text the Mac's IMAP path gets (it prefers the HTML part): Gmail's own plain version lays tables out differently.
+  var body = /<(html|body|div|table|p|br|td|span)\b/i.test(html) ? htmlToText(html) : '';
+  if (!body.trim()) body = String(m.getPlainBody() || '');
+  var fwd = String(m.getHeader('X-Forwarded-For') || '').trim();
+  var note = fwd ? 'chuyển tiếp từ ' + fwd.split(/\s+/)[0] : /^(fwd?|tt)\s*:/i.test(m.getSubject()) ? 'chuyển tiếp' : '';
+  // The RFC Message-ID lets the Mac count an order email without an order number once, whether it came by IMAP or here.
+  return [String(m.getId()), m.getDate(), textCell_(m.getFrom()), textCell_(m.getSubject()),
+          textCell_(body.slice(0, EMAIL_BODY_MAX)), note, String(m.getHeader('Message-ID') || '').trim()];
+}
+
+/** setValues reads a string starting with "=" as a formula even in a plain-text column. */
+function textCell_(s) {
+  s = String(s === undefined || s === null ? '' : s);
+  return s[0] === '=' ? "'" + s : s;
+}
+
+function emailSheet_() {
+  var ss = sheet_().getParent();
+  var sh = ss.getSheetByName(EMAIL_SHEET);
+  if (!sh) {
+    sh = ss.insertSheet(EMAIL_SHEET);
+    sh.appendRow(EMAIL_HEADERS);
+    sh.setFrozenRows(1);
+    sh.getRange(1, 1, 1, EMAIL_HEADERS.length).setFontWeight('bold');
+    sh.getRange('A:A').setNumberFormat('@');  // an all-digit Gmail id would otherwise turn into a rounded number
+    sh.getRange('B:B').setNumberFormat('dd/MM/yyyy HH:mm');
+    sh.getRange('C:G').setNumberFormat('@');
+    sh.setColumnWidth(4, 260);
+  }
+  return sh;
+}
+
+function emailIds_(sh) {
+  var n = sh.getLastRow() - 1;
+  return n > 0 ? sh.getRange(2, 1, n, 1).getValues().map(function (r) { return String(r[0]); }) : [];
+}
+
+function pruneEmails_(sh) {
+  var n = sh.getLastRow() - 1;
+  if (n < 1) return;
+  var cutoff = new Date(Date.now() - EMAIL_KEEP_DAYS * 864e5);
+  var dates = sh.getRange(2, 2, n, 1).getValues();
+  var old = 0;
+  while (old < n && dates[old][0] instanceof Date && dates[old][0] < cutoff) old++;
+  var drop = Math.max(old, n - EMAIL_KEEP_ROWS);
+  if (drop > 0) sh.deleteRows(2, drop);
+}
+
+/** Rows after the one whose id is `since` (from the top if it is empty or was pruned; the Mac skips ids it has). */
+function emails_(since) {
+  var reply = {ok: true, rows: [], next: since, more: false, scanned: props.getProperty('EMAIL_LAST_RUN') || '',
+               version: SCRIPT_VERSION};
+  var lock = LockService.getScriptLock();
+  if (!lock.tryLock(5000)) return reply;  // quetEmail is deleting old rows, which shifts row numbers; the Mac asks again later
+  try {
+    var ss = sheet_().getParent();
+    var sh = ss.getSheetByName(EMAIL_SHEET);
+    if (!sh) return reply;
+    var ids = emailIds_(sh);
+    var start = since ? ids.indexOf(since) + 1 : 0;
+    var count = Math.min(EMAIL_PAGE, ids.length - start);
+    if (count <= 0) return reply;
+    var values = sh.getRange(start + 2, 1, count, EMAIL_HEADERS.length).getValues();
+    var tz = ss.getSpreadsheetTimeZone();
+    var chars = 0, i;
+    for (i = 0; i < values.length && (i === 0 || chars < EMAIL_PAGE_CHARS); i++) {
+      var v = values[i];
+      if (!v[0]) continue;
+      var when = v[1] instanceof Date ? Utilities.formatDate(v[1], tz, "yyyy-MM-dd'T'HH:mm:ss") : String(v[1]);
+      chars += String(v[4]).length;
+      reply.rows.push({id: String(v[0]), date: when, from: String(v[2]), subject: String(v[3]), body: String(v[4]),
+                       note: String(v[5]), mid: String(v[6]), row: start + i + 2});
+      reply.next = String(v[0]);
+    }
+    reply.more = start + i < ids.length;
+    reply.total = ids.length;
+    return reply;
+  } finally {
+    lock.releaseLock();
+  }
 }
 
 // ---------------------------------------------------------------- mirror from the Mac app
@@ -244,6 +401,24 @@ function parseDate(raw) {
   if (!m) return null;
   var y = m[3] ? (m[3].length === 2 ? 2000 + +m[3] : +m[3]) : new Date().getFullYear();
   return iso_(y, +m[2], +m[1]);
+}
+
+/** Port of parsers.html_to_text on the Mac: block tags become line breaks, style/script/head are dropped. */
+function htmlToText(html) {
+  var s = String(html || '').replace(/<!--[\s\S]*?-->/g, '')
+      .replace(/<(style|script|head)\b[\s\S]*?<\/\1\s*>/gi, '')
+      .replace(/<\/?(p|div|tr|br|li|h1|h2|h3|h4|table|td|th)\b[^>]*>/gi, '\n')
+      .replace(/<[^>]*>/g, '');
+  var named = {amp: '&', lt: '<', gt: '>', quot: '"', apos: "'", nbsp: '\u00a0'};
+  s = s.replace(/&(#x[0-9a-f]+|#\d+|[a-z]+);/gi, function (all, e) {
+    if (e[0] === '#') {
+      var c = e[1] === 'x' || e[1] === 'X' ? parseInt(e.slice(2), 16) : parseInt(e.slice(1), 10);
+      return c > 0 && c < 0x110000 ? String.fromCodePoint(c) : all;
+    }
+    return named[e.toLowerCase()] !== undefined ? named[e.toLowerCase()] : all;
+  });
+  return s.split(/\r\n|\r|\n/).map(function (ln) { return ln.replace(/[ \t\u00a0]+/g, ' ').trim(); })
+      .filter(function (ln) { return ln; }).join('\n');
 }
 
 function iso_(y, mo, d) {
