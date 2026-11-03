@@ -18,6 +18,7 @@ Runbook cho tối nay và cho mỗi lần sửa lỗi sau này. Làm theo thứ 
   tên sheet đúng **trước** khi kết nối.
 - `Code.gs` có `SCRIPT_VERSION`. App cần bản nào thì ghi ở `phone_inbox.REQUIRED_SCRIPT_VERSION`; sheet chạy bản cũ
   hơn thì app báo "Code.gs trên Google là bản cũ" ở thẻ iPhone. Code.gs cũng đi TEST → PRODUCTION như app (mục E).
+  Đọc Gmail qua sheet (mục G) cần bản 3 nhưng không bắt buộc: sheet bản 2 thì iPhone vẫn chạy, mục Gmail báo cần bản 3.
 
 Máy vợ chạy macOS 11 trở lên là được, chip Apple hay Intel đều có file cài. Đọc ảnh chụp biên lai cần macOS 13+;
 máy cũ hơn vẫn nhập tay, nhận iPhone, Gmail, sao kê bình thường (`docs/LIMITATIONS.md`, mục "macOS 11/12 so với 13+").
@@ -55,9 +56,10 @@ Làm trên Mac, trình duyệt đăng nhập Google **của anh**. Làm hai lầ
    ```sh
    pbcopy < ~/family-budget/phone/Code.gs     # chép vào clipboard rồi ⌘V vào trình soạn Apps Script
    ```
-   Thấy: dòng `var SCRIPT_VERSION = 2;` ở gần đầu file.
+   Thấy: dòng `var SCRIPT_VERSION = 3;` ở gần đầu file (bản 1.4.0 là `2`).
 4. Thanh trên: chọn hàm **caiDat** → **▶ Run** → **Review permissions** → chọn tài khoản →
-   "Google hasn't verified this app" → **Advanced → Go to … (unsafe)** → **Allow**.
+   "Google hasn't verified this app" → **Advanced → Go to … (unsafe)** → **Allow**. Từ bản 3 Google hỏi cả quyền
+   Gmail (cho mục G); script chỉ đọc Gmail khi đã chạy `batQuetEmail`.
    Thấy: Execution log ghi `Đã tạo sheet "Hộp thư đến"…`; tab Sheet có tab **Hộp thư đến** với 7 cột.
 5. **Deploy → New deployment** → ⚙️ → **Web app**:
    - Execute as: **Me**
@@ -73,7 +75,7 @@ Làm trên Mac, trình duyệt đăng nhập Google **của anh**. Làm hai lầ
    ```sh
    curl -sL 'MA&a=ping'
    ```
-   Thấy: `{"ok":true,"sheet":"https://docs.google.com/…","name":"Thu Chi — TEST","version":2}`
+   Thấy: `{"ok":true,"sheet":"https://docs.google.com/…","name":"Thu Chi — TEST","version":3}`
    (lần 2 là `Thu Chi — PRODUCTION`). Thấy trang HTML có "Sign in" thì bước 5 chưa chọn **Anyone**: Deploy →
    Manage deployments → ✏️ → Who has access: Anyone → Deploy.
 
@@ -236,7 +238,8 @@ sau này là `develop`). `release.py rc` chỉ chạy trên `develop` hoặc `re
 
 1. **TEST trước**: mở sheet **Thu Chi — TEST** → Extensions → Apps Script → xoá hết, dán `phone/Code.gs` mới → ⌘S →
    **Deploy → Manage deployments → ✏️ (Edit) → Version: New version → Deploy**. **Không** bấm New deployment: nó tạo
-   địa chỉ mới và mọi mã kết nối cũ ngừng hoạt động. Kiểm: `curl -sL 'MÃ TEST&a=ping'` ra `"version":<số mới>`;
+   địa chỉ mới và mọi mã kết nối cũ ngừng hoạt động. Bản cần quyền mới (bản 3: Gmail) thì chạy `batQuetEmail` → Allow
+   **trước** khi Deploy (mục G1). Kiểm: `curl -sL 'MÃ TEST&a=ping'` ra `"version":<số mới>`;
    trên máy anh bấm ↻ Đồng bộ → cảnh báo "Code.gs … bản cũ" (nếu có) biến mất; Phím tắt TEST ghi được.
 2. **PRODUCTION sau**, chỉ khi TEST ổn và **trước hoặc cùng lúc** cài app mới lên máy vợ: làm y hệt trên sheet
    **Thu Chi — PRODUCTION**. Kiểm bằng `curl` với MÃ PRODUCTION và một khoản thật trên iPhone.
@@ -267,7 +270,87 @@ open -a "Thu Chi Gia Dinh"
 - Tab Giao dịch/Tổng hợp của sheet sẽ được ghi đè theo dữ liệu vừa khôi phục ở lần đẩy kế tiếp.
 
 **3. Code.gs**: Deploy → Manage deployments → ✏️ → Version: chọn **phiên bản cũ** trong danh sách → Deploy. Địa chỉ và
-mã giữ nguyên.
+mã giữ nguyên. Dán lại Code.gs bản 2 vào trình soạn thì chạy `tatQuetEmail` **trước** (lịch 30 phút chạy code đã lưu chứ không
+theo bản Deploy; mất hàm `quetEmail` thì Google gửi thư báo lỗi mỗi lần). App 1.5.0 thấy bản 2 thì ngừng lấy email và
+báo trong mục Gmail; Phím tắt iPhone không bị ảnh hưởng.
+
+---
+
+## G. Gmail qua Google Sheet (không cần App Password)
+
+Dùng khi Google không cho tạo App Password (tài khoản chỉ dùng passkey/khoá bảo mật, Advanced Protection, tài khoản
+công ty…). Apps Script trong sheet đọc Gmail **của chủ sheet** (anh) mỗi 30 phút và chép email Shopee/TikTok/MoMo,
+**cả nội dung**, vào tab **Email**. App Mac lấy các dòng đó mỗi lần đồng bộ và đọc như email IMAP (cùng bộ đọc, cùng
+cách bỏ quảng cáo, mỗi đơn tính một lần). Thư của vợ đi vào Gmail của anh bằng bộ lọc chuyển tiếp trong Gmail của vợ.
+
+```
+Gmail vợ ──bộ lọc chuyển tiếp──▶ Gmail anh ──quetEmail mỗi 30 phút──▶ tab "Email" ──a=emails──▶ app Mac (máy vợ)
+```
+
+Cần `Code.gs` bản 3 và app 1.5.0. App cũ không đọc tab Email nhưng vẫn chạy bình thường với Code.gs bản 3.
+
+### G1. Bật trên sheet (làm TEST trước, rồi PRODUCTION)
+
+1. Mở sheet (**Thu Chi — TEST**, sau đó **Thu Chi — PRODUCTION**) → **Extensions → Apps Script** → xoá hết, dán
+   `phone/Code.gs` mới → ⌘S. Thấy `var SCRIPT_VERSION = 3;`.
+2. Chọn hàm **batQuetEmail** → **▶ Run** → **Review permissions** → chọn **tài khoản Google của anh** (chủ sheet) →
+   Advanced → Go to … (unsafe) → **Allow**. Google ghi "Read, compose, send, and permanently delete all your email":
+   đó là quyền duy nhất Google cho `GmailApp` (xem "Vì sao không chỉ đọc" bên dưới). Code chỉ tìm và đọc thư.
+   Thấy trong Execution log: `Đã bật quét Gmail mỗi 30 phút. Lần này lưu N email mới vào tab "Email"…`; trong sheet
+   có tab **Email** (Mã thư, Ngày, Người gửi, Tiêu đề, Nội dung, Ghi chú, Message-ID).
+3. **Bước 2 phải xong trước bước này.** **Deploy → Manage deployments → ✏️ → Version: New version → Deploy**.
+   Bản mới cần quyền Gmail; nếu Deploy khi chưa Allow, Google có thể trả "Authorization is required…" cho mọi lời
+   gọi, kể cả Phím tắt iPhone (app Mac sẽ báo "Code.gs mới cần thêm quyền…"). Sửa: làm bước 2 rồi Deploy lại.
+4. Kiểm:
+   ```sh
+   curl -sL 'MÃ&a=ping'          # "version":3
+   curl -sL 'MÃ&a=emails' | head -c 400
+   ```
+   Thấy `{"ok":true,"rows":[{"id":"18…","date":"2026-…","from":"Shopee <…>",…}],"next":"…","more":false,"scanned":"…"}`.
+   Phím tắt iPhone vẫn ghi được (thử một khoản).
+5. Trong app (1.5.0): bấm **↻ Đồng bộ**. Nhập dữ liệu → Gmail → mục **"Không tạo được App Password? Đọc Gmail qua
+   Google Sheet"** hiện `Code.gs bản 3 · N email, mới nhất … · lấy về …` và "Google quét Gmail lần cuối …". Có đơn
+   mới thì chuông có "✉️ N đơn mới từ Gmail (qua Google Sheet)".
+
+Tắt: chạy **tatQuetEmail** (xoá lịch 30 phút; tab Email giữ nguyên). Đổi câu tìm: Project Settings (⚙️) →
+**Script properties** → thêm `EMAIL_QUERY`, ví dụ `from:(shopee OR tiktok OR momo OR lazada) newer_than:30d -in:spam -in:trash`.
+Chạy `batQuetEmail` lần nữa không tạo lịch thứ hai.
+
+### G2. Chuyển tiếp thư của vợ sang Gmail của anh
+
+Trên máy tính, đăng nhập **Gmail của vợ** (giao diện tiếng Anh; tiếng Việt ghi trong ngoặc):
+
+1. ⚙️ → **See all settings** (Xem tất cả chế độ cài đặt) → tab **Forwarding and POP/IMAP** (Chuyển tiếp và POP/IMAP)
+   → **Add a forwarding address** (Thêm địa chỉ chuyển tiếp) → gõ Gmail của anh → Next → Proceed → OK.
+2. Gmail gửi thư xác nhận tới **hộp thư của anh**: mở thư "Gmail Forwarding Confirmation" và bấm link (hoặc gõ mã
+   xác nhận vào ô ở trang của vợ → Verify). **Không** bật "Forward a copy of incoming mail" cho mọi thư: để
+   "Disable forwarding", chỉ bộ lọc ở bước 3 mới chuyển.
+3. Ô tìm kiếm của Gmail vợ → biểu tượng bộ lọc (Show search options) → **From**: `shopee OR tiktok OR momo` →
+   **Create filter** → tick **Forward it to** (Chuyển tiếp tới) → chọn Gmail của anh → **Create filter**.
+4. Gmail giữ nguyên **người gửi gốc** (Shopee, TikTok, MoMo) khi tự chuyển tiếp, nên câu tìm `from:(shopee OR tiktok OR momo)`
+   của script vẫn bắt được, và cột Ghi chú ghi "chuyển tiếp từ <gmail vợ>". Bộ lọc chỉ áp cho thư **đến sau khi tạo**;
+   thư cũ cần thì chuyển tiếp tay (app vẫn nhận ra Shopee/TikTok/MoMo trong thư "Fwd:").
+5. Kiểm: nhờ vợ đặt một đơn (hoặc chuyển tiếp tay một email đơn hàng cũ). Trong ≤ 30 phút dòng đó có ở tab Email;
+   bấm ↻ Đồng bộ trên Mac vợ → giao dịch có số tiền và tên sản phẩm (ca **M-29**).
+
+### Vì sao không chỉ đọc (gmail.readonly)
+
+Tài liệu Google cho `GmailApp.search`, `getMessageById` và các hàm đọc thư (`getPlainBody`, `getBody`, `getHeader`…)
+chỉ liệt kê một quyền là `https://mail.google.com/` (toàn quyền) —
+<https://developers.google.com/apps-script/reference/gmail/gmail-app>,
+<https://developers.google.com/apps-script/reference/gmail/gmail-message>. Ghi `gmail.readonly` vào `oauthScopes` của
+manifest thì GmailApp không được Google bảo đảm chạy. Muốn chỉ đọc phải chuyển sang Advanced Gmail service (Gmail API),
+bật thêm dịch vụ và tự giải mã MIME/base64 của từng thư: nhiều bước cài và nhiều code hơn cho một script gia đình, nên
+chưa làm. Script chạy trong tài khoản của anh, không gửi thư đi đâu ngoài tab Email của chính sheet đó.
+
+### Giữ bao nhiêu
+
+- Mỗi lần quét: tối đa 500 luồng thư khớp câu tìm, lưu tối đa 200 thư mới (phần còn lại lần sau), cũ nhất trước.
+- Tab Email giữ thư **90 ngày** gần nhất và tối đa **1000 dòng**; dòng cũ hơn bị xoá. Thư cũ hơn 90 ngày không được
+  chép lại.
+- Nội dung cắt ở **45.000 ký tự** (một ô Sheets chứa tối đa 50.000). Email đơn hàng thường dưới 10.000.
+- App nhớ dòng cuối đã lấy (con trỏ = Mã thư) và mỗi lần lấy tối đa 100 dòng một trang. Con trỏ bị xoá (Mac tắt
+  hơn 90 ngày) thì script gửi lại từ đầu, app bỏ qua thư đã có. **Đừng sắp xếp hay sửa tab Email** bằng tay.
 
 ---
 

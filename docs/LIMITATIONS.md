@@ -34,7 +34,7 @@ xử lý hiện có, nếu có.
 | Giới hạn | Ảnh hưởng | Cách xử lý |
 | --- | --- | --- |
 | Chỉ đồng bộ **khi app đang mở và bạn bấm "Đồng bộ ngay"** | Không có đồng bộ chạy ngầm; số liệu chỉ mới tới lần đồng bộ gần nhất | Mở app và bấm đồng bộ mỗi tuần |
-| Cần **Xác minh 2 bước** và **App Password** | Bước cài đặt khó nhất với người mới (xem test case M-02) | Màn hình hướng dẫn 3 bước trong app |
+| Cần **Xác minh 2 bước** và **App Password** | Bước cài đặt khó nhất với người mới (xem test case M-02). Google không cho tạo App Password với tài khoản chỉ dùng passkey/khoá bảo mật hay Advanced Protection | Màn hình hướng dẫn 3 bước trong app; không tạo được thì dùng "Gmail qua Google Sheet" (mục dưới) |
 | Tài khoản Google Workspace (email công ty/trường) có thể **bị quản trị viên chặn** App Password hoặc IMAP | Không kết nối được | Dùng Gmail cá nhân để nhận email đơn hàng |
 | App Password **bị Google thu hồi** khi bạn đổi mật khẩu Google | Đồng bộ báo lỗi đăng nhập | Gỡ rồi thêm lại tài khoản với App Password mới |
 | Đọc email bằng **mẫu cố định** (regex), không dùng AI | Khi Shopee/TikTok đổi mẫu email, có thể không đọc được số tiền; đơn có nhiều sản phẩm được xếp theo sản phẩm khớp đầu tiên | Email lỗi hiện trong "Email chưa đọc được"; sửa `parsers.py` rồi bấm "Phân tích lại". Đơn sai hạng mục thì đổi tay |
@@ -44,6 +44,21 @@ xử lý hiện có, nếu có.
 | **Shopee/TikTok có thể không gửi email cho từng đơn.** Khi thử với hộp thư thật (31/10/2026), 180 ngày chỉ có bản tin, khảo sát và email tuyển dụng của Shopee, không có email đơn hàng nào | Nguồn Gmail có thể trống với nhiều người | Chụp màn hình trang "Đơn mua" (nhiều đơn trên một ảnh) và thêm ở ô Ảnh chụp; sau khi đồng bộ, app tự giải thích nếu không tìm thấy email đơn hàng |
 | **Không đọc Spam và Thùng rác** (chỉ đọc All Mail: Hộp thư đến, các tab Quảng cáo/Mạng xã hội/Cập nhật, thư đã lưu trữ) | Email đơn hàng bị Gmail đưa vào Spam sẽ bị bỏ sót | Đây là chủ ý: Spam hay có email giả danh Shopee/MoMo, đọc vào sẽ sinh giao dịch giả. Nếu thấy email thật nằm trong Spam, bấm "Không phải thư rác" rồi đồng bộ lại |
 | Mẫu email biên lai **MoMo** mới được viết theo biên lai hiển thị trong app MoMo, **chưa kiểm chứng với email MoMo thật** | Có thể không đọc được số tiền | Email lỗi hiện trong "Email chưa đọc được" kèm nội dung; gửi một mẫu (che số tài khoản) để chỉnh bộ đọc |
+
+## Gmail qua Google Sheet (không cần App Password)
+
+Cách cài: `docs/DEPLOY.md` mục G.
+
+| Giới hạn | Ảnh hưởng | Cách xử lý |
+| --- | --- | --- |
+| Apps Script quét Gmail **mỗi 30 phút** | Đơn mới đến app chậm tối đa khoảng 30 phút (cộng thời gian tới lần đồng bộ kế tiếp của app) | Chạy `quetEmail` bằng tay trong Apps Script nếu cần ngay |
+| Chỉ đọc **Gmail của chủ sheet**; thư của người khác chỉ có khi **bộ lọc chuyển tiếp** trong Gmail của họ gửi sang | Thư không khớp bộ lọc (người gửi khác, đã có trước khi tạo bộ lọc) không bao giờ tới app | Bộ lọc `from:(shopee OR tiktok OR momo)`; thư cũ chuyển tiếp tay (app nhận ra thư "Fwd:") |
+| Google bắt cấp **toàn quyền Gmail** (`https://mail.google.com/`) cho `GmailApp`, không có mức chỉ đọc | Màn hình xin quyền đáng sợ; script về lý thuyết gửi/xoá được thư | Code chỉ tìm và đọc thư, chạy trong tài khoản của chủ sheet. Chỉ đọc thì phải chuyển sang Gmail API (chưa làm, xem DEPLOY mục G) |
+| Từ Code.gs bản 3, **mọi** sheet dùng bản này đều được hỏi quyền Gmail, kể cả khi chỉ dùng iPhone | Deploy bản 3 khi chưa Allow có thể làm Google trả "Authorization is required" cho cả Phím tắt | Chạy `batQuetEmail` (hoặc `caiDat`) → Allow trước khi Deploy → New version |
+| Nội dung email bị **cắt ở 45.000 ký tự** (ô Sheets tối đa 50.000) | Email rất dài có thể mất phần tổng tiền ở cuối | Hiện trong "Email chưa đọc được"; email đơn hàng thường dưới 10.000 ký tự |
+| Tab Email chỉ giữ **90 ngày / 1000 dòng**; câu tìm mặc định chỉ lấy **30 ngày** | Lần bật đầu tiên không có đơn cũ hơn 30 ngày | Sửa `EMAIL_QUERY` trong Script properties (tối đa 90 ngày còn ý nghĩa) |
+| Email đi qua **Google Sheet trong Drive** của chủ sheet | Ai được chia sẻ sheet đọc được nội dung email đơn hàng | Không chia sẻ sheet; tab Email chỉ có thư khớp câu tìm |
+| **Shopee/TikTok có thể không gửi email cho từng đơn** (như mục Gmail ở trên) | Tab Email chỉ có bản tin, khảo sát | Chụp màn hình trang "Đơn mua" |
 
 ## Ảnh chụp (OCR)
 

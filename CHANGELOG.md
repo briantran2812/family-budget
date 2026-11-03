@@ -1,5 +1,18 @@
 # Changelog
 
+## Chưa phát hành (1.5.0)
+
+- **Gmail qua Google Sheet, không cần App Password** (cho tài khoản Google không hiện trang Mật khẩu ứng dụng: chỉ
+  dùng passkey/khoá bảo mật, Advanced Protection…). `Code.gs` bản 3 có `batQuetEmail`: cứ 30 phút chép email
+  Shopee/TikTok/MoMo trong Gmail của chủ sheet, **cả nội dung**, vào tab "Email" (giữ 90 ngày/1000 dòng, nội dung tối
+  đa 45.000 ký tự). App Mac lấy các dòng mới mỗi lần đồng bộ iPhone (`a=emails`, theo trang, nhớ con trỏ) và đọc bằng
+  đúng bộ đọc email IMAP: bỏ quảng cáo, áp đơn huỷ, mỗi đơn tính một lần kể cả khi cùng đơn về qua IMAP. Thư của vợ
+  tới bằng bộ lọc chuyển tiếp trong Gmail của vợ. Chuông "✉️ N đơn mới từ Gmail (qua Google Sheet)"; mục Gmail (Nhập
+  dữ liệu và Cài đặt) có hướng dẫn và dòng trạng thái. Sheet còn Code.gs bản 2 thì iPhone vẫn chạy như cũ, mục Gmail
+  báo cần bản 3. Cài: `docs/DEPLOY.md` mục G. Code: `sheet_email.py`.
+- Code.gs bản 3 cần quyền Gmail (toàn quyền: Google không có mức chỉ đọc cho `GmailApp`); cho phép bằng `batQuetEmail`
+  **trước** khi Deploy → New version. App giải thích trang "Authorization is required" của Google.
+
 ## 1.4.0 — nhập từ iPhone (beta dùng thử, chưa qua cổng QA)
 
 Gồm cả các tính năng của 1.3.0, bản chưa từng phát hành vì lỗi S1 (bản đóng gói chỉ chạy trên macOS 26). Release note

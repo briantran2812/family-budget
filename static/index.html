@@ -277,6 +277,9 @@ details.recsec { margin-top: 16px; } details.recsec > summary { cursor: pointer;
 .result { margin-top: 14px; font-size: 13.5px; padding: 12px 14px; border-radius: 12px; background: var(--surface-2); }
 .result.err { background: var(--bad-soft); color: var(--bad); }
 .result.ok { background: var(--good-soft); color: var(--text); }
+.alt-way { margin-top: 18px; padding-top: 14px; border-top: 1px solid var(--border); }
+.alt-way h3 { font-size: 14px; margin: 0 0 4px; }
+.alt-way .hint { margin: 0 0 10px; font-size: 13px; color: var(--muted); }
 .ocr-row { display: grid; grid-template-columns: 26px 130px 78px minmax(0, 1fr) 180px 140px; gap: 8px; align-items: center;
   padding: 8px 0; border-bottom: 1px solid var(--border); }
 .ocr-row .dup-note { grid-column: 2 / -1; font-size: 12px; margin-top: -4px; }
@@ -502,6 +505,7 @@ ol.howto li { margin: 5px 0; }
             </div>
             <div class="muted" style="font-size:12px;margin-top:10px" id="lastSync"></div>
             <div id="syncResult"></div>
+            <div class="alt-way" id="sheetMail"></div>
           </div>
           <div class="card feature" id="phoneCard">
             <div class="big-ico">📱</div>
@@ -591,6 +595,7 @@ ol.howto li { margin: 5px 0; }
             <form class="row-form" id="queryForm" style="margin-top:10px"><input class="field" name="gmail_query"><button class="btn sm">Lưu</button></form>
             <p class="hint" style="margin-top:6px">Cú pháp tìm kiếm của Gmail, ví dụ <code>from:(shopee OR tiktok) newer_than:2y</code></p>
           </details>
+          <div class="alt-way" id="sheetMailSet"></div>
         </div>
         <div class="card" id="phoneSettings">
           <div class="card-head"><h2>iPhone (Google Sheet)</h2></div>
@@ -1086,6 +1091,68 @@ function renderAccounts() {
     : '<div class="acct"><span class="muted">Chưa kết nối tài khoản nào</span></div>';
   $('#syncBtn').hidden = !list.length;
   $('#lastSync').textContent = state.info.gmail_last_sync ? 'Đồng bộ lần cuối: ' + state.info.gmail_last_sync.replace('T', ' lúc ') : '';
+  renderSheetMail();
+}
+// Gmail through the Google Sheet (Code.gs 3+): for accounts where Google won't show the App Password page.
+function renderSheetMail() {
+  const i = state.info, v = i.phone_script_version || 0, need = i.sheet_email_required || 3;
+  const when = s => esc(String(s).slice(0, 16).replace(/[T ]/, ' lúc '));
+  let status;
+  if (!i.phone_connected) status = '<div class="acct"><span class="muted">Cần kết nối Google Sheet trước (thẻ Từ iPhone)</span></div>';
+  else if (v < need) status = `<div class="result err" style="margin-top:0">Code.gs trên Google là bản ${v}, cần bản ${need}. Dán Code.gs mới, ⌘S,
+    chạy <b>batQuetEmail</b> → Allow, rồi Deploy → Manage deployments → ✏️ → Version: New version → Deploy.</div>`;
+  else {
+    const parts = [`Code.gs bản ${v}`, `${i.sheet_email_count || 0} email`
+      + (i.sheet_email_last_date ? `, mới nhất ${esc(i.sheet_email_last_date.split('-').reverse().join('/'))}` : '')];
+    if (i.sheet_email_last_pull) parts.push('lấy về ' + when(i.sheet_email_last_pull));
+    status = `<div class="acct">✉️ <span>${parts.join(' · ')}</span></div>`
+      + (i.sheet_email_scanned ? `<div class="muted" style="font-size:12px">Google quét Gmail lần cuối ${when(i.sheet_email_scanned)}</div>`
+        : '<div class="muted" style="font-size:12px">Chưa thấy lần quét nào: chạy <b>batQuetEmail</b> một lần trong Apps Script.</div>')
+      + (i.sheet_email_error ? `<div class="result err">${esc(i.sheet_email_error)}</div>` : '');
+  }
+  const html = `<h3>Không tạo được App Password? Đọc Gmail qua Google Sheet</h3>
+    <p class="hint">Apps Script trong sheet tự chép email Shopee/TikTok/MoMo (cả nội dung) vào tab Email mỗi 30 phút; app lấy về mỗi lần đồng bộ.</p>
+    ${status}
+    <div class="row-form" style="margin-top:10px"><button class="btn sm" type="button" data-sheetmail="help">Xem cách bật</button>
+      ${i.sheet_email_available ? '<button class="btn sm" type="button" data-sheetmail="sync">↻ Lấy email ngay</button>' : ''}</div>
+    <div data-sheetmail-result></div>`;
+  ['#sheetMail', '#sheetMailSet'].forEach(id => { $(id).innerHTML = html; });
+}
+document.addEventListener('click', e => {
+  const b = e.target.closest('[data-sheetmail]'); if (!b) return;
+  if (b.dataset.sheetmail === 'help') sheetMailHelp();
+  if (b.dataset.sheetmail === 'sync') busy(b, async () => {
+    const host = b.closest('.alt-way'), out = () => $('[data-sheetmail-result]', host);  // re-rendered below
+    try {
+      const r = await api('/api/phone/sync', {method: 'POST'}), m = r.emails || {};
+      await loadInfo(); renderSheetMail(); renderPhone();
+      out().innerHTML = r.emails_error
+        ? `<div class="result err">${esc(r.emails_error)}</div>`
+        : `<div class="result ok"><b>✉️ Đã lấy ${r.emails_imported} đơn mới từ Gmail (qua Google Sheet)</b><br>
+          <span class="muted">${m.new || 0} email mới · ${m.duplicate || 0} trùng đơn cũ · ${m.cancelled || 0} huỷ/hoàn · ${m.no_amount || 0} không có giá · ${m.skipped || 0} quảng cáo</span></div>`;
+      if (r.emails_imported || r.imported) { refresh(); loadEmails(); }
+    } catch (err) { out().innerHTML = `<div class="result err">${esc(err.message)}</div>`; }
+  });
+});
+function sheetMailHelp() {
+  const sheet = state.info.phone_sheet_url;
+  const m = modal(`<h3>Đọc Gmail qua Google Sheet</h3>
+    <p class="lead">Không cần App Password. Làm trên sheet <b>PRODUCTION</b> (sheet đang kết nối với app), khoảng 5 phút.</p>
+    <ol class="howto">
+      <li>Mở ${sheet ? `<a href="${esc(sheet)}" target="_blank" rel="noopener">Google Sheet</a>` : 'Google Sheet'} → <b>Extensions → Apps Script</b>.</li>
+      <li>Xoá hết, dán Code.gs mới <button class="link" id="smCopy" type="button">(bấm để sao chép)</button>, nhấn <b>⌘S</b>.</li>
+      <li>Chọn <b>batQuetEmail</b> → <b>▶ Run</b> → <b>Allow</b>. Google xin toàn quyền Gmail của chủ sheet (không có mức chỉ đọc);
+        script chỉ đọc, chép email Shopee/TikTok/MoMo vào tab <b>Email</b> và quét lại mỗi 30 phút.</li>
+      <li>Sau bước 3: <b>Deploy → Manage deployments → ✏️ → Version: New version → Deploy</b>. Mã kết nối giữ nguyên.</li>
+      <li>Thư của vợ: trong Gmail của vợ, <b>Settings → See all settings → Forwarding and POP/IMAP → Add a forwarding address</b>
+        (Gmail của chủ sheet), xác nhận trong hộp thư chủ sheet, rồi tạo bộ lọc <code>from:(shopee OR tiktok OR momo)</code>
+        → <b>Forward it to</b> địa chỉ đó.</li>
+    </ol>
+    <p class="hint">Email mới đến app chậm tối đa khoảng 30 phút. Chi tiết: docs/DEPLOY.md mục G.</p>
+    <div class="modal-foot"><button class="btn primary" data-close>Đã hiểu</button></div>`, {wide: true});
+  $('#smCopy', m.el).onclick = async () => {
+    const r = await fetch('/api/phone/script'); toast(await copyText(await r.text()) ? 'Đã sao chép Code.gs' : 'Không sao chép được', false);
+  };
 }
 $('#syncBtn').onclick = () => busy($('#syncBtn'), async () => {
   const box = $('#syncResult');
@@ -1433,12 +1500,13 @@ async function phoneSync(quiet = false) {
   const box = $('#phoneResult');
   try {
     const r = await api('/api/phone/sync', {method: 'POST'});
-    if (!quiet || r.imported) {
-      const msg = `📱 Đã lấy ${r.imported} khoản mới từ iPhone`;
+    const mail = r.emails_imported ? ` · ✉️ ${r.emails_imported} đơn mới từ Gmail (qua Google Sheet)` : '';
+    if (!quiet || r.imported || r.emails_imported) {
+      const msg = `📱 Đã lấy ${r.imported} khoản mới từ iPhone` + mail;
       box.innerHTML = `<div class="result ok"><b>${msg}</b><br><span class="muted">${r.total} dòng trong sheet · ${r.duplicate} đã có · ${r.invalid} dòng không đọc được${r.bad_rows.length ? ' (dòng ' + r.bad_rows.join(', ') + ')' : ''}</span></div>`;
       if (quiet) toast(msg);
     }
-    await loadInfo(); renderPhone(); if (r.imported) refresh();
+    await loadInfo(); renderPhone(); renderSheetMail(); if (r.imported || r.emails_imported) refresh();
   } catch (err) {
     box.innerHTML = `<div class="result err">${esc(err.message)}</div>`;
     if (!quiet) throw err;
@@ -1486,7 +1554,11 @@ async function syncAll(quiet = false, {gmail = true} = {}) {
   const got = [], errors = [];
   try {
     if (state.info.phone_connected) {
-      try { const r = await api('/api/phone/sync', {method: 'POST'}); if (r.imported) got.push(`${r.imported} khoản từ iPhone`); }
+      try {
+        const r = await api('/api/phone/sync', {method: 'POST'});
+        if (r.imported) got.push(`${r.imported} khoản từ iPhone`);
+        if (r.emails_imported) got.push(`${r.emails_imported} đơn từ Gmail (qua Google Sheet)`);
+      }
       catch (err) { errors.push(err.message); }
     }
     const lastMail = Date.parse((state.info.gmail_last_sync || '').replace(' ', 'T')) || 0;
@@ -1505,7 +1577,7 @@ $('#syncAllBtn').onclick = () => busy($('#syncAllBtn'), () => syncAll(false));
 // ---------------------------------------------------------------- settings
 const EMOJIS = '🎓📚💡💧🔥📶📱💄🧴💅🛒🍚🥬🍜☕️🏠🧺🧹🛋️👗👟👜🍼🧸👶💊🏥🦷🚗⛽️🛵✈️🎬🎮🏖️🎁💝🐶🐱🌿💼💰🏦📈🧾📦❤️⭐️'.match(/\p{Extended_Pictographic}️?/gu);
 function renderSettings() {
-  renderPhone();
+  renderPhone(); renderSheetMail();
   $('#profileForm').user_name.value = state.info.user_name || '';
   $('#queryForm').gmail_query.value = state.info.gmail_query || '';
   $('#dataDir').textContent = state.info.data_dir || '';

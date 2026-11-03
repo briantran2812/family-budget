@@ -825,3 +825,39 @@ def test_ux50_pick_which_screenshot_rows_to_save(onboarded, page, tmp_path, monk
     page.locator("#ocrPay").fill("Techcombank")
     page.locator("#ocrSave").click()
     expect(toast(page)).to_have_text("Đã lưu 1 giao dịch")
+
+
+
+def test_ux51_gmail_via_google_sheet(onboarded, open_page, fake_sheet):
+    import phone_inbox
+    oid = "261020EFGH5678"
+    body = parsers.html_to_text(shopee_email(oid, [("Sữa công thức Meiji số 9 800g", 1, 525_000)], 0, 0))
+    fake_sheet["version"] = 3
+    fake_sheet["scanned"] = "2026-10-31T09:30:00"
+    fake_sheet["emails"] = [{"id": "18f0a1", "date": "2026-10-20T09:00:00", "from": "Shopee <info@mail.shopee.vn>",
+                             "subject": f"Xác nhận đơn hàng #{oid}", "body": body, "note": "chuyển tiếp từ lan@gmail.com",
+                             "mid": "<x@shopee>", "row": 2}]
+    with db.connect() as c:
+        phone_inbox.connect(c, fake_sheet["code"])
+    p = open_page()
+    expect(p.locator(".toast").last).to_contain_text("1 đơn từ Gmail (qua Google Sheet)")   # pulled at start
+    p.locator("nav button[data-tab=import]").click()
+    box = p.locator("#sheetMail")
+    expect(box).to_contain_text("Không tạo được App Password? Đọc Gmail qua Google Sheet")
+    expect(box).to_contain_text("Code.gs bản 3 · 1 email, mới nhất 20/10/2026 · lấy về")
+    expect(box).to_contain_text("Google quét Gmail lần cuối 2026-10-31 lúc 09:30")
+    box.get_by_role("button", name="Xem cách bật").click()
+    expect(p.locator(".modal")).to_contain_text("batQuetEmail")
+    expect(p.locator(".modal")).to_contain_text("Forwarding and POP/IMAP")
+    p.get_by_role("button", name="Đã hiểu").click()
+    box.get_by_role("button", name="↻ Lấy email ngay").click()
+    expect(box).to_contain_text("Đã lấy 0 đơn mới từ Gmail (qua Google Sheet)")
+    p.locator("nav button[data-tab=tx]").click()
+    row = p.locator("#txList .txrow", has_text="Sữa công thức Meiji")
+    expect(row).to_contain_text("525.000")
+    fake_sheet["version"] = 2   # the sheet's Code.gs rolled back: email stops, iPhone keeps working, the card says why
+    p.locator("#syncAllBtn").click()
+    expect(p.locator(".toast").last).to_contain_text("không có gì mới")
+    p.locator("nav button[data-tab=settings]").click()
+    expect(p.locator("#sheetMailSet")).to_contain_text("Code.gs trên Google là bản 2, cần bản 3")
+    expect(p.locator("#sheetMailSet")).to_contain_text("New version")

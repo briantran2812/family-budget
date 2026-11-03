@@ -5,7 +5,8 @@ ngay trên máy, phần còn lại là quy tắc cố định. Dữ liệu nằm
 bản sao nằm trong Google Sheet của chính bạn.
 
 - **Gmail:** tự đọc email xác nhận đơn **Shopee** và **TikTok Shop**. Kết nối được nhiều tài khoản
-  (vợ + chồng). Mỗi đơn chỉ tính một lần; đơn huỷ tự bỏ ra.
+  (vợ + chồng). Mỗi đơn chỉ tính một lần; đơn huỷ tự bỏ ra. Không tạo được App Password thì đọc Gmail qua Google
+  Sheet ([docs/DEPLOY.md](docs/DEPLOY.md) mục G).
 - **Ảnh chụp:** biên lai MoMo, trang "Đơn mua", hoá đơn điện nước… được đọc bằng OCR của macOS.
 - **Nhập tay:** học phí, lương, đi chợ. Gõ `1.500.000`, `1,5tr` hay `200k` đều được.
 - **Tổng quan:** % theo hạng mục, so với tháng trước, ngân sách từng hạng mục, xu hướng 12 tháng.
@@ -88,6 +89,7 @@ Shopee và TikTok thỉnh thoảng đổi mẫu email. Email nào không lấy �
 | `rules.py` | Phân loại theo từ khoá (không phân biệt dấu, từ khoá dài nhất thắng) |
 | `parsers.py` | Đọc số tiền, mã đơn, tên sản phẩm từ email và từ chữ OCR |
 | `gmail_sync.py` | Đọc Gmail qua IMAP, hỗ trợ nhiều tài khoản |
+| `sheet_email.py` | Đọc email mà Apps Script chép vào tab Email của Google Sheet (không cần App Password) |
 | `ocr.py` | OCR bằng Vision framework của macOS |
 | `alerts.py` | Cảnh báo hạng mục chạm 80% ngân sách tháng, thông báo macOS một lần mỗi mức |
 | `piggy.py` | Ống heo: ghi phần còn lại (thu − chi) của mỗi tháng đã qua |

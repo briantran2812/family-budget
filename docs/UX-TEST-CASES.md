@@ -68,6 +68,7 @@ Có hai loại test case:
 | UX-48 | Thanh trên cùng ở cửa sổ vừa | Tháng, chuông, Đồng bộ, Thêm khoản luôn nằm trên một dòng (lời chào co lại trước) |
 | UX-49 | Duyệt ảnh minh bạch | Ảnh gốc hiện cạnh kết quả; ảnh không có ngày thì ô ngày tô vàng kèm lời nhắc; không chọn sẵn dòng "Khách đưa"; đổi Chi/Thu thì danh sách hạng mục đổi theo; chữ đọc được mở sẵn |
 | UX-50 | Chọn dòng cần lưu | "Chọn tất cả", dòng đếm "Đã chọn n/N · Thu · Chi", dòng không chọn mờ đi, nút ghi "Lưu n dòng đã chọn" và bị khoá khi chưa chọn dòng nào |
+| UX-51 | Gmail qua Google Sheet | Sheet có Code.gs bản 3 và một email Shopee trong tab Email: mở app thì tự lấy về, báo "1 đơn từ Gmail (qua Google Sheet)", giao dịch đúng số tiền và tên sản phẩm; mục "Không tạo được App Password? Đọc Gmail qua Google Sheet" hiện bản Code.gs, số email, email mới nhất, lần quét cuối; "Xem cách bật" có batQuetEmail và bước chuyển tiếp; sheet về bản 2 thì báo cần bản 3 kèm bước New version |
 
 Bản đóng gói còn được kiểm tra tự động bằng `tests/test_packaged.py`: cửa sổ tải được giao diện,
 Keychain hoạt động, OCR chạy bên trong bundle, và kết nối TLS tới Gmail thành công.
@@ -108,6 +109,7 @@ hàng.
 | M-26 | P2 | Thông báo ngân sách trên Mac thật | Đặt ngân sách 1tr cho một hạng mục → thêm khoản 800k tháng này → thêm 50k → thêm 200k. Thêm một khoản 2tr vào tháng trước | Thông báo "… đã dùng 80% ngân sách tháng" hiện đúng một lần sau khoản 800k (không hiện lại sau khoản 50k); thông báo "đã vượt" hiện một lần sau khoản 200k; khoản tháng trước không gây thông báo. Nếu macOS hỏi quyền thông báo thì ghi lại tên app trong câu hỏi |
 | M-27 | P2 | Vợ chọn giao diện Sáng | Trên máy để chế độ Tối, Lan vào Cài đặt → Giao diện → Sáng, tắt rồi mở lại app | App mở bằng nền sáng, không nháy tối lúc mở |
 | M-28 | P2 | Ống heo vào cuối tháng thật | Ghi lương và vài khoản chi trong tháng → mở app vào ngày cuối tháng (hoặc đầu tháng sau) | Chuông có "🐷 Tháng …: bỏ ống heo …" đúng bằng "Còn lại" của tháng đó; mục Ống heo cộng thêm tháng này; mở lại app không có thông báo thứ hai |
+| M-29 | P1 | Đơn của vợ qua Gmail chuyển tiếp | Làm DEPLOY mục G trên sheet PRODUCTION (batQuetEmail, New version) và bộ lọc chuyển tiếp trong Gmail của vợ → vợ đặt một đơn Shopee/TikTok (hoặc chuyển tiếp tay một email đơn hàng) → đợi ≤ 30 phút → ↻ Đồng bộ trên Mac vợ | Dòng thư có trong tab Email (Ghi chú "chuyển tiếp…"); app có giao dịch đúng số tiền và sản phẩm, chuông "✉️ 1 đơn mới từ Gmail (qua Google Sheet)"; đồng bộ lại không trùng; Phím tắt iPhone vẫn ghi được |
 
 ## Mức độ lỗi
 

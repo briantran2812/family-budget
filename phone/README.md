@@ -26,9 +26,10 @@ Làm theo thứ tự **A → D trên máy của bạn trước**. Đạt hết m
    - Google hỏi quyền: **Xem lại quyền** → chọn tài khoản.
    - Màn hình **"Google chưa xác minh ứng dụng này"** hiện ra vì đây là script của chính bạn, chưa
      gửi Google duyệt. Bấm **Nâng cao → Đi tới Thu Chi Gia Đình (không an toàn)** → **Cho phép**.
-   - Script chỉ xin quyền Google Sheets. Google ghi là "xem, sửa… tất cả bảng tính" vì đó là mức quyền
-     nhỏ nhất cho script mở sheet theo mã. Code chỉ mở đúng sheet tạo ở bước này. Script không có quyền
-     với Gmail hay các file khác trên Drive.
+   - Google ghi là "xem, sửa… tất cả bảng tính" vì đó là mức quyền nhỏ nhất cho script mở sheet theo mã.
+     Code chỉ mở đúng sheet tạo ở bước này.
+   - Từ Code.gs bản 3 Google hỏi thêm **quyền Gmail** (cho mục "Gmail qua Google Sheet" bên dưới). Script chỉ
+     đọc Gmail khi bạn chạy `batQuetEmail`; không chạy thì không đọc thư nào.
    - Nhật ký thực thi ghi "Đã tạo sheet Hộp thư đến…". Quay lại tab Sheet sẽ thấy tab **Hộp thư đến**
      có 6 cột.
 5. Bấm **Triển khai → Bản triển khai mới** (Deploy → New deployment) → biểu tượng ⚙️ → **Ứng dụng web**
@@ -129,6 +130,21 @@ Sheet) → Bản sao trên Google Sheet**. Sheet chỉ để xem; sửa thì s�
 Tính năng này cần bản `Code.gs` mới (có `doPost`). Đã cài từ trước thì: dán `Code.gs` mới → ⌘S → **Deploy → Manage
 deployments → ✏️ → Version: New version → Deploy**. Địa chỉ và mã kết nối giữ nguyên.
 
+## Gmail qua Google Sheet (không cần App Password)
+
+Khi Google không cho tạo App Password, script đọc Gmail của **chủ sheet** thay cho app:
+
+1. Dán Code.gs bản 3 → ⌘S → chọn **`batQuetEmail`** → ▶ Chạy → **Cho phép** (quyền Gmail). Cứ 30 phút script chép
+   email Shopee/TikTok/MoMo khớp `from:(shopee OR tiktok OR momo) newer_than:30d` (cả nội dung, tối đa 45.000 ký tự)
+   vào tab **Email**, giữ 90 ngày. `tatQuetEmail` tắt.
+2. **Sau** bước 1: Triển khai → Quản lý bản triển khai → ✏️ → **Phiên bản mới** → Triển khai.
+3. Thư của người khác (vợ): trong Gmail của họ tạo bộ lọc `from:(shopee OR tiktok OR momo)` → **Chuyển tiếp tới**
+   Gmail của chủ sheet. Gmail giữ người gửi gốc khi tự chuyển tiếp.
+4. App Mac 1.5.0 lấy tab Email mỗi lần đồng bộ (`a=emails&since=<Mã thư>`, 100 dòng một trang) và đọc như email IMAP.
+
+Từng bước, kể cả xác nhận địa chỉ chuyển tiếp: [docs/DEPLOY.md mục G](../docs/DEPLOY.md). Giới hạn:
+[docs/LIMITATIONS.md](../docs/LIMITATIONS.md), mục "Gmail qua Google Sheet".
+
 ## Sự cố thường gặp
 
 | Hiện tượng | Nguyên nhân và cách sửa |
@@ -138,13 +154,15 @@ deployments → ✏️ → Version: New version → Deploy**. Địa chỉ và m
 | Phím tắt báo "Mã kết nối sai" sau khi chạy `doiMa` | Đúng như thiết kế. Chạy `layMaKetNoi`, rồi dán mã mới vào app Mac và vào bước đầu của Phím tắt |
 | Sửa `Code.gs` mà iPhone vẫn chạy như cũ | Triển khai → Quản lý bản triển khai → ✏️ → Phiên bản: **Phiên bản mới** → Triển khai. Địa chỉ và mã giữ nguyên |
 | Lộ mã kết nối | Chạy `doiMa` ngay, rồi dán mã mới vào app Mac và các iPhone |
+| Sau khi dán Code.gs bản 3, Phím tắt/app báo "Authorization is required" | Chưa cho phép quyền Gmail. Chọn `batQuetEmail` → ▶ Chạy → Cho phép, rồi Triển khai phiên bản mới |
+| Tab Email trống sau `batQuetEmail` | Gmail của chủ sheet không có thư khớp trong 30 ngày, hoặc bộ lọc chuyển tiếp chưa tạo. Thử tìm đúng câu đó trong Gmail |
 
 ## Cho người phát triển
 
 - `Code.gs` được test trong Node với dịch vụ Google giả lập: `node tests/apps_script/harness.mjs`
   (chạy kèm `pytest`).
 - `phone_inbox.py` (phía Mac) có test ở `tests/test_phone_inbox.py`; UX-34 đến UX-36 trong
-  `tests/e2e/test_ux.py`.
+  `tests/e2e/test_ux.py`. Email qua sheet: `sheet_email.py`, `tests/test_sheet_email.py`, UX-51.
 - Phím tắt dùng **GET**, không dùng POST. Apps Script luôn trả 302 sang `googleusercontent.com`, và
   máy khách nào đổi POST thành GET khi đi theo chuyển hướng sẽ làm mất dữ liệu gửi đi.
 - Mã kết nối không nằm trong file `.shortcut`; iOS hỏi mã lúc thêm phím tắt (`WFWorkflowImportQuestions`).

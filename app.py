@@ -24,6 +24,7 @@ import phone_inbox
 import piggy
 import reconcile
 import rules
+import sheet_email
 import statements
 
 VERSION = "1.4.0"
@@ -81,7 +82,8 @@ def info():
                        phone_push=db.get_setting(c, "phone_push", "1") == "1",
                        phone_last_push=db.get_setting(c, "phone_last_push"),
                        phone_push_error=db.get_setting(c, "phone_push_error"),
-                       device_name=phone_inbox.device_name(c), **phone_inbox.environment(c))
+                       device_name=phone_inbox.device_name(c), **phone_inbox.environment(c),
+                       **sheet_email.status(c))
 
 
 @app.get("/api/notifications")
@@ -446,6 +448,9 @@ def phone_sync():
             if r["imported"]:
                 notifications.add(c, "phone", "📱", f"Đã lấy {r['imported']} khoản mới từ iPhone",
                                   link={"tab": "tx", "src": "phone"})
+            if r["emails_imported"]:
+                notifications.add(c, "gmail", "✉️", f"{r['emails_imported']} đơn mới từ Gmail (qua Google Sheet)",
+                                  link={"tab": "tx"})
             return jsonify(r)
     except phone_inbox.InboxError as e:
         return jsonify(error=str(e)), 400

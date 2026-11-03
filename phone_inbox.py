@@ -31,8 +31,8 @@ def connected(conn: sqlite3.Connection) -> bool:
     return db.get_setting(conn, "phone_connected") == "1"
 
 
-def _get(code: str, action: str) -> dict:
-    return _request(f"{code}&{urllib.parse.urlencode({'a': action})}")
+def _get(code: str, action: str, **params) -> dict:
+    return _request(f"{code}&{urllib.parse.urlencode({'a': action, **params})}")
 
 
 def _post(code: str, payload: dict) -> dict:
@@ -67,6 +67,9 @@ def _explain_html(body: str, final_url: str) -> str:
     if "Script function not found: doPost" in body or "tìm thấy hàm tập lệnh: doPost" in body:  # English / Vietnamese UI
         return ("Code.gs trên Google là bản cũ, chưa nhận được bản sao từ Mac. Dán Code.gs mới, ⌘S, rồi "
                 "Deploy → Manage deployments → ✏️ → Version: New version → Deploy.")
+    if "Authorization is required" in body or "Cần được cấp quyền" in body:
+        return ("Code.gs mới cần thêm quyền mà chưa được cho phép. Mở Apps Script, chọn batQuetEmail → ▶ Run → "
+                "Allow, rồi Deploy → Manage deployments → ✏️ → Version: New version → Deploy.")
     if "Script function not found: doGet" in body or "tìm thấy hàm tập lệnh: doGet" in body:
         return ("Bản Deploy không có code (đã Deploy trước khi dán Code.gs, hoặc chưa lưu). Dán Code.gs, ⌘S, rồi "
                 "Deploy → Manage deployments → ✏️ → Version: New version → Deploy.")
@@ -118,6 +121,8 @@ def disconnect(conn: sqlite3.Connection) -> None:
         pass
     for key in ("phone_connected", "phone_sheet_url", "phone_sheet_name", "phone_script_version"):
         db.set_setting(conn, key, "")
+    import sheet_email
+    sheet_email.forget(conn)
 
 
 def code(conn: sqlite3.Connection) -> str:
@@ -171,6 +176,8 @@ def apply_row(conn: sqlite3.Connection, compiled, row: dict) -> str:
 
 
 def sync(conn: sqlite3.Connection) -> dict:
+    """iPhone rows, then (Code.gs 3+) the Gmail copies in the "Email" tab; an email failure never fails the iPhone part."""
+    import sheet_email
     reply = _get(code(conn), "list")
     _remember_script(conn, reply)
     rows = reply.get("rows", [])
@@ -183,7 +190,15 @@ def sync(conn: sqlite3.Connection) -> dict:
         if status == "invalid":
             bad_rows.append(row.get("row"))
     db.set_setting(conn, "phone_last_sync", datetime.now().strftime("%Y-%m-%d %H:%M"))
-    return {"total": len(rows), **counts, "bad_rows": bad_rows[:20]}
+    result = {"total": len(rows), **counts, "bad_rows": bad_rows[:20], "emails_imported": 0}
+    if sheet_email.available(conn):
+        try:
+            result["emails"] = sheet_email.pull(conn, code(conn))
+            result["emails_imported"] = result["emails"].get("imported", 0)
+        except InboxError as e:
+            db.set_setting(conn, "sheet_email_error", str(e))
+            result["emails_error"] = str(e)
+    return result
 
 
 # ---------------------------------------------------------------- mirror to the Sheet (tabs "Giao dịch", "Tổng hợp")

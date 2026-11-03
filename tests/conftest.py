@@ -86,21 +86,31 @@ PHONE_CODE = "https://script.google.com/macros/s/AKfyc-test_1/exec?k=0123456789a
 
 @pytest.fixture
 def fake_sheet(monkeypatch, fake_keyring):
-    """Fake web app: `rows` is what action=list returns."""
+    """Fake web app: `rows` is what action=list returns, `emails` the "Email" tab that action=emails pages through."""
     import phone_inbox
     state = {"rows": [], "calls": [], "code": PHONE_CODE, "name": "Thu Chi — PRODUCTION",
-             "version": phone_inbox.REQUIRED_SCRIPT_VERSION}
+             "version": phone_inbox.REQUIRED_SCRIPT_VERSION, "emails": [], "email_page": 100, "scanned": "",
+             "email_error": None}
     monkeypatch.setattr(phone_inbox.keyring, "set_password", lambda s, u, p: fake_keyring.__setitem__((s, u), p))
     monkeypatch.setattr(phone_inbox.keyring, "get_password", lambda s, u: fake_keyring.get((s, u)))
     monkeypatch.setattr(phone_inbox.keyring, "delete_password", lambda s, u: fake_keyring.pop((s, u), None))
 
-    def fake_get(code, action):
-        state["calls"].append((code, action))
+    def fake_get(code, action, **params):
+        state["calls"].append((code, action, params) if params else (code, action))
         if code != PHONE_CODE:
             raise phone_inbox.InboxError("Apps Script báo lỗi: Mã kết nối sai. Lấy lại mã kết nối bằng layMaKetNoi.")
         script = {"name": state["name"], "version": state["version"]}  # what Code.gs SCRIPT_VERSION 2+ adds
         if action == "ping":
             return {"ok": True, "sheet": "https://docs.google.com/spreadsheets/d/abc", **script}
+        if action == "emails":  # Code.gs emails_(): rows after the cursor id, from the top if it is unknown
+            if state["email_error"]:
+                raise phone_inbox.InboxError(state["email_error"])
+            ids = [e["id"] for e in state["emails"]]
+            since = params.get("since", "")
+            start = ids.index(since) + 1 if since in ids else 0
+            page = state["emails"][start:start + state["email_page"]]
+            return {"ok": True, "rows": page, "next": page[-1]["id"] if page else since,
+                    "more": start + len(page) < len(ids), "scanned": state["scanned"], "version": state["version"]}
         return {"ok": True, "rows": state["rows"], **script}
     monkeypatch.setattr(phone_inbox, "_get", fake_get)
     state["pushes"] = []
