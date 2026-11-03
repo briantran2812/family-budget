@@ -191,6 +191,7 @@ var EMAIL_PAGE = 100;          // a=emails returns at most this many rows…
 var EMAIL_PAGE_CHARS = 2000000;  // …or about this much body text, whichever comes first
 
 function batQuetEmail() {
+  if (ScriptApp.requireAllScopes) ScriptApp.requireAllScopes(ScriptApp.AuthMode.FULL);  // see batTelegram
   var have = ScriptApp.getProjectTriggers().filter(function (t) { return t.getHandlerFunction() === 'quetEmail'; });
   if (!have.length) ScriptApp.newTrigger('quetEmail').timeBased().everyMinutes(30).create();
   var n = quetEmail();
@@ -412,7 +413,14 @@ function batTelegram() {
     throw new Error('Chưa có token. Project Settings (⚙️) → Script properties → Add script property: ' +
         'TELEGRAM_TOKEN = token @BotFather đưa (dạng 123456789:AA…), Save, rồi chạy lại batTelegram.');
   }
+  // With Google's per-scope consent an unticked scope fails later as "You do not have permission"; ask for all now.
+  if (ScriptApp.requireAllScopes) ScriptApp.requireAllScopes(ScriptApp.AuthMode.FULL);
   var me = tg_('getMe', {});
+  if (!me.ok && /permission|quyền/i.test(me.description || '')) {
+    throw new Error('Script chưa được cấp quyền "Connect to an external service". Chạy lại batTelegram và tick đủ mọi ' +
+        'quyền (Select all); không thấy màn hình cấp quyền thì vào myaccount.google.com/connections, xoá quyền của ' +
+        'project này rồi chạy lại.');
+  }
   if (!me.ok) throw new Error('Telegram không nhận token: ' + (me.description || 'không rõ') + '. Kiểm tra TELEGRAM_TOKEN.');
   setJson_('TG_BOT', {id: me.result.id, username: me.result.username});
   tg_('deleteWebhook', {});  // getUpdates answers 409 while a webhook is set

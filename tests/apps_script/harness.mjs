@@ -933,6 +933,15 @@ if (process.argv[2] === '--html-to-text') {  // used by tests/test_apps_script.p
   process.exit(0);
 }
 
+Object.assign(tests, {
+  bat_telegram_explains_a_missing_scope() {
+    const {ctx, store} = load();
+    store.TELEGRAM_TOKEN = '123:abc';
+    ctx.UrlFetchApp = {fetch() { throw new Error('You do not have permission to call UrlFetchApp.fetch. Required permissions: https://www.googleapis.com/auth/script.external_request'); }};
+    assert.throws(() => ctx.batTelegram(), /chưa được cấp quyền "Connect to an external service"/);
+  },
+});
+
 const only = process.argv[2];
 const NOW = Date.now;  // Telegram tests move the clock; each test starts from the same instant
 let failed = 0;
