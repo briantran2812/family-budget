@@ -825,3 +825,29 @@ def test_ux50_pick_which_screenshot_rows_to_save(onboarded, page, tmp_path, monk
     page.locator("#ocrPay").fill("Techcombank")
     page.locator("#ocrSave").click()
     expect(toast(page)).to_have_text("Đã lưu 1 giao dịch")
+
+
+def test_ux52_usage_statistics_card_shows_what_is_sent_and_switches_off(onboarded, page):
+    page.wait_for_load_state("networkidle")                           # the start-up "open" has been recorded
+    page.locator("nav button[data-tab=settings]").click()
+    card = page.locator("#usageCard")
+    expect(card).to_contain_text("Gửi thống kê sử dụng cho người cài đặt")
+    expect(card).to_contain_text("tab Tổng hợp, nhóm Hoạt động và Lỗi")
+    expect(card).to_contain_text("Phím bạn gõ, các app khác, hình ảnh màn hình")
+    expect(page.locator("#usageOn")).to_be_checked()                   # on by default
+    expect(page.locator("#usageState")).to_contain_text("chưa kết nối Google Sheet")
+    page.locator("#usagePreviewBtn").click()
+    rows = page.locator("#usagePreview tbody tr")
+    expect(rows.filter(has_text="Số lần mở 30 ngày").locator("td").nth(4)).to_have_text("1")  # this page load
+    expect(rows.filter(has_text="Giao diện").locator("td").nth(4)).to_have_text("Theo máy")
+    page.locator("#usageOn").uncheck()
+    expect(toast(page)).to_have_text("Đã tắt gửi thống kê sử dụng")
+    expect(page.locator("#usagePreview")).to_have_text("Không có dòng nào sẽ được gửi.")
+    expect(page.locator("#usageState")).to_contain_text("Đang tắt")
+    reload(page)
+    page.locator("nav button[data-tab=settings]").click()
+    expect(page.locator("#usageOn")).not_to_be_checked()               # remembered
+    page.locator("#usageOn").check()
+    page.locator("#usagePreviewBtn").click()
+    expect(page.locator("#usagePreview tbody tr").filter(has_text="Phiên bản app")).to_have_count(1)
+    assert not page.evaluate("document.documentElement.scrollWidth > innerWidth")

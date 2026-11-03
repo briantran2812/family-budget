@@ -238,6 +238,8 @@ def mirror_payload(conn: sqlite3.Connection) -> dict:
         for name, amount in total("SELECT COALESCE(pay_account, 'Chưa ghi cách trả'), SUM(amount) FROM transactions "
                                   "WHERE status = 'ok' AND kind = 'expense' AND substr(date, 1, 7) = ? GROUP BY 1 ORDER BY 2 DESC"):
             summary.append([device, month, "Cách trả", name, amount, pct(amount)])
+    import usage
+    summary += usage.rows(conn, device)  # groups "Hoạt động" and "Lỗi"; none while share_usage is off
     return {"a": "mirror", "device": device, "rows": rows, "summary": summary}
 
 
