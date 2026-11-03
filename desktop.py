@@ -1,4 +1,5 @@
 """Native window entry point — this is what the packaged .app runs. Closing the window quits the app."""
+import os
 import socket
 import sys
 import threading
@@ -37,8 +38,10 @@ def main() -> None:
 
     webview.settings["ALLOW_DOWNLOADS"] = True              # "Xuất CSV" saves to Downloads
     webview.settings["OPEN_EXTERNAL_LINKS_IN_BROWSER"] = True  # Google account pages open in Safari/Chrome
+    # Smoke tests launch the real bundle; a hidden window keeps it off the screen and safe from a stray click.
+    hidden = os.environ.get("THUCHI_HIDDEN_WINDOW") == "1"
     webview.create_window("Thu Chi Gia Đình", url, width=1200, height=820, min_size=(420, 640),
-                          background_color="#f4f5fb")
+                          background_color="#f4f5fb", hidden=hidden)
     webview.start()
 
 

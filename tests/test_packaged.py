@@ -17,7 +17,7 @@ pytestmark = pytest.mark.skipif(not APP, reason="set APP_PATH to a built .app")
 def running_app():
     data = tempfile.mkdtemp(prefix="thuchi-packaged-")
     binary = os.path.join(APP, "Contents", "MacOS", os.path.basename(APP)[:-4])
-    proc = subprocess.Popen([binary], env={**os.environ, "BUDGET_DATA": data},
+    proc = subprocess.Popen([binary], env={**os.environ, "BUDGET_DATA": data, "THUCHI_HIDDEN_WINDOW": "1"},
                             stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
     port = None
     for _ in range(60):
