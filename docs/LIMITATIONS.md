@@ -69,7 +69,11 @@ Cách cài: `docs/DEPLOY.md` mục H.
 
 | Giới hạn | Ảnh hưởng | Cách xử lý |
 | --- | --- | --- |
-| Bot đọc tin nhắn **mỗi phút** (Apps Script không nhận webhook được) | Trả lời và nút bấm chậm tới khoảng 1 phút; bấm nút thấy vòng xoay một lúc | Bấm một lần rồi đợi; bấm lại không ghi trùng |
+| Bot đọc tin nhắn **mỗi phút** (Apps Script không nhận webhook được); Code.gs 5 chờ tin tiếp theo (long polling) trong **khoảng 2 phút** sau mỗi tin | Tin **đầu tiên** sau lúc im lặng vẫn chậm tới khoảng 1 phút; sau đó trả lời và nút bấm gần như ngay (giữa hai lượt chạy có thể trễ vài giây) | Bấm một lần rồi đợi; bấm lại chỉ hiện "Đã ghi rồi", không ghi trùng |
+| Trả lời nhanh tối đa **40 phút/ngày** (`TG_FAST_MINUTES`), tính vào quota trigger 90 phút/ngày | Ngày nhắn rất nhiều: hết 40 phút thì về chế độ mỗi phút như Code.gs 4 tới 0 giờ | `kiemTraTelegram` in số phút đã dùng và chế độ hiện tại |
+| Bot tự chọn hạng mục theo **từ khoá app Mac gửi lên** (máy đẩy bản sao gần nhất) | Sửa từ khoá trên Mac chỉ có hiệu lực với bot sau lần đẩy kế tiếp; Mac 1.4.0 không gửi từ khoá nên bot luôn hỏi bằng nút | Mở app 1.5.0 trên Mac (tự đẩy khi có thay đổi) |
+| Không gõ cách trả thì bot dùng **cách trả lần trước** của người gõ | Lần này trả khác mà quên gõ thì ghi sai cách trả; tin "Đã ghi" chỉ có nút đổi hạng mục | Gõ cách trả ở cuối (`tm`, `ck`, `visa`, `momo`), hoặc ↩️ Huỷ rồi gõ lại; sửa trên Mac |
+| **✏️ Đổi hạng mục** chỉ được khi Mac **chưa lấy** khoản đó | Mac đã đồng bộ thì bot báo "đổi trong app trên Mac" | Đổi trong app trên Mac |
 | Báo cáo tính tới **lần Mac đồng bộ gần nhất**, cộng các khoản ghi qua Telegram/iPhone sau đó (dòng "Số liệu tới…") | Khoản nhập tay trên Mac, sao kê, sửa/xoá trên Mac chỉ vào báo cáo sau khi Mac mở và đẩy bản sao | Mở app trên Mac (tự đẩy khi mở) |
 | **Đơn Gmail, ảnh chụp** chỉ vào app khi **một Mac mở** | Không thấy trong báo cáo Telegram cho tới lúc đó, kể cả khi tab Email đã có thư | Mở app trên Mac |
 | Khoản chọn ✨ Tự động nằm ở **"Chưa phân loại (chờ Mac)"** cho tới khi Mac phân loại | % theo hạng mục lệch trong lúc chờ | Chọn hạng mục cụ thể bằng nút |
@@ -78,10 +82,10 @@ Cách cài: `docs/DEPLOY.md` mục H.
 | Token bot nằm trong **Script properties** của sheet | Ai sửa được script của sheet thì lấy được token và điều khiển bot | Không chia sẻ quyền sửa sheet; lộ thì @BotFather → `/revoke`, đặt token mới, chạy `batTelegram` |
 | Ai đã ở trong nhóm đã kết nối đều **ghi, huỷ và xem báo cáo** được | Thêm người lạ vào nhóm là cho họ xem số liệu | Nhóm chỉ có hai vợ chồng; lộ mã `/ketnoi` thì `doiMaTelegram` |
 | Privacy mode của bot phải **tắt** (`/setprivacy` → Disable) | Quên bước này thì trong nhóm bot chỉ thấy lệnh, gõ "45k phở" không có gì xảy ra | `batTelegram` và `/huongdan` báo khi còn bật; tắt xong phải xoá bot khỏi nhóm và thêm lại |
-| Lịch mỗi phút dùng khoảng **8–25 phút/ngày** trong quota trigger **90 phút/ngày** của tài khoản Gmail thường (cùng quota với quét Gmail mục G) | Hết quota thì bot im tới khi quota hồi lại | Xem Executions; `tatTelegram` khi không dùng |
+| Lịch mỗi phút dùng khoảng **8–25 phút/ngày**, cộng phần trả lời nhanh (thường 20–30, tối đa 40 phút) trong quota trigger **90 phút/ngày** của tài khoản Gmail thường (cùng quota với quét Gmail mục G) | Hết quota thì bot im tới khi quota hồi lại | Xem Executions; hạ `TG_FAST_MINUTES`; `tatTelegram` khi không dùng |
 | Tắt bot (hoặc hết quota) **quá 24 giờ** thì Telegram xoá các tin chưa đọc | Khoản gõ trong lúc đó bị mất, bot không trả lời | Gõ lại sau khi bật |
 | Số tiền đọc theo **mẫu cố định**: phải bắt đầu bằng số (`45k phở`, không phải `phở 45k`); số trần dưới 1.000 thì bot hỏi lại; tin nhắn thường bắt đầu bằng số ("5 phút nữa về") cũng bị hỏi | Phải bấm Huỷ cho những câu đó | Không có gì được ghi khi chưa bấm hạng mục |
-| Chỉ có **hạng mục mặc định** trên nút (như Phím tắt iPhone); không gửi ảnh hoá đơn qua bot | Hạng mục tự tạo trên Mac không có nút; ảnh gửi vào nhóm bị bỏ qua | Chọn ✨ Tự động rồi đổi trên Mac; ảnh thì thêm trên Mac |
+| Chỉ có **hạng mục mặc định** trên nút (như Phím tắt iPhone); không gửi ảnh hoá đơn qua bot | Hạng mục tự tạo trên Mac không có nút (nhưng từ khoá của nó vẫn được bot dùng); ảnh gửi vào nhóm bị bỏ qua | Thêm từ khoá cho hạng mục đó trên Mac, hoặc chọn ✨ Tự động rồi đổi trên Mac; ảnh thì thêm trên Mac |
 | Mỗi sheet cần **một bot riêng**; hai Mac cùng đẩy bản sao thì báo cáo chỉ dùng **máy đẩy gần nhất** | Bot dùng chung giữa TEST và PRODUCTION sẽ mất tin | Tạo bot TEST riêng |
 
 ## Ảnh chụp (OCR)

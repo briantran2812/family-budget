@@ -23,6 +23,15 @@
   lần, khôi phục trong app thì giữ). Nguồn mới **💬 Telegram** (nhãn, bộ lọc ở Giao dịch). Bản sao gửi thêm nhóm
   `Ngân sách` vào tab Tổng hợp. App vẫn chỉ cần Code.gs bản 2; Code.gs bản 4 cần thêm quyền "kết nối dịch vụ bên ngoài":
   chạy `batTelegram` → Allow **trước** khi Deploy → New version.
+- **Bot Telegram nhanh hơn** (`Code.gs` bản 5, app vẫn cần bản 2): mỗi lần đẩy bản sao app gửi kèm mọi từ khoá
+  (`rules`: từ khoá, hạng mục, loại, biểu tượng; bản 4 bỏ qua trường này). Bot so khớp đúng như app (bỏ dấu, nguyên từ, từ
+  khoá dài nhất; test so JS với Python), nhớ cách trả lần trước của từng người, nên `45k phở bò` được **ghi ngay**
+  trong lượt đọc đầu tiên: "✓ Đã ghi … — Lan" kèm **✏️ Đổi hạng mục** (sửa cột Hạng mục khi Mac chưa lấy) và ↩️ Huỷ;
+  không có từ khoá thì một lần bấm hạng mục. Sau mỗi tin, script chờ tin kế tiếp bằng long polling tới khoảng giây 50
+  của lượt chạy, trong 2 phút sau tin cuối: trả lời và nút bấm gần như ngay, nút được trả lời trước khi ghi sheet, bấm
+  lại chỉ báo "Đã ghi rồi", câu hỏi quá 6 giờ báo rõ thay vì im lặng. Tối đa 40 phút/ngày (`TG_FAST_MINUTES`), quá thì
+  về chế độ mỗi phút; `kiemTraTelegram` báo số phút đã dùng và số từ khoá. Tin đầu tiên sau lúc im vẫn chậm tới ~1 phút.
+  Nâng cấp: dán Code.gs 5, Deploy → New version, đẩy bản sao từ Mac một lần (`docs/DEPLOY.md` H6).
 - **Thống kê sử dụng** (Cài đặt, bật sẵn, tắt được): số lần mở app, số lần dùng từng việc trong 30 ngày và 10 lỗi gần nhất (số thẻ/tài khoản được che) được ghi vào tab "Tổng hợp" của Google Sheet, nhóm "Hoạt động" và "Lỗi", để người cài app biết app có được dùng và chỗ nào hay vướng. Nút "Xem dữ liệu sẽ gửi" hiện đúng các dòng sẽ gửi. Không cần sửa Code.gs. Code: `usage.py`.
 
 ## 1.4.0 — nhập từ iPhone (beta dùng thử, chưa qua cổng QA)

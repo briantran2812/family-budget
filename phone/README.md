@@ -150,15 +150,17 @@ Từng bước, kể cả xác nhận địa chỉ chuyển tiếp: [docs/DEPLOY
 ## Bot Telegram cho nhóm gia đình
 
 Ghi khoản chi và xem báo cáo trong một nhóm Telegram (anh + vợ + bot), không cần mở Mac. Bot chạy ngay trong Apps
-Script của sheet: lịch `pollTelegram` mỗi phút đọc tin nhắn mới (nên chậm tối đa khoảng 1 phút), ghi vào **Hộp thư
-đến** với Kênh `telegram`, Người nhập `Telegram · <tên>`. App Mac lấy về như khoản từ iPhone.
+Script của sheet: lịch `pollTelegram` mỗi phút đọc tin nhắn mới (tin đầu tiên chậm tối đa khoảng 1 phút; Code.gs 5
+trả lời gần như ngay trong 2 phút sau đó), ghi vào **Hộp thư đến** với Kênh `telegram`, Người nhập `Telegram · <tên>`.
+App Mac lấy về như khoản từ iPhone.
 
 1. @BotFather → `/newbot` → lấy token; `/setprivacy` → chọn bot → **Disable** (bỏ bước này thì trong nhóm bot chỉ thấy lệnh).
 2. Project Settings → Script properties → `TELEGRAM_TOKEN` = token.
-3. Dán Code.gs bản 4 → ⌘S → chạy **`batTelegram`** → **Cho phép** → **sau đó** Triển khai → Quản lý bản triển khai → ✏️ →
+3. Dán Code.gs (bản 4 trở lên) → ⌘S → chạy **`batTelegram`** → **Cho phép** → **sau đó** Triển khai → Quản lý bản triển khai → ✏️ →
    **Phiên bản mới**.
 4. Tạo nhóm, thêm bot, gõ `/ketnoi <mã 6 số>` (mã in trong nhật ký của `batTelegram`).
-5. Gõ `45k phở` → bấm hạng mục → cách trả → "✓ Đã ghi …". Báo cáo: `/homnay`, `/tuan`, `/thang`, `/ngansach`, `/ongheo`;
+5. Gõ `45k phở` → bấm hạng mục (lần đầu thêm cách trả) → "✓ Đã ghi …". Code.gs 5: nội dung có từ khoá của app Mac
+   (`45k phở bò`) thì ghi ngay, kèm nút ✏️ Đổi hạng mục và ↩️ Huỷ. Báo cáo: `/homnay`, `/tuan`, `/thang`, `/ngansach`, `/ongheo`;
    hướng dẫn: `/huongdan`. Tắt: `tatTelegram`; đổi mã: `doiMaTelegram`.
 
 Từng bước, quota và cách bot tính báo cáo: [docs/DEPLOY.md mục H](../docs/DEPLOY.md). Giới hạn:
@@ -186,7 +188,8 @@ Từng bước, quota và cách bot tính báo cáo: [docs/DEPLOY.md mục H](..
   `tests/e2e/test_ux.py`. Email qua sheet: `sheet_email.py`, `tests/test_sheet_email.py`, UX-51. Bot Telegram: các test
   `telegram_*` trong harness (Bot API giả lập), UX-53.
 - Bot dùng **polling** (`getUpdates`), không dùng webhook: web app Apps Script luôn trả 302, Telegram coi đó là webhook
-  lỗi và gửi lại mãi.
+  lỗi và gửi lại mãi. Code.gs 5 long poll (timeout 25 giây; `UrlFetchApp` không có tuỳ chọn timeout và bỏ cuộc ở khoảng
+  60 giây) trong 2 phút sau mỗi tin; harness giả lập bằng đồng hồ giả (`later`, `setNow`), không chờ thật.
 - Phím tắt dùng **GET**, không dùng POST. Apps Script luôn trả 302 sang `googleusercontent.com`, và
   máy khách nào đổi POST thành GET khi đi theo chuyển hướng sẽ làm mất dữ liệu gửi đi.
 - Mã kết nối không nằm trong file `.shortcut`; iOS hỏi mã lúc thêm phím tắt (`WFWorkflowImportQuestions`).
